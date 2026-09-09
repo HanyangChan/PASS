@@ -1,0 +1,582 @@
+[
+  {
+    "id": "G001",
+    "name": "가상 사과 명절 세트 1",
+    "category": "fruit",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "사과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "naturally_sweet",
+    "packaging": "basic",
+    "brand": "가상브랜드1",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 과일 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G002",
+    "name": "가상 배 명절 세트 2",
+    "category": "fruit",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "배"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "naturally_sweet",
+    "packaging": "basic",
+    "brand": "가상브랜드1",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 과일 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G003",
+    "name": "가상 혼합 과일 명절 세트 3",
+    "category": "fruit",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "혼합 과일"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "naturally_sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드1",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 과일 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G004",
+    "name": "가상 사과 명절 세트 4",
+    "category": "fruit",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "사과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "naturally_sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드1",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 과일 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G005",
+    "name": "가상 배 명절 세트 5",
+    "category": "fruit",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "배"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "naturally_sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드1",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 과일 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G006",
+    "name": "가상 유과 명절 세트 1",
+    "category": "hangwa",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "유과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "sweet",
+    "packaging": "basic",
+    "brand": "가상브랜드2",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 한과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G007",
+    "name": "가상 약과 명절 세트 2",
+    "category": "hangwa",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "약과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "sweet",
+    "packaging": "basic",
+    "brand": "가상브랜드2",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 한과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G008",
+    "name": "가상 혼합 한과 명절 세트 3",
+    "category": "hangwa",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "혼합 한과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드2",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 한과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G009",
+    "name": "가상 유과 명절 세트 4",
+    "category": "hangwa",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "유과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드2",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 한과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G010",
+    "name": "가상 약과 명절 세트 5",
+    "category": "hangwa",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "약과"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "sweet",
+    "packaging": "formal",
+    "brand": "가상브랜드2",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 한과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G011",
+    "name": "가상 아몬드 명절 세트 1",
+    "category": "nuts",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "아몬드"
+    ],
+    "allergens_declared": [
+      "견과류"
+    ],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드3",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 견과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G012",
+    "name": "가상 호두 명절 세트 2",
+    "category": "nuts",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "호두"
+    ],
+    "allergens_declared": [
+      "견과류"
+    ],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드3",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 견과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G013",
+    "name": "가상 혼합 견과 명절 세트 3",
+    "category": "nuts",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "혼합 견과"
+    ],
+    "allergens_declared": [
+      "견과류"
+    ],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드3",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 견과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G014",
+    "name": "가상 아몬드 명절 세트 4",
+    "category": "nuts",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "아몬드"
+    ],
+    "allergens_declared": [
+      "견과류"
+    ],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드3",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 견과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G015",
+    "name": "가상 호두 명절 세트 5",
+    "category": "nuts",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "호두"
+    ],
+    "allergens_declared": [
+      "견과류"
+    ],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드3",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 견과 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G016",
+    "name": "가상 녹차 명절 세트 1",
+    "category": "tea",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "녹차"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드4",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 차 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G017",
+    "name": "가상 보리차 명절 세트 2",
+    "category": "tea",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "보리차"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드4",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 차 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G018",
+    "name": "가상 혼합 차 명절 세트 3",
+    "category": "tea",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "혼합 차"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드4",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 차 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G019",
+    "name": "가상 녹차 명절 세트 4",
+    "category": "tea",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "녹차"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드4",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 차 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G020",
+    "name": "가상 보리차 명절 세트 5",
+    "category": "tea",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "보리차"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드4",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 차 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G021",
+    "name": "가상 드립백 명절 세트 1",
+    "category": "coffee",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "드립백"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드5",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 커피 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G022",
+    "name": "가상 원두 명절 세트 2",
+    "category": "coffee",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "원두"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드5",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 커피 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G023",
+    "name": "가상 디카페인 드립백 명절 세트 3",
+    "category": "coffee",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "디카페인 드립백"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드5",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 커피 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G024",
+    "name": "가상 드립백 명절 세트 4",
+    "category": "coffee",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "드립백"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드5",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 커피 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G025",
+    "name": "가상 원두 명절 세트 5",
+    "category": "coffee",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "원두"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드5",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 커피 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G026",
+    "name": "가상 참기름 명절 세트 1",
+    "category": "oil",
+    "price_krw": 24000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "참기름"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드6",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 기름 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G027",
+    "name": "가상 들기름 명절 세트 2",
+    "category": "oil",
+    "price_krw": 39000,
+    "shipping_fee_per_set_krw": 3000,
+    "ingredients": [
+      "들기름"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "basic",
+    "brand": "가상브랜드6",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 기름 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G028",
+    "name": "가상 혼합 기름 명절 세트 3",
+    "category": "oil",
+    "price_krw": 55000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "혼합 기름"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드6",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 기름 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G029",
+    "name": "가상 참기름 명절 세트 4",
+    "category": "oil",
+    "price_krw": 72000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "참기름"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드6",
+    "arrival_date": "2026-09-23",
+    "stock_sets": 10,
+    "description": "실험용 기름 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  },
+  {
+    "id": "G030",
+    "name": "가상 들기름 명절 세트 5",
+    "category": "oil",
+    "price_krw": 105000,
+    "shipping_fee_per_set_krw": 0,
+    "ingredients": [
+      "들기름"
+    ],
+    "allergens_declared": [],
+    "allergen_information_complete": false,
+    "sweetness": "unsweetened",
+    "packaging": "formal",
+    "brand": "가상브랜드6",
+    "arrival_date": "2026-09-20",
+    "stock_sets": 10,
+    "description": "실험용 기름 선물세트. 실제 판매 상품이 아닙니다.",
+    "synthetic": true
+  }
+]

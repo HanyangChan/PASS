@@ -1,0 +1,1089 @@
+[
+  {
+    "id": "T01",
+    "title": "예산 범위와 수량 변경",
+    "turns": [
+      {
+        "user": "추석 부모님 선물 한 세트, 상품값 10만 원 이하로 추천해줘.",
+        "expected_patch": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ],
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "recipients",
+          "quantity",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "너무 단 건 안 좋아하셔.",
+        "expected_patch": {
+          "preferences": [
+            "less_sweet"
+          ]
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [
+            "less_sweet"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "preferences"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "처가에도 같은 걸 보낼게. 두 세트 상품값 합쳐 15만 원 이하로.",
+        "expected_patch": {
+          "recipients": [
+            "부모님",
+            "처가"
+          ],
+          "quantity": 2,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 150000,
+            "scope": "total"
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님",
+            "처가"
+          ],
+          "quantity": 2,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 150000,
+            "scope": "total",
+            "shipping_included": false
+          },
+          "preferences": [
+            "less_sweet"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "recipients",
+          "quantity",
+          "same_product",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T02",
+    "title": "명시적 제외 추가와 해제",
+    "turns": [
+      {
+        "user": "설 선물 한 세트, 상품값 8만 원 이하. 견과류는 빼줘.",
+        "expected_patch": {
+          "occasion": "설",
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "excluded_categories": [
+            "nuts"
+          ]
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [
+            "nuts"
+          ],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget",
+          "excluded_categories"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "한과도 제외해줘.",
+        "expected_patch": {
+          "excluded_categories": [
+            "nuts",
+            "hangwa"
+          ]
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [
+            "nuts",
+            "hangwa"
+          ],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "excluded_categories"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "견과류는 다시 포함해도 돼.",
+        "expected_patch": {
+          "excluded_categories": [
+            "hangwa"
+          ]
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [
+            "hangwa"
+          ],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "excluded_categories"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T03",
+    "title": "모호한 가격 표현",
+    "turns": [
+      {
+        "user": "추석 선물 한 세트, 상품값 10만 원 이하.",
+        "expected_patch": {
+          "occasion": "추석",
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "좀 더 저렴하게.",
+        "expected_patch": {},
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [],
+        "clarification_topics": [
+          "새 예산 상한 또는 현재 후보보다 저렴한 순위 선호인지 확인"
+        ],
+        "recommendation_ready": false
+      },
+      {
+        "user": "상품값 5만 원 이하로 해줘.",
+        "expected_patch": {
+          "budget": {
+            "amount_krw": 50000
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 50000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T04",
+    "title": "관계로 취향을 추측하지 않기",
+    "turns": [
+      {
+        "user": "부모님께 드릴 추석 선물이야.",
+        "expected_patch": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ]
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ],
+          "quantity": null,
+          "same_product": null,
+          "budget": {
+            "amount_krw": null,
+            "scope": null,
+            "shipping_included": null
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "recipients"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "차 한 세트로 상품값 6만 원 이하.",
+        "expected_patch": {
+          "quantity": 1,
+          "preferences": [
+            "category:tea"
+          ],
+          "budget": {
+            "amount_krw": 60000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "부모님"
+          ],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 60000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [
+            "category:tea"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "quantity",
+          "budget",
+          "preferences"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "아니, 받는 분은 교수님이야. 격식 있는 포장으로.",
+        "expected_patch": {
+          "recipients": [
+            "교수님"
+          ],
+          "packaging": "formal"
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [
+            "교수님"
+          ],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 60000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [
+            "category:tea"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": "formal"
+        },
+        "changed_fields": [
+          "recipients",
+          "packaging"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T05",
+    "title": "배송비 포함 총예산",
+    "turns": [
+      {
+        "user": "추석 선물 같은 걸 세 집에 한 세트씩, 배송비 포함 총 12만 원 이하.",
+        "expected_patch": {
+          "occasion": "추석",
+          "quantity": 3,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 120000,
+            "scope": "total",
+            "shipping_included": true
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 3,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 120000,
+            "scope": "total",
+            "shipping_included": true
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "same_product",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "총예산 15만 원으로 올릴게.",
+        "expected_patch": {
+          "budget": {
+            "amount_krw": 150000
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 3,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 150000,
+            "scope": "total",
+            "shipping_included": true
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "배송비는 예산에서 빼고 상품값만 계산해.",
+        "expected_patch": {
+          "budget": {
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 3,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 150000,
+            "scope": "total",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T06",
+    "title": "상대 날짜 확인",
+    "turns": [
+      {
+        "user": "추석 선물 한 세트, 상품값 8만 원 이하.",
+        "expected_patch": {
+          "occasion": "추석",
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "명절 전날까지 와야 해.",
+        "expected_patch": {},
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [],
+        "clarification_topics": [
+          "원하는 수령 마감일을 YYYY-MM-DD로 확인"
+        ],
+        "recommendation_ready": false
+      },
+      {
+        "user": "2026년 9월 21일까지 받으면 돼.",
+        "expected_patch": {
+          "delivery_by": "2026-09-21"
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": "2026-09-21",
+          "packaging": null
+        },
+        "changed_fields": [
+          "delivery_by"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T07",
+    "title": "브랜드 제한 해제",
+    "turns": [
+      {
+        "user": "설 선물 한 세트. 가상브랜드4만, 상품값 8만 원 이하.",
+        "expected_patch": {
+          "occasion": "설",
+          "quantity": 1,
+          "brand": "가상브랜드4",
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": "가상브랜드4",
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget",
+          "brand"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "브랜드는 상관없어.",
+        "expected_patch": {
+          "brand": null
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "brand"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "단맛 없는 걸 선호해.",
+        "expected_patch": {
+          "preferences": [
+            "unsweetened"
+          ]
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [
+            "unsweetened"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "preferences"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  },
+  {
+    "id": "T08",
+    "title": "조건 만족 상품 없음",
+    "turns": [
+      {
+        "user": "추석 선물 한 세트, 상품값 1만 원 이하로.",
+        "expected_patch": {
+          "occasion": "추석",
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 10000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 10000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "예산은 그대로 두고 격식 있는 포장으로.",
+        "expected_patch": {
+          "packaging": "formal"
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 10000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": "formal"
+        },
+        "changed_fields": [
+          "packaging"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "그럼 상품값 6만 원까지 괜찮아.",
+        "expected_patch": {
+          "budget": {
+            "amount_krw": 60000
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 60000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": "formal"
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ],
+    "special_assertions": [
+      "1~2턴은 후보 0개. 예산 자동 완화 금지.",
+      "3턴에는 formal 포장과 60000원 이하 조건 모두 적용."
+    ]
+  },
+  {
+    "id": "T09",
+    "title": "알레르기와 불완전 상품정보",
+    "turns": [
+      {
+        "user": "추석 선물 한 세트, 상품값 8만 원 이하. 땅콩 알레르기가 있는 분께 드려.",
+        "expected_patch": {
+          "occasion": "추석",
+          "quantity": 1,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "excluded_ingredients": [
+            "땅콩"
+          ]
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "땅콩"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "budget",
+          "excluded_ingredients"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "호두도 피해야 해.",
+        "expected_patch": {
+          "excluded_ingredients": [
+            "땅콩",
+            "호두"
+          ]
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 80000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "땅콩",
+            "호두"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "excluded_ingredients"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "예산만 10만 원으로 올려.",
+        "expected_patch": {
+          "budget": {
+            "amount_krw": 100000
+          }
+        },
+        "expected_state": {
+          "occasion": "추석",
+          "recipients": [],
+          "quantity": 1,
+          "same_product": null,
+          "budget": {
+            "amount_krw": 100000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "땅콩",
+            "호두"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ],
+    "special_assertions": [
+      "알레르기 정보가 불완전하므로 안전한 상품이라고 단정하거나 적합 추천하지 않는다.",
+      "성분·교차접촉 정보 확인 필요 상태를 반환한다."
+    ]
+  },
+  {
+    "id": "T10",
+    "title": "단위 예산에서 총예산으로 전환",
+    "turns": [
+      {
+        "user": "설 선물 같은 걸 네 세트. 세트당 상품값 5만 원 이하.",
+        "expected_patch": {
+          "occasion": "설",
+          "quantity": 4,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 50000,
+            "scope": "per_set",
+            "shipping_included": false
+          }
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 4,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 50000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "occasion",
+          "quantity",
+          "same_product",
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "다섯 세트로 바꿀게.",
+        "expected_patch": {
+          "quantity": 5
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 5,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 50000,
+            "scope": "per_set",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "quantity"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      },
+      {
+        "user": "세트당 말고 다섯 세트 상품값 합쳐 20만 원 이하로.",
+        "expected_patch": {
+          "budget": {
+            "amount_krw": 200000,
+            "scope": "total"
+          }
+        },
+        "expected_state": {
+          "occasion": "설",
+          "recipients": [],
+          "quantity": 5,
+          "same_product": true,
+          "budget": {
+            "amount_krw": 200000,
+            "scope": "total",
+            "shipping_included": false
+          },
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null
+        },
+        "changed_fields": [
+          "budget"
+        ],
+        "clarification_topics": [],
+        "recommendation_ready": true
+      }
+    ]
+  }
+]

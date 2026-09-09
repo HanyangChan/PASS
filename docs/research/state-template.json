@@ -1,0 +1,17 @@
+{
+  "occasion": null,
+  "recipients": [],
+  "quantity": null,
+  "same_product": null,
+  "budget": {
+    "amount_krw": null,
+    "scope": null,
+    "shipping_included": null
+  },
+  "preferences": [],
+  "excluded_categories": [],
+  "excluded_ingredients": [],
+  "brand": null,
+  "delivery_by": null,
+  "packaging": null
+}
