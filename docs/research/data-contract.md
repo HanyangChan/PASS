@@ -37,3 +37,8 @@ per_set은 한 세트 비용과 예산을 비교한다. total은 총비용과 �
 확인 질문이 있다고 모든 추천을 중단할 필요는 없지만, 미확정 조건을 충족했다고 표시해서는 안 된다. 테스트의 recommendation_ready는 확인 질문 주제가 비어 있다는 뜻만 가진다. 후보 존재나 알레르기 적합성을 보장하지 않는다. 런타임 response_status는 ready / needs_clarification / no_match / insufficient_product_info로 별도 계산한다.
 
 UI의 조건 변화 표시는 상태 비교 결과를 사용하고, 추천 설명은 선택된 상품의 ID·가격·속성에서 생성한다. 금액 변화와 수량 변화가 동시에 일어나면 둘 다 표시한다.
+
+
+## 가상 조건 비교
+
+`lib/counterfactual.mjs`는 현재 상태를 수정하지 않고 예산 상한만 바꿔 재계산한다. `alternatives`의 각 항목은 `patch`, `amount`, `delta`, `scope`, `shippingIncluded`, `quantity`, `current`, `target`, `targetRank`, `topIds`, `effect`, `facts`, 설명 문구를 포함한다. `effect`는 first_match / top_changed / top_three_changed / eligible_only이며 후보 확대를 순위 변경과 구분한다. 명시적 적용 시에만 patch를 세션 상태에 합친다. 자세한 규칙은 [비교 설명 설계](counterfactual-explanations.md)를 따른다.
