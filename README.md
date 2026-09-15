@@ -80,3 +80,7 @@ Added [36-case Korean diagnostic set and runner](evaluation/README.md). The froz
 ## 2026-09-15 — Language error corrections
 
 Corrected the 14 diagnosed failures without changing the diagnostic labels. Frozen baseline 22/36 → regression result 36/36 cases (74/74 checks); automated tests 41/41. Added bounded Korean money normalization, negation handling, recipient/quantity corrections, invalid-date and unsupported-goods clarification. Clarifications survive unrelated edits and recover after explicit corrections. This is regression improvement on known cases, not independent user accuracy. See `evaluation/results/after-language-fix.md`.
+
+## Explanation A/B pilot
+
+Open `/study` (or “설명 평가” from the main page) for two fixed gift tasks. Four randomized task/condition sequences compare basic reasons with added counterfactual explanations; candidates and budget controls are identical across conditions. Choice, elapsed time, comprehension and three ratings remain in memory and can be downloaded as JSON after completion or withdrawal. No automatic upload. See [pilot protocol](evaluation/study-protocol.md) for limitations, timing definitions and remaining user/browser validation. This evaluates explanation presentation, not conversational input usability.
