@@ -76,3 +76,7 @@ React와 Vinext를 사용하며 Sites용 설정을 포함합니다. `.openai/hos
 ## 2026-09-15 — Diagnostic evaluation baseline
 
 Added [36-case Korean diagnostic set and runner](evaluation/README.md). The frozen deployed-source baseline passes 22/36 cases and 53/74 explicit final-state checks. Fourteen failures remain visible with reproduction transcripts and a prioritized backlog. This agent-authored set is separate from development examples but is not an independent blind or human-validated evaluation. The application has not changed in this evaluation-only step.
+
+## 2026-09-15 — Language error corrections
+
+Corrected the 14 diagnosed failures without changing the diagnostic labels. Frozen baseline 22/36 → regression result 36/36 cases (74/74 checks); automated tests 41/41. Added bounded Korean money normalization, negation handling, recipient/quantity corrections, invalid-date and unsupported-goods clarification. Clarifications survive unrelated edits and recover after explicit corrections. This is regression improvement on known cases, not independent user accuracy. See `evaluation/results/after-language-fix.md`.

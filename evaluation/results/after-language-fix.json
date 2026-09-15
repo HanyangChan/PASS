@@ -1,0 +1,1125 @@
+{
+  "generatedAt": "2026-09-15T13:32:11.042Z",
+  "sourceCommit": "8b71a43e81714af6ab464f6878560c005ea3211b",
+  "datasetSha256": "6e75c63f254786ac39bdd16206b6d94d55ed089efeb04624ca11683a94511852",
+  "datasetVersion": "1.0",
+  "provenance": "Agent-authored diagnostic set, separate from development examples; not blind, human-annotated, or representative population data. Expected labels frozen before first run.",
+  "casePass": 36,
+  "caseTotal": 36,
+  "checkPass": 74,
+  "checkTotal": 74,
+  "results": [
+    {
+      "id": "E01",
+      "category": "budget",
+      "title": "총예산 명시",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 120000,
+          "actual": 120000,
+          "pass": true
+        },
+        {
+          "path": "state.budget.scope",
+          "expected": "total",
+          "actual": "total",
+          "pass": true
+        },
+        {
+          "path": "state.quantity",
+          "expected": 2,
+          "actual": 2,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구에게 줄 설 선물 두 세트 같은 상품, 배송비 포함 총 12만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 2세트 · 모두 합쳐 120,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "category": "budget",
+      "title": "세트당 명시",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.scope",
+          "expected": "per_set",
+          "actual": "per_set",
+          "pass": true
+        },
+        {
+          "path": "state.budget.shipping_included",
+          "expected": false,
+          "actual": false,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "교수님 한 세트, 세트당 상품값 7만 원",
+          "assistant": "이렇게 이해했어요: 교수님 · 1세트 · 세트당 70,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "category": "budget",
+      "title": "금액만 말한 초기 요청",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 90000,
+          "actual": 90000,
+          "pass": true
+        },
+        {
+          "path": "state.budget.scope",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "scope",
+          "actual": "scope",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친척 세 세트 같은 상품, 상품값 9만 원",
+          "assistant": "이렇게 이해했어요: 친척 · 3세트 · 기준 확인 중 90,000원 이하 · 배송비 별도.\n말씀하신 금액은 모두 합친 예산인가요, 한 세트 예산인가요?",
+          "question": "scope"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "category": "budget",
+      "title": "한글 금액",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 100000,
+          "actual": 100000,
+          "pass": true
+        },
+        {
+          "path": "state.budget.scope",
+          "expected": "total",
+          "actual": "total",
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트, 상품값 총 십만 원",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "category": "budget",
+      "title": "쉼표 금액",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 120000,
+          "actual": 120000,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 120,000원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 120,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "category": "budget",
+      "title": "범위 예산 상한",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 80000,
+          "actual": 80000,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 5만 원에서 8만 원 사이",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "category": "budget",
+      "title": "부정 뒤 새 총예산",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 60000,
+          "actual": 60000,
+          "pass": true
+        },
+        {
+          "path": "state.budget.scope",
+          "expected": "total",
+          "actual": "total",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 8만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "8만 원 말고 6만 원으로",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 60,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "category": "budget",
+      "title": "음수 거부",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "amount",
+          "actual": "amount",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트 상품값 총 -5만 원",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 배송비 별도.\n얼마까지 쓰고 싶으세요?",
+          "question": "amount"
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "category": "budget",
+      "title": "하한만 제시",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "amount",
+          "actual": "amount",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손녀 한 세트 상품값 총 30만 원 이상",
+          "assistant": "이렇게 이해했어요: 손녀 · 1세트 · 배송비 별도.\n얼마까지 쓰고 싶으세요?",
+          "question": "amount"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "category": "budget",
+      "title": "원 단위 없음",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 100000,
+          "actual": 100000,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 10만",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "category": "quantity",
+      "title": "짧은 응답",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 3,
+          "actual": 3,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "amount",
+          "actual": "amount",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손녀",
+          "assistant": "이렇게 이해했어요: 손녀.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        },
+        {
+          "user": "셋이요",
+          "assistant": "이렇게 이해했어요: 손녀 · 3세트.\n얼마까지 쓰고 싶으세요?",
+          "question": "amount"
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "category": "quantity",
+      "title": "아라비아 숫자 응답",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 2,
+          "actual": 2,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "amount",
+          "actual": "amount",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "자녀",
+          "assistant": "이렇게 이해했어요: 자녀.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        },
+        {
+          "user": "2",
+          "assistant": "이렇게 이해했어요: 자녀 · 2세트.\n얼마까지 쓰고 싶으세요?",
+          "question": "amount"
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "category": "quantity",
+      "title": "숫자 동의 혼동 금지",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 2,
+          "actual": 2,
+          "pass": true
+        },
+        {
+          "path": "state.same_product",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손주 두 세트 상품값 총 15만 원",
+          "assistant": "이렇게 이해했어요: 손주 · 2세트 · 모두 합쳐 150,000원 이하 · 배송비 별도.\n모두 같은 상품으로 보낼까요? 지금은 같은 식품 선물을 여러 세트 고를 수 있어요.",
+          "question": "same"
+        },
+        {
+          "user": "네",
+          "assistant": "이렇게 이해했어요: 손주 · 2세트 · 모두 합쳐 150,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E14",
+      "category": "quantity",
+      "title": "음수 수량 거부",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "quantity",
+          "actual": "quantity",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 -2세트 상품값 총 10만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        }
+      ]
+    },
+    {
+      "id": "E15",
+      "category": "quantity",
+      "title": "다른 상품 요청",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.same_product",
+          "expected": false,
+          "actual": false,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "same",
+          "actual": "same",
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손주 네 명 상품값 총 40만 원, 각각 다른 것으로",
+          "assistant": "이렇게 이해했어요: 손주 · 4세트 · 모두 합쳐 400,000원 이하 · 배송비 별도.\n지금은 받는 분마다 다른 상품을 나누어 추천하지 못해요. 같은 상품을 원하실 때만 “같은 상품으로”라고 알려주세요.",
+          "question": "same"
+        }
+      ]
+    },
+    {
+      "id": "E16",
+      "category": "quantity",
+      "title": "수량 정정",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 3,
+          "actual": 3,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친척 두 세트 같은 상품 배송비 포함 총 20만 원",
+          "assistant": "이렇게 이해했어요: 친척 · 2세트 · 모두 합쳐 200,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "두 세트가 아니라 세 세트",
+          "assistant": "이렇게 이해했어요: 친척 · 3세트 · 모두 합쳐 200,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E17",
+      "category": "quantity",
+      "title": "여섯 수량",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 6,
+          "actual": 6,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손주 여섯 명 같은 상품 배송비 포함 총 30만 원",
+          "assistant": "이렇게 이해했어요: 손주 · 6세트 · 모두 합쳐 300,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E18",
+      "category": "quantity",
+      "title": "수량을 예산으로 오해하지 않기",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.quantity",
+          "expected": 3,
+          "actual": 3,
+          "pass": true
+        },
+        {
+          "path": "state.budget.amount_krw",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 3명",
+          "assistant": "이렇게 이해했어요: 친구 · 3세트.\n얼마까지 쓰고 싶으세요?",
+          "question": "amount"
+        }
+      ]
+    },
+    {
+      "id": "E19",
+      "category": "preservation",
+      "title": "제외 추가 후 예산 갱신",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.excluded_categories",
+          "expected": [
+            "hangwa"
+          ],
+          "actual": [
+            "hangwa"
+          ],
+          "pass": true
+        },
+        {
+          "path": "state.quantity",
+          "expected": 2,
+          "actual": 2,
+          "pass": true
+        },
+        {
+          "path": "state.budget.scope",
+          "expected": "total",
+          "actual": "total",
+          "pass": true
+        },
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 120000,
+          "actual": 120000,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 두 세트 같은 상품, 총 상품값 10만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 2세트 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "한과 제외",
+          "assistant": "이렇게 이해했어요: 친구 · 2세트 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "12만 원으로",
+          "assistant": "이렇게 이해했어요: 친구 · 2세트 · 모두 합쳐 120,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E20",
+      "category": "preservation",
+      "title": "제외 취소",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.excluded_categories",
+          "expected": [],
+          "actual": [],
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님",
+          "assistant": "이렇게 이해했어요: 부모님.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        },
+        {
+          "user": "과일은 제외",
+          "assistant": "이렇게 이해했어요: 부모님.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        },
+        {
+          "user": "과일은 포함해도 돼",
+          "assistant": "이렇게 이해했어요: 부모님.\n선물이 몇 세트 필요한가요?",
+          "question": "quantity"
+        }
+      ]
+    },
+    {
+      "id": "E21",
+      "category": "preservation",
+      "title": "수신자 추가",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.recipients",
+          "expected": [
+            "부모님",
+            "친척"
+          ],
+          "actual": [
+            "부모님",
+            "친척"
+          ],
+          "pass": true
+        },
+        {
+          "path": "state.quantity",
+          "expected": 2,
+          "actual": 2,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트 상품값 총 7만 원",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 70,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "친척에도 같은 상품 두 세트",
+          "assistant": "이렇게 이해했어요: 부모님·친척 · 2세트 · 모두 합쳐 70,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E22",
+      "category": "preservation",
+      "title": "브랜드 제한 해제",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.brand",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 90000,
+          "actual": 90000,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 가상브랜드2 한 세트 상품값 총 9만 원",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "브랜드 상관없어요",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E23",
+      "category": "clarification",
+      "title": "알레르기 정보 지속",
+      "pass": true,
+      "checks": [
+        {
+          "path": "question",
+          "expected": "issue",
+          "actual": "issue",
+          "pass": true
+        },
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 9만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "알레르기가 있어",
+          "assistant": "피해야 할 성분을 알려주세요.",
+          "question": "issue"
+        },
+        {
+          "user": "격식 있는 포장",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n피해야 할 성분을 알려주세요.",
+          "question": "issue"
+        }
+      ]
+    },
+    {
+      "id": "E24",
+      "category": "clarification",
+      "title": "성분 응답 뒤 추천 차단",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.excluded_ingredients",
+          "expected": [
+            "우유"
+          ],
+          "actual": [
+            "우유"
+          ],
+          "pass": true
+        },
+        {
+          "path": "result.status",
+          "expected": "insufficient_product_info",
+          "actual": "insufficient_product_info",
+          "pass": true
+        },
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 9만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "알레르기가 있어",
+          "assistant": "피해야 할 성분을 알려주세요.",
+          "question": "issue"
+        },
+        {
+          "user": "우유",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n성분·알레르기 정보가 충분하지 않아 적합한 상품을 확정할 수 없어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E25",
+      "category": "clarification",
+      "title": "정확한 마감일 제공",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.delivery_by",
+          "expected": "2026-09-20",
+          "actual": "2026-09-20",
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 9만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "명절 전까지",
+          "assistant": "수령 마감일을 2026-09-21처럼 알려주세요.",
+          "question": "issue"
+        },
+        {
+          "user": "2026-09-20",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E26",
+      "category": "clarification",
+      "title": "잘못된 날짜 거부",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.delivery_by",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        },
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트 상품값 총 8만 원, 2026-02-30까지",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n수령 마감일이 올바르지 않아요. 실제 날짜를 2026-09-21처럼 알려주세요.",
+          "question": "issue"
+        }
+      ]
+    },
+    {
+      "id": "E27",
+      "category": "clarification",
+      "title": "모호한 저렴함 유지",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 80000,
+          "actual": 80000,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": "issue",
+          "actual": "issue",
+          "pass": true
+        },
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 8만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "좀 더 저렴하게",
+          "assistant": "원하는 새 예산 상한을 알려주세요.",
+          "question": "issue"
+        },
+        {
+          "user": "견과류 제외",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n원하는 새 예산 상한을 알려주세요.",
+          "question": "issue"
+        }
+      ]
+    },
+    {
+      "id": "E28",
+      "category": "clarification",
+      "title": "시작 안내",
+      "pass": true,
+      "checks": [
+        {
+          "path": "question",
+          "expected": "recipient",
+          "actual": "recipient",
+          "pass": true
+        },
+        {
+          "path": "state.recipients",
+          "expected": [],
+          "actual": [],
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "선물 좀 골라줘",
+          "assistant": "누구에게 드릴 선물인가요?",
+          "question": "recipient"
+        }
+      ]
+    },
+    {
+      "id": "E29",
+      "category": "shipping",
+      "title": "배송비 포함 확인",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.shipping_included",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손주 한 세트 총 6만 원",
+          "assistant": "이렇게 이해했어요: 손주 · 1세트 · 모두 합쳐 60,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": "shipping"
+        },
+        {
+          "user": "배송비 포함",
+          "assistant": "이렇게 이해했어요: 손주 · 1세트 · 모두 합쳐 60,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E30",
+      "category": "shipping",
+      "title": "배송비 제외 확인",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.shipping_included",
+          "expected": false,
+          "actual": false,
+          "pass": true
+        },
+        {
+          "path": "question",
+          "expected": null,
+          "actual": null,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "자녀 한 세트 총 6만 원",
+          "assistant": "이렇게 이해했어요: 자녀 · 1세트 · 모두 합쳐 60,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": "shipping"
+        },
+        {
+          "user": "상품값만",
+          "assistant": "이렇게 이해했어요: 자녀 · 1세트 · 모두 합쳐 60,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E31",
+      "category": "shipping",
+      "title": "배송비 제외에서 포함 변경",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.shipping_included",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        },
+        {
+          "path": "state.budget.amount_krw",
+          "expected": 80000,
+          "actual": 80000,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 8만 원",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "배송비 포함으로 바꿔",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 포함.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E32",
+      "category": "shipping",
+      "title": "부정문 배송비",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.budget.shipping_included",
+          "expected": false,
+          "actual": false,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트 총 7만 원",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 70,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": "shipping"
+        },
+        {
+          "user": "배송비 포함하지 마",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 70,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E33",
+      "category": "boundary",
+      "title": "견과 알레르기 안전 단정 방지",
+      "pass": true,
+      "checks": [
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "부모님 한 세트 총 상품값 9만 원, 견과류 알레르기",
+          "assistant": "이렇게 이해했어요: 부모님 · 1세트 · 모두 합쳐 90,000원 이하 · 배송비 별도.\n피해야 할 성분을 알려주세요.",
+          "question": "issue"
+        }
+      ]
+    },
+    {
+      "id": "E34",
+      "category": "boundary",
+      "title": "조건 없는 초기 추천 차단",
+      "pass": true,
+      "checks": [
+        {
+          "path": "question",
+          "expected": "recipient",
+          "actual": "recipient",
+          "pass": true
+        },
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": []
+    },
+    {
+      "id": "E35",
+      "category": "boundary",
+      "title": "취향 철회",
+      "pass": true,
+      "checks": [
+        {
+          "path": "state.preferences",
+          "expected": [],
+          "actual": [],
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "친구 한 세트 상품값 총 8만 원, 단맛 없는 걸로",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        },
+        {
+          "user": "단맛은 상관없어",
+          "assistant": "이렇게 이해했어요: 친구 · 1세트 · 모두 합쳐 80,000원 이하 · 배송비 별도.\n현재 조건에 맞는 상품을 골랐어요.",
+          "question": null
+        }
+      ]
+    },
+    {
+      "id": "E36",
+      "category": "boundary",
+      "title": "범위 밖 상품 요청",
+      "pass": true,
+      "checks": [
+        {
+          "path": "blocked",
+          "expected": true,
+          "actual": true,
+          "pass": true
+        }
+      ],
+      "transcript": [
+        {
+          "user": "손녀 한 세트 상품값 총 10만 원, 운동화로 추천해줘",
+          "assistant": "이렇게 이해했어요: 손녀 · 1세트 · 모두 합쳐 100,000원 이하 · 배송비 별도.\n지금은 식품 선물만 추천할 수 있어요. 식품으로 바꾸려면 “식품으로 추천해줘”라고 알려주세요.",
+          "question": "issue"
+        }
+      ]
+    }
+  ]
+}
