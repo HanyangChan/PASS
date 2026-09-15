@@ -72,3 +72,7 @@ React와 Vinext를 사용하며 Sites용 설정을 포함합니다. `.openai/hos
 - Larger quick-reply targets and automatic conversation scrolling.
 - Validation: 34 automated tests pass (26 existing + 8 conversation regressions). No user study or browser interaction testing conducted. Synthetic food catalog only; no LLM, voice, real checkout or age-specific matching.
 - Next: independent Korean evaluation set; A/B task/log design; senior-user pilot; LLM structured-output integration.
+
+## 2026-09-15 — Diagnostic evaluation baseline
+
+Added [36-case Korean diagnostic set and runner](evaluation/README.md). The frozen deployed-source baseline passes 22/36 cases and 53/74 explicit final-state checks. Fourteen failures remain visible with reproduction transcripts and a prioritized backlog. This agent-authored set is separate from development examples but is not an independent blind or human-validated evaluation. The application has not changed in this evaluation-only step.

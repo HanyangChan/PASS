@@ -1,0 +1,469 @@
+{
+  "version": "1.0",
+  "provenance": "Agent-authored diagnostic set, separate from development examples; not blind, human-annotated, or representative population data. Expected labels frozen before first run.",
+  "cases": [
+    {
+      "id": "E01",
+      "category": "budget",
+      "title": "총예산 명시",
+      "turns": [
+        "친구에게 줄 설 선물 두 세트 같은 상품, 배송비 포함 총 12만 원"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 120000,
+        "state.budget.scope": "total",
+        "state.quantity": 2,
+        "question": null
+      }
+    },
+    {
+      "id": "E02",
+      "category": "budget",
+      "title": "세트당 명시",
+      "turns": [
+        "교수님 한 세트, 세트당 상품값 7만 원"
+      ],
+      "expected": {
+        "state.budget.scope": "per_set",
+        "state.budget.shipping_included": false,
+        "question": null
+      }
+    },
+    {
+      "id": "E03",
+      "category": "budget",
+      "title": "금액만 말한 초기 요청",
+      "turns": [
+        "친척 세 세트 같은 상품, 상품값 9만 원"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 90000,
+        "state.budget.scope": null,
+        "question": "scope"
+      }
+    },
+    {
+      "id": "E04",
+      "category": "budget",
+      "title": "한글 금액",
+      "turns": [
+        "부모님 한 세트, 상품값 총 십만 원"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 100000,
+        "state.budget.scope": "total",
+        "question": null
+      }
+    },
+    {
+      "id": "E05",
+      "category": "budget",
+      "title": "쉼표 금액",
+      "turns": [
+        "친구 한 세트 상품값 총 120,000원"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 120000,
+        "question": null
+      }
+    },
+    {
+      "id": "E06",
+      "category": "budget",
+      "title": "범위 예산 상한",
+      "turns": [
+        "친구 한 세트 상품값 총 5만 원에서 8만 원 사이"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 80000
+      }
+    },
+    {
+      "id": "E07",
+      "category": "budget",
+      "title": "부정 뒤 새 총예산",
+      "turns": [
+        "친구 한 세트 상품값 총 8만 원",
+        "8만 원 말고 6만 원으로"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 60000,
+        "state.budget.scope": "total"
+      }
+    },
+    {
+      "id": "E08",
+      "category": "budget",
+      "title": "음수 거부",
+      "turns": [
+        "부모님 한 세트 상품값 총 -5만 원"
+      ],
+      "expected": {
+        "state.budget.amount_krw": null,
+        "question": "amount"
+      }
+    },
+    {
+      "id": "E09",
+      "category": "budget",
+      "title": "하한만 제시",
+      "turns": [
+        "손녀 한 세트 상품값 총 30만 원 이상"
+      ],
+      "expected": {
+        "state.budget.amount_krw": null,
+        "question": "amount"
+      }
+    },
+    {
+      "id": "E10",
+      "category": "budget",
+      "title": "원 단위 없음",
+      "turns": [
+        "친구 한 세트 상품값 총 10만"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 100000
+      }
+    },
+    {
+      "id": "E11",
+      "category": "quantity",
+      "title": "짧은 응답",
+      "turns": [
+        "손녀",
+        "셋이요"
+      ],
+      "expected": {
+        "state.quantity": 3,
+        "question": "amount"
+      }
+    },
+    {
+      "id": "E12",
+      "category": "quantity",
+      "title": "아라비아 숫자 응답",
+      "turns": [
+        "자녀",
+        "2"
+      ],
+      "expected": {
+        "state.quantity": 2,
+        "question": "amount"
+      }
+    },
+    {
+      "id": "E13",
+      "category": "quantity",
+      "title": "숫자 동의 혼동 금지",
+      "turns": [
+        "손주 두 세트 상품값 총 15만 원",
+        "네"
+      ],
+      "expected": {
+        "state.quantity": 2,
+        "state.same_product": true,
+        "question": null
+      }
+    },
+    {
+      "id": "E14",
+      "category": "quantity",
+      "title": "음수 수량 거부",
+      "turns": [
+        "친구 -2세트 상품값 총 10만 원"
+      ],
+      "expected": {
+        "state.quantity": null,
+        "question": "quantity"
+      }
+    },
+    {
+      "id": "E15",
+      "category": "quantity",
+      "title": "다른 상품 요청",
+      "turns": [
+        "손주 네 명 상품값 총 40만 원, 각각 다른 것으로"
+      ],
+      "expected": {
+        "state.same_product": false,
+        "question": "same"
+      }
+    },
+    {
+      "id": "E16",
+      "category": "quantity",
+      "title": "수량 정정",
+      "turns": [
+        "친척 두 세트 같은 상품 배송비 포함 총 20만 원",
+        "두 세트가 아니라 세 세트"
+      ],
+      "expected": {
+        "state.quantity": 3
+      }
+    },
+    {
+      "id": "E17",
+      "category": "quantity",
+      "title": "여섯 수량",
+      "turns": [
+        "손주 여섯 명 같은 상품 배송비 포함 총 30만 원"
+      ],
+      "expected": {
+        "state.quantity": 6,
+        "question": null
+      }
+    },
+    {
+      "id": "E18",
+      "category": "quantity",
+      "title": "수량을 예산으로 오해하지 않기",
+      "turns": [
+        "친구 3명"
+      ],
+      "expected": {
+        "state.quantity": 3,
+        "state.budget.amount_krw": null
+      }
+    },
+    {
+      "id": "E19",
+      "category": "preservation",
+      "title": "제외 추가 후 예산 갱신",
+      "turns": [
+        "친구 두 세트 같은 상품, 총 상품값 10만 원",
+        "한과 제외",
+        "12만 원으로"
+      ],
+      "expected": {
+        "state.excluded_categories": [
+          "hangwa"
+        ],
+        "state.quantity": 2,
+        "state.budget.scope": "total",
+        "state.budget.amount_krw": 120000
+      }
+    },
+    {
+      "id": "E20",
+      "category": "preservation",
+      "title": "제외 취소",
+      "turns": [
+        "부모님",
+        "과일은 제외",
+        "과일은 포함해도 돼"
+      ],
+      "expected": {
+        "state.excluded_categories": []
+      }
+    },
+    {
+      "id": "E21",
+      "category": "preservation",
+      "title": "수신자 추가",
+      "turns": [
+        "부모님 한 세트 상품값 총 7만 원",
+        "친척에도 같은 상품 두 세트"
+      ],
+      "expected": {
+        "state.recipients": [
+          "부모님",
+          "친척"
+        ],
+        "state.quantity": 2
+      }
+    },
+    {
+      "id": "E22",
+      "category": "preservation",
+      "title": "브랜드 제한 해제",
+      "turns": [
+        "부모님 가상브랜드2 한 세트 상품값 총 9만 원",
+        "브랜드 상관없어요"
+      ],
+      "expected": {
+        "state.brand": null,
+        "state.budget.amount_krw": 90000
+      }
+    },
+    {
+      "id": "E23",
+      "category": "clarification",
+      "title": "알레르기 정보 지속",
+      "turns": [
+        "친구 한 세트 상품값 총 9만 원",
+        "알레르기가 있어",
+        "격식 있는 포장"
+      ],
+      "expected": {
+        "question": "issue",
+        "blocked": true
+      }
+    },
+    {
+      "id": "E24",
+      "category": "clarification",
+      "title": "성분 응답 뒤 추천 차단",
+      "turns": [
+        "친구 한 세트 상품값 총 9만 원",
+        "알레르기가 있어",
+        "우유"
+      ],
+      "expected": {
+        "state.excluded_ingredients": [
+          "우유"
+        ],
+        "result.status": "insufficient_product_info",
+        "blocked": true
+      }
+    },
+    {
+      "id": "E25",
+      "category": "clarification",
+      "title": "정확한 마감일 제공",
+      "turns": [
+        "친구 한 세트 상품값 총 9만 원",
+        "명절 전까지",
+        "2026-09-20"
+      ],
+      "expected": {
+        "state.delivery_by": "2026-09-20",
+        "question": null
+      }
+    },
+    {
+      "id": "E26",
+      "category": "clarification",
+      "title": "잘못된 날짜 거부",
+      "turns": [
+        "부모님 한 세트 상품값 총 8만 원, 2026-02-30까지"
+      ],
+      "expected": {
+        "state.delivery_by": null,
+        "blocked": true
+      }
+    },
+    {
+      "id": "E27",
+      "category": "clarification",
+      "title": "모호한 저렴함 유지",
+      "turns": [
+        "친구 한 세트 상품값 총 8만 원",
+        "좀 더 저렴하게",
+        "견과류 제외"
+      ],
+      "expected": {
+        "state.budget.amount_krw": 80000,
+        "question": "issue",
+        "blocked": true
+      }
+    },
+    {
+      "id": "E28",
+      "category": "clarification",
+      "title": "시작 안내",
+      "turns": [
+        "선물 좀 골라줘"
+      ],
+      "expected": {
+        "question": "recipient",
+        "state.recipients": []
+      }
+    },
+    {
+      "id": "E29",
+      "category": "shipping",
+      "title": "배송비 포함 확인",
+      "turns": [
+        "손주 한 세트 총 6만 원",
+        "배송비 포함"
+      ],
+      "expected": {
+        "state.budget.shipping_included": true,
+        "question": null
+      }
+    },
+    {
+      "id": "E30",
+      "category": "shipping",
+      "title": "배송비 제외 확인",
+      "turns": [
+        "자녀 한 세트 총 6만 원",
+        "상품값만"
+      ],
+      "expected": {
+        "state.budget.shipping_included": false,
+        "question": null
+      }
+    },
+    {
+      "id": "E31",
+      "category": "shipping",
+      "title": "배송비 제외에서 포함 변경",
+      "turns": [
+        "친구 한 세트 상품값 총 8만 원",
+        "배송비 포함으로 바꿔"
+      ],
+      "expected": {
+        "state.budget.shipping_included": true,
+        "state.budget.amount_krw": 80000
+      }
+    },
+    {
+      "id": "E32",
+      "category": "shipping",
+      "title": "부정문 배송비",
+      "turns": [
+        "부모님 한 세트 총 7만 원",
+        "배송비 포함하지 마"
+      ],
+      "expected": {
+        "state.budget.shipping_included": false
+      }
+    },
+    {
+      "id": "E33",
+      "category": "boundary",
+      "title": "견과 알레르기 안전 단정 방지",
+      "turns": [
+        "부모님 한 세트 총 상품값 9만 원, 견과류 알레르기"
+      ],
+      "expected": {
+        "blocked": true
+      }
+    },
+    {
+      "id": "E34",
+      "category": "boundary",
+      "title": "조건 없는 초기 추천 차단",
+      "turns": [],
+      "expected": {
+        "question": "recipient",
+        "blocked": true
+      }
+    },
+    {
+      "id": "E35",
+      "category": "boundary",
+      "title": "취향 철회",
+      "turns": [
+        "친구 한 세트 상품값 총 8만 원, 단맛 없는 걸로",
+        "단맛은 상관없어"
+      ],
+      "expected": {
+        "state.preferences": []
+      }
+    },
+    {
+      "id": "E36",
+      "category": "boundary",
+      "title": "범위 밖 상품 요청",
+      "turns": [
+        "손녀 한 세트 상품값 총 10만 원, 운동화로 추천해줘"
+      ],
+      "expected": {
+        "blocked": true
+      }
+    }
+  ]
+}
