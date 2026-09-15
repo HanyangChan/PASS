@@ -63,3 +63,12 @@ React와 Vinext를 사용하며 Sites용 설정을 포함합니다. `.openai/hos
 3. 동일 추천 로직·조건 패널에서 대조·반사실 설명 유무에 따른 조건 이해 효과 평가
 
 [두 축의 연구 방향과 비교 설명 설계](docs/research/counterfactual-explanations.md)를 참고하세요. 초기 버전은 예산 증액만 비교하며, 후보 추가와 추천 순위 변경을 구분합니다. 비교 카드는 적용 버튼을 누르기 전까지 실제 조건을 바꾸지 않습니다.
+
+## 2026-09-15 — HCI guided conversation
+
+- Added `lib/conversation.mjs`: one question at a time, contextual short answers, and in-chat read-back of recipient, quantity and budget.
+- Unspecified budget scope stays unconfirmed; recommendations and what-if cards wait for recipient, quantity, budget scope, shipping and same-product confirmation.
+- Allergy/deadline clarification survives unrelated edits. Different gifts per recipient remain unsupported and are explained explicitly.
+- Larger quick-reply targets and automatic conversation scrolling.
+- Validation: 34 automated tests pass (26 existing + 8 conversation regressions). No user study or browser interaction testing conducted. Synthetic food catalog only; no LLM, voice, real checkout or age-specific matching.
+- Next: independent Korean evaluation set; A/B task/log design; senior-user pilot; LLM structured-output integration.
