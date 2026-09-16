@@ -12,6 +12,6 @@ export async function POST(request:Request){
  let input;try{input=validateRequest(JSON.parse(raw));}catch{return json({error:'입력 형식을 확인해주세요.'},400);}
  const {GEMINI_API_KEY,GEMINI_MODEL}=config();
  if(!GEMINI_API_KEY)return json({...singleTurn({state:input.state,issues:input.issues},input.text,products),mode:'rules',notice:'Gemini 연결 대기 · 기본 해석으로 처리했습니다.'});
- try{return json({...await llmTurn(input,products,{apiKey:GEMINI_API_KEY,model:GEMINI_MODEL||'gemini-2.5-flash'}),mode:'llm',notice:'Gemini로 대화 조건을 이해했어요.'});}
+ try{return json({...await llmTurn(input,products,{apiKey:GEMINI_API_KEY,model:GEMINI_MODEL||'gemini-3.6-flash'}),mode:'llm',notice:'Gemini로 대화 조건을 이해했어요.'});}
  catch{return json({...singleTurn({state:input.state,issues:input.issues},input.text,products),mode:'rules',notice:'Gemini 응답을 받지 못해 기본 해석으로 처리했습니다.'});}
 }
