@@ -13,5 +13,5 @@ export async function POST(request:Request){
  const {XAI_API_KEY,XAI_MODEL}=config();
  if(!XAI_API_KEY)return json({...singleTurn({state:input.state,issues:input.issues},input.text,products),mode:'rules',notice:'xAI 연결 대기 · 기본 해석으로 처리했습니다.'});
  try{return json({...await llmTurn(input,products,{apiKey:XAI_API_KEY,model:XAI_MODEL||'grok-4.6'}),mode:'llm',notice:'xAI로 대화 조건을 이해했어요.'});}
- catch{return json({error:'AI 응답을 받지 못했습니다. 조건은 바꾸지 않았어요. 잠시 후 다시 보내주세요.'},503);}
+ catch{return json({...singleTurn({state:input.state,issues:input.issues},input.text,products),mode:'rules',notice:'xAI 응답을 받지 못해 기본 해석으로 처리했습니다.'});}
 }
