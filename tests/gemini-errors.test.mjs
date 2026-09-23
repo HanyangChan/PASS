@@ -13,3 +13,10 @@ test('Gemini thought parts are ignored while split answer text is assembled',asy
  const r=await llmTurn({state,issues:[],history:[],text:'도와줘'},[],{apiKey:'test',fetcher:async()=>Response.json({candidates:[{content:{parts:[{thought:true,text:'private reasoning'},{text:payload.slice(0,30)},{text:payload.slice(30)}]}}]})});
  assert.deepEqual(r.session.state,state);
 });
+test('one transient retry shares its deadline, while auth and quota failures are not retried',async()=>{
+ const state=singleInitial(),input={state,issues:[],history:[],text:'도와줘'};
+ let calls=0,signal;
+ await llmTurn(input,[],{apiKey:'test',fetcher:async(url,options)=>{calls++;if(calls===1){signal=options.signal;return Response.json({error:{message:'unavailable'}},{status:503});}assert.equal(options.signal,signal);return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({state,question:null})}]}}]});}});
+ assert.equal(calls,2);
+ for(const status of [403,429,503]){calls=0;await assert.rejects(()=>llmTurn(input,[],{apiKey:'test',fetcher:async()=>{calls++;return Response.json({error:{message:'unavailable'}},{status});}}));assert.equal(calls,status===503?2:1);}
+});

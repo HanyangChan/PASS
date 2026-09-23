@@ -14,3 +14,9 @@ test('model cannot silently drop a previously reported allergen',async()=>{const
 test('current quick replies use the deterministic fast path',()=>{const input={...body(),text:'부모님',source:'quick_reply'};const r=fastRuleTurn(input,products);assert.deepEqual(r.session.state.recipients,['부모님']);assert.equal(r.question.key,'amount');});
 test('short yes and no replies resolve the pending shipping question without an LLM',()=>{for(const [text,expected] of [['네',true],['아니',false]]){const input={...body(),text,source:'typed',state:{...singleInitial(),recipients:['동창'],budget:{amount_krw:50000,shipping_included:null}}};const r=fastRuleTurn(input,products);assert.equal(r.session.state.budget.shipping_included,expected);assert.equal(r.question.key,null);}});
 test('free-form messages fall through to Gemini',()=>{const input={...body(),text:'동창에게 줄 덜 단 차 선물로 바꿔줘',source:'typed'};assert.equal(fastRuleTurn(input,products),null);});
+test('Gemini shipping clarification uses fast replies and clears only the resolved question',()=>{
+ const input={...body(),state:{...singleInitial(),recipients:['친구'],budget:{amount_krw:50000,shipping_included:null}},issues:['예산 5만 원에 배송비가 포함되나요?'],text:'아니',source:'typed'};
+ assert.equal(singleQuestion({state:input.state,issues:input.issues}).key,'shipping');
+ const r=fastRuleTurn(input,products);assert.equal(r.session.state.budget.shipping_included,false);assert.deepEqual(r.session.issues,[]);
+ assert.equal(fastRuleTurn({...input,issues:['알레르기 성분을 알려주세요.']},products),null);
+});
