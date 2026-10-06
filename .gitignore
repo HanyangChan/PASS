@@ -36,3 +36,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Expo mobile generated files
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/dist/
+/mobile/ios/
+/mobile/android/

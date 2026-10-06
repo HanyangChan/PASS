@@ -4,6 +4,10 @@ Session-based personalized recommendation chatbot with contrastive and budget co
 
 한국어 명절 선물 대화에서 예산·수량·선호·제외 조건을 갱신하고, 변경 내역·추천 상품·가상 예산 비교를 함께 표시하는 연구용 프로토타입입니다.
 
+## 모바일 앱 전환
+
+`mobile/`에 Expo / React Native iOS·Android 앱을 추가했습니다. 실행·구현 범위와 남은 디자인 접근 사항은 [모바일 README](mobile/README.md)를 참고하세요. 설문조사는 당분간 비활성화되어 있습니다.
+
 ## 데모
 
 [명절 선물 추천 데모](https://myeongjeol-gift-lab.hwangma.chatgpt.site/) — 현재 소유자 전용 접근입니다.
@@ -83,4 +87,4 @@ Corrected the 14 diagnosed failures without changing the diagnostic labels. Froz
 
 ## Explanation A/B pilot
 
-Open `/study` (or “설명 평가” from the main page) for two fixed gift tasks. Four randomized task/condition sequences compare basic reasons with added counterfactual explanations; candidates and budget controls are identical across conditions. Choice, elapsed time, comprehension and three ratings remain in memory and can be downloaded as JSON after completion or withdrawal. No automatic upload. See [pilot protocol](evaluation/study-protocol.md) for limitations, timing definitions and remaining user/browser validation. This evaluates explanation presentation, not conversational input usability.
+The explanation pilot is temporarily disabled during the mobile app transition. The main-page entry point is removed and `/study` redirects to `/`. Its implementation remains in `app/study/study-client.tsx`; `lib/features.ts` controls the pause. When re-enabling it, also restore the main-page entry point. The preserved pilot contains two fixed gift tasks. Four randomized task/condition sequences compare basic reasons with added counterfactual explanations; candidates and budget controls are identical across conditions. Choice, elapsed time, comprehension and three ratings remain in memory and can be downloaded as JSON after completion or withdrawal. No automatic upload. See [pilot protocol](evaluation/study-protocol.md) for limitations, timing definitions and remaining user/browser validation. This evaluates explanation presentation, not conversational input usability.
