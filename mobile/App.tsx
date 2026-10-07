@@ -36,13 +36,16 @@ import {
   ArrowLeft,
   Heart,
   Share2,
-  Send,
+  ArrowUp,
   ChevronDown,
   Star,
 } from 'lucide-react-native';
 import SearchIcon from './assets/figma/search.svg';
 import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
+import { ChatTools } from './src/ChatTools';
+import { AttachmentPicker } from './src/AttachmentPicker';
+import { usePrototype } from './src/PrototypeFlows';
 import {
   Gift,
   popularGifts,
@@ -134,6 +137,12 @@ export function AppContent({
     setAllRecent,
   } = state;
   const router = useRouter();
+  const { loggedIn } = usePrototype();
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [priceLimit, setPriceLimit] = useState<number | null>(null);
+  const [draftFilter, setDraftFilter] = useState('전체');
+  const [draftSort, setDraftSort] = useState('인기순');
+  const [draftPrice, setDraftPrice] = useState<number | null>(null);
   const screen = activeScreen ?? baseScreen;
   const detail = detailPage ? selectedDetail : null;
   const resultsOpen = resultPage;
@@ -257,7 +266,7 @@ export function AppContent({
   );
   let ranked = rankingByRecipient[recipient].filter(
     (g) =>
-      (filter === '전체' || g.category === filter) && g.name.includes(search),
+      (filter === '전체' || g.category === filter) && g.name.includes(search) && (priceLimit === null || g.price <= priceLimit),
   );
   if (sort !== '인기순')
     ranked = [...ranked].sort((a, b) =>
@@ -407,9 +416,7 @@ export function AppContent({
                 <Button
                   label="선물하기"
                   onPress={() =>
-                    setNotice(
-                      '현재는 데모 앱이에요. 실제 구매·선물 발송은 준비 중입니다.',
-                    )
+                    router.push('/gift-confirm')
                   }
                 />
               </View>
@@ -502,8 +509,8 @@ export function AppContent({
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="마이 페이지 열기"
-                    onPress={() => navigate('mypage')}
+                    accessibilityLabel={loggedIn ? '마이 페이지 열기' : '로그인 체험하기'}
+                    onPress={() => loggedIn ? navigate('mypage') : router.push('/login')}
                     style={s.profile}
                   >
                     <User size={18} color={c.muted} />
@@ -582,7 +589,7 @@ export function AppContent({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="상품군 필터"
-                    onPress={() => setShowFilter(true)}
+                    onPress={() => { setDraftFilter(filter); setDraftSort(sort); setDraftPrice(priceLimit); setShowFilter(true); }}
                     style={s.iconButton}
                   >
                     <FilterIcon />
@@ -669,12 +676,19 @@ export function AppContent({
                       setMessages([]);
                       setInput('');
                       setComparisonId(null);
+                      setAttachments([]);
                     }}
                     style={s.reset}
                   >
                     <Text style={s.small}>새 대화</Text>
                   </Pressable>
                 </View>
+                <ChatTools conditions={session.state} onVoice={setInput} onApply={(patch) => {
+                    const turn = finishSingle(session.state, apply(session.state, patch), [], products);
+                    setSession(turn.session);
+                    setComparisonId(null);
+                    setMessages(old => [...old, { role: 'user', text: '추천 조건을 변경했어요.' }, { role: 'assistant', text: turn.message }]);
+                  }} />
                 <ScrollView
                   ref={chatRef}
                   style={s.flex}
@@ -698,39 +712,35 @@ export function AppContent({
                       {m.text}
                     </Text>
                   ))}
-                  {!question.key && (
+                  {!question.key && result.items.length === 0 && <View style={s.noMatches}>
+                    <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
+                    <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
+                    <Button label="제외 조건 풀어보기" onPress={() => {
+                      const turn = finishSingle(session.state, apply(session.state, { excluded_categories: [], excluded_ingredients: [] }), [], products);
+                      setSession(turn.session); setMessages(old => [...old, { role: 'assistant', text: turn.message }]);
+                    }}/>
+                  </View>}
+                  {!question.key && result.items.length > 0 && (
                     <>
-                      {tiles(result.items.map(toGift))}
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chatCards}>
+                        {result.items.map((p: any, i: number) => {
+                          const g = toGift(p);
+                          return <View key={g.id} style={s.chatCard}>
+                            <View style={s.chatCardHero}><GiftImage gift={g}/><Text style={s.rankBadge}>{i + 1}순위</Text>
+                              <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} ${liked(g) ? '찜 해제' : '찜하기'}`} onPress={() => save(g)} style={s.cardHeart}><Heart size={22} color={liked(g) ? c.primary : c.muted}/></Pressable>
+                            </View>
+                            <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
+                              <Button label="자세히 보기" onPress={() => open(g)}/>
+                            </View>
+                          </View>;
+                        })}
+                      </ScrollView>
                       <View style={s.resultButton}>
-                        <Button
-                          label="추천 결과 · 예산 비교 보기"
-                          onPress={() => setResultsOpen(true)}
-                        />
+                        <Pressable accessibilityRole="button" onPress={() => setResultsOpen(true)} style={s.compareButton}><Sparkles size={20} color={c.primary}/><Text style={s.compareText}>조건을 바꾸면 어떻게 달라질까요?</Text><ChevronDown size={18} color={c.primary}/></Pressable>
                       </View>
                     </>
                   )}
                 </ScrollView>
-                {session.state.recipients.length > 0 && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="선물 조건 수정"
-                    onPress={() => inputRef.current?.focus()}
-                    style={s.conditionStrip}
-                  >
-                    <Text numberOfLines={2} style={s.small}>
-                      {session.state.recipients.join(' · ')}
-                      {session.state.budget.amount_krw
-                        ? ` · ${won(session.state.budget.amount_krw)} 이하`
-                        : ''}
-                      {session.state.budget.shipping_included === null
-                        ? ''
-                        : session.state.budget.shipping_included
-                          ? ' · 배송비 포함'
-                          : ' · 상품값 기준'}{' '}
-                      · 수정하려면 입력해주세요
-                    </Text>
-                  </Pressable>
-                )}
                 <View style={s.inputArea}>
                   <ScrollView
                     horizontal
@@ -745,25 +755,36 @@ export function AppContent({
                       />
                     ))}
                   </ScrollView>
+                  {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
                   <View style={s.composer}>
+                    <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
+                    <View style={s.inputShell}>
                     <TextInput
                       ref={inputRef}
                       accessibilityLabel="선물 조건 입력"
                       value={input}
                       onChangeText={setInput}
-                      placeholder="어떤 분께 드릴 선물인가요?"
+                      placeholder="받는 분, 예산을 말해 주세요"
                       maxLength={1200}
                       multiline
                       style={[s.input, s.flex]}
                     />
+                    <ChatTools mode="voice" conditions={session.state} onVoice={setInput} onApply={() => {}} />
+                    </View>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="메시지 보내기"
-                      disabled={!input.trim()}
-                      onPress={() => send(input)}
-                      style={[s.send, !input.trim() && s.disabled]}
+                      disabled={!input.trim() && attachments.length === 0}
+                      onPress={() => {
+                        if (attachments.length) {
+                          setMessages(old => [...old, { role: 'user', text: `예시 첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '예시 첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 실제 파일 분석은 제공하지 않아요.' }]);
+                          setAttachments([]);
+                        }
+                        if (input.trim()) send(input);
+                      }}
+                      style={[s.send, !input.trim() && attachments.length === 0 && s.disabled]}
                     >
-                      <Send size={18} color={c.white} />
+                      <ArrowUp size={22} color={input.trim() || attachments.length ? c.white : c.muted} />
                     </Pressable>
                   </View>
                 </View>
@@ -775,7 +796,9 @@ export function AppContent({
                 </View>
                 <View style={s.myIntro}>
                   <User size={32} color={c.primary} />
-                  <Text style={s.sectionTitle}>내 선물 기록</Text>
+                  <Text style={s.sectionTitle}>{loggedIn ? '체험 사용자' : '로그인하면 이어서 볼 수 있어요'}</Text>
+                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인 체험하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
+                  {!loggedIn && <Button label="이 기기의 선물 준비 기록" onPress={() => router.push('/account')}/> }
                   <Text style={s.subtitle}>
                     찜과 최근 본 선물은 이 기기에 저장돼요.
                   </Text>
@@ -847,15 +870,19 @@ export function AppContent({
         )}
       </KeyboardAvoidingView>
       <Modal
-        visible={showFilter}
+        visible={showFilter && activeScreen === 'ranking'}
         transparent
         animationType="slide"
         onRequestClose={() => setShowFilter(false)}
       >
         <View style={s.overlay}>
           <View style={s.sheet}>
-            <Text style={s.title}>상품군</Text>
-            <ScrollView style={s.filterScroll}>
+            <View style={s.row}><Text style={[s.title,s.flex]}>필터</Text><Pressable accessibilityRole="button" accessibilityLabel="필터 닫기" onPress={() => setShowFilter(false)} style={s.iconButton}><Text style={s.sectionTitle}>×</Text></Pressable></View>
+            <ScrollView contentContainerStyle={{ gap: 16 }} keyboardShouldPersistTaps="handled">
+            <Text style={s.sectionTitle}>정렬</Text><View style={s.filterChoices}>{['인기순', '낮은 가격순', '높은 가격순'].map(label => <Chip key={label} label={label} selected={draftSort === label} onPress={() => setDraftSort(label)}/>)}</View>
+            <Text style={s.sectionTitle}>가격</Text><View style={s.filterChoices}>{[{ label: '전체', value: null }, { label: '3만 원 이하', value: 30000 }, { label: '5만 원 이하', value: 50000 }, { label: '10만 원 이하', value: 100000 }].map(item => <Chip key={item.label} label={item.label} selected={draftPrice === item.value} onPress={() => setDraftPrice(item.value)}/>)}</View>
+            <Text style={s.sectionTitle}>상품군</Text>
+            <View>
               <View style={s.filterChoices}>
                 {[
                   '전체',
@@ -868,18 +895,24 @@ export function AppContent({
                   <Chip
                     key={label}
                     label={label}
-                    selected={filter === label}
-                    onPress={() => setFilter(label)}
+                    selected={draftFilter === label}
+                    onPress={() => setDraftFilter(label)}
                   />
                 ))}
               </View>
+            </View>
             </ScrollView>
-            <Button label="적용하기" onPress={() => setShowFilter(false)} />
+            <View style={s.row}><Button label="초기화" onPress={() => { setDraftFilter('전체'); setDraftPrice(null); setDraftSort('인기순'); }}/><View style={s.flex}><Button label="필터 적용" onPress={() => { setFilter(draftFilter); setSort(draftSort); setPriceLimit(draftPrice); setShowFilter(false); }} /></View></View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
+}
+export function usePassContext() {
+  const state = useContext(PassContext);
+  if (!state) throw new Error('PassProvider is required');
+  return state;
 }
 function usePassState() {
   const [screen, setScreen] = useState<Screen>('home'),
@@ -1055,7 +1088,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: { fontFamily: f.bold, fontSize: 14, color: c.white },
-  disabled: { opacity: 0.4 },
+  disabled: { backgroundColor: c.segment },
   horizontal: { paddingHorizontal: 20, gap: 12 },
   demoNote: {
     fontFamily: f.regular,
@@ -1238,7 +1271,7 @@ const s = StyleSheet.create({
     lineHeight: 23,
   },
   inputArea: {
-    backgroundColor: c.white,
+    backgroundColor: c.background,
     paddingTop: 12,
     paddingBottom: 12,
     borderTopWidth: 1,
@@ -1253,10 +1286,7 @@ const s = StyleSheet.create({
     gap: 10,
   },
   input: {
-    backgroundColor: c.segment,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 12,
+    backgroundColor: c.white,
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: c.text,
@@ -1268,10 +1298,11 @@ const s = StyleSheet.create({
   send: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 24,
     backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   reset: { padding: 8, minHeight: 44, justifyContent: 'center' },
   conditionStrip: {
@@ -1279,7 +1310,21 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  resultButton: { marginHorizontal: 20 },
+  resultButton: { marginHorizontal: 16 },
+  compareButton: { backgroundColor: c.tint, borderRadius: 14, minHeight: 48, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  compareText: { flex: 1, fontFamily: f.bold, fontSize: 13, color: c.primary },
+  attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
+  inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
+  attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
+  attachmentChip: { borderWidth: 1, borderColor: c.border, backgroundColor: c.white, borderRadius: 12, padding: 10 },
+  noMatches: { marginHorizontal: 16, padding: 16, backgroundColor: c.white, borderRadius: 16, gap: 12 },
+  chatCards: { paddingHorizontal: 16, gap: 12, alignItems: 'stretch' },
+  chatCard: { width: 248, backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 16, overflow: 'hidden' },
+  chatCardHero: { height: 92, backgroundColor: c.image, alignItems: 'center', justifyContent: 'center' },
+  rankBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: c.primary, color: c.white, fontFamily: f.bold, fontSize: 12, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  cardHeart: { position: 'absolute', top: 4, right: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  chatCardBody: { padding: 14, gap: 8 },
+  chatCardPrice: { fontFamily: f.bold, fontSize: 20, color: c.text },
   hero: { height: 256, backgroundColor: c.image },
   heroImage: { width: '100%', height: 256 },
   heroPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -1371,6 +1416,7 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
+    maxHeight: '90%',
     backgroundColor: c.white,
     padding: 24,
     paddingBottom: 40,
