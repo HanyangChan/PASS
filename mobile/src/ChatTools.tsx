@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Mic, Square, X, Gift, ChevronDown, ChevronUp, Plus } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent, type ExpoSpeechRecognitionErrorCode } from 'expo-speech-recognition';
@@ -32,6 +32,16 @@ const voiceErrors: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
   busy: '음성 인식이 이미 사용 중이에요. 잠시 후 다시 말하거나 아래에 직접 입력해주세요.',
 };
 const voiceErrorFallback = '음성을 인식하지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.';
+// The app keeps audio on the device; browsers have no on-device mode, so the web demo uses browser recognition.
+const onDeviceOnly = Platform.OS !== 'web';
+const onDeviceUnsupported = '이 기기는 기기 안에서만 처리하는 음성 인식을 지원하지 않아요. 아래에 직접 입력해주세요.';
+const koreanModelMissing = '기기 안에서 인식하려면 한국어 음성 인식 모델이 필요해요. 모델을 받은 뒤 다시 말하거나 아래에 직접 입력해주세요.';
+const modelDownloadNotes = {
+  opened_dialog: '모델 다운로드 창을 열었어요. 받은 뒤 다시 말하기를 눌러주세요.',
+  download_success: '한국어 모델을 받았어요. 다시 말하기를 눌러주세요.',
+  download_scheduled: '다운로드가 예약됐어요. Wi-Fi 연결 등 조건이 맞으면 진행돼요. 완료 후 다시 말하기를 눌러주세요.',
+} as const;
+const hasKorean = (locales: string[]) => locales.some(locale => locale.toLowerCase().startsWith('ko'));
 const toLabel = (value: string) => conditionLabels[value] ?? value;
 const toValue = (value: string, field: string) => {
   if (field === 'preferences' && value === '차') return 'category:tea';
@@ -49,6 +59,8 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   const [error, setError] = useState('');
   const [voiceError, setVoiceError] = useState('');
   const [stopping, setStopping] = useState(false);
+  const [needsModel, setNeedsModel] = useState(false);
+  const [modelNote, setModelNote] = useState('');
   // App.tsx mounts two ChatTools at once; only the instance that started recognition handles events.
   const listeningRef = useRef(false);
   const voiceOpenRef = useRef(false);
@@ -60,6 +72,9 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   });
   useSpeechRecognitionEvent('error', event => {
     if (!listeningRef.current || event.error === 'aborted') return;
+    if (onDeviceOnly && Platform.OS === 'android' && event.error === 'language-not-supported') {
+      setNeedsModel(true); setVoiceError(koreanModelMissing); return;
+    }
     setVoiceError(voiceErrors[event.error] ?? voiceErrorFallback);
   });
   useSpeechRecognitionEvent('end', () => {
@@ -72,24 +87,42 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   useEffect(() => () => { if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); } }, []);
   const failVoice = (message: string) => { setVoiceError(message); setStage('review'); };
   const startListening = async () => {
-    setTranscript(''); heardRef.current = ''; setVoiceError(''); setStopping(false);
+    setTranscript(''); heardRef.current = ''; setVoiceError(''); setStopping(false); setNeedsModel(false); setModelNote('');
     if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) return failVoice(voiceErrors['service-not-allowed']!);
+    if (onDeviceOnly && !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) return failVoice(onDeviceUnsupported);
     try {
-      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (onDeviceOnly && Platform.OS === 'android') {
+        // installedLocales is only meaningful for the on-device service package; if the lookup fails, let start() report errors.
+        const locales = await ExpoSpeechRecognitionModule.getSupportedLocales({ androidRecognitionServicePackage: 'com.google.android.as' }).catch(() => null);
+        if (!voiceOpenRef.current) return;
+        if (locales && !hasKorean(locales.installedLocales)) { setNeedsModel(true); return failVoice(koreanModelMissing); }
+      }
+      // On-device recognition only needs the microphone; the speech recognizer permission is for network recognition on iOS.
+      const permission = onDeviceOnly
+        ? await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync()
+        : await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       if (!voiceOpenRef.current) return;
       if (!permission.granted) return failVoice(voiceErrors['not-allowed']!);
       listeningRef.current = true;
       setStage('recording');
-      ExpoSpeechRecognitionModule.start({ lang: 'ko-KR', interimResults: true, continuous: false });
+      ExpoSpeechRecognitionModule.start({ lang: 'ko-KR', interimResults: true, continuous: false, requiresOnDeviceRecognition: onDeviceOnly });
     } catch {
       listeningRef.current = false;
       if (voiceOpenRef.current) failVoice(voiceErrorFallback);
     }
   };
   const stopListening = () => { setStopping(true); ExpoSpeechRecognitionModule.stop(); };
+  const downloadKoreanModel = async () => {
+    try {
+      const result = await ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({ locale: 'ko-KR' });
+      setModelNote(modelDownloadNotes[result.status]);
+    } catch {
+      setModelNote('모델을 받지 못했어요. 아래에 직접 입력해주세요.');
+    }
+  };
   const openVoice = () => {
     voiceOpenRef.current = true;
-    setStage('ready'); setTranscript(''); setVoiceError(''); setStopping(false); setPanel('voice');
+    setStage('ready'); setTranscript(''); setVoiceError(''); setStopping(false); setNeedsModel(false); setModelNote(''); setPanel('voice');
   };
   const openConditions = () => {
     setDraft(Object.fromEntries(fields.map(([key]) => {
@@ -146,11 +179,15 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
             {panel === 'voice' ? <>
-              <Text style={s.note}>기기의 음성 인식 서비스로 한국어 말을 글자로 바꿔요. 기기 설정에 따라 음성이 인식 서비스 서버로 전송될 수 있어요. 결과는 바로 보내지 않고, 확인·수정한 뒤 입력창에 넣어요.</Text>
+              <Text style={s.note}>{onDeviceOnly
+                ? '음성을 외부 서버로 보내지 않도록 기기 안에서만 한국어 말을 글자로 바꿔요. 결과는 바로 보내지 않고, 확인·수정한 뒤 입력창에 넣어요.'
+                : '브라우저의 음성 인식으로 한국어 말을 글자로 바꿔요. 브라우저에 따라 음성이 인식 서비스 서버로 전송될 수 있어요. 결과는 바로 보내지 않고, 확인·수정한 뒤 입력창에 넣어요.'}</Text>
               <View style={s.voice}><Mic size={48} color={c.primary}/><Text style={s.title}>{stage === 'ready' ? '어떤 선물을 찾고 있나요?' : stage === 'recording' ? (stopping ? '인식을 마무리하고 있어요…' : '듣고 있어요…') : '입력 내용을 확인해주세요'}</Text>
                 {stage === 'recording' && !!transcript && <Text accessibilityLiveRegion="polite" style={s.live}>{transcript}</Text>}
                 <Text style={s.note}>{stage === 'recording' ? '말하기를 마친 뒤 완료를 눌러주세요.' : '예: 부모님께 드릴 5만 원 이하 선물'}</Text></View>
               {!!voiceError && <Text accessibilityRole="alert" style={s.error}>{voiceError}</Text>}
+              {needsModel && <Pressable accessibilityRole="button" onPress={() => void downloadKoreanModel()} style={s.secondary}><Text style={s.toolText}>한국어 음성 인식 모델 받기</Text></Pressable>}
+              {!!modelNote && <Text accessibilityLiveRegion="polite" style={s.note}>{modelNote}</Text>}
               {stage === 'review' && <TextInput accessibilityLabel="음성 인식 내용" multiline value={transcript} onChangeText={setTranscript} placeholder="찾는 선물을 직접 입력할 수 있어요." style={s.transcript}/>}
               {stage !== 'review' ? <>
                 <Pressable accessibilityRole="button" disabled={stopping} onPress={() => { if (stage === 'ready') void startListening(); else stopListening(); }} style={[s.primary, stopping && { opacity: 0.4 }]}><Square size={16} color={c.white}/><Text style={s.white}>{stage === 'ready' ? '말하기 시작' : '말하기 완료'}</Text></Pressable>
