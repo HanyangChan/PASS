@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Mic, Square, X, Gift, ChevronDown, ChevronUp, Plus } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent, type ExpoSpeechRecognitionErrorCode } from 'expo-speech-recognition';
 import { colors as c, fonts as f } from './theme';
 import { Chip } from './components';
 
@@ -20,6 +21,17 @@ const fields = [
   ['packaging', '포장', '격식 있는 포장 / 기본 포장'],
 ] as const;
 const conditionLabels: Record<string, string> = { less_sweet: '덜 달게', unsweetened: '단맛 없이', 'category:tea': '차', nuts: '견과류', hangwa: '한과', fruit: '과일', coffee: '커피', tea: '차', formal: '격식 있는 포장', basic: '기본 포장' };
+const voiceErrors: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
+  'no-speech': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
+  'speech-timeout': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
+  'not-allowed': '마이크 또는 음성 인식 권한이 없어요. 기기 설정에서 허용하거나 아래에 직접 입력해주세요.',
+  'service-not-allowed': '이 기기에서 음성 인식을 사용할 수 없어요. iOS는 Siri 및 받아쓰기 설정을 확인해주세요. 아래에 직접 입력할 수 있어요.',
+  'language-not-supported': '이 기기의 음성 인식이 한국어를 지원하지 않아요. 아래에 직접 입력해주세요.',
+  network: '네트워크 문제로 인식하지 못했어요. 연결을 확인한 뒤 다시 말하거나 아래에 직접 입력해주세요.',
+  'audio-capture': '마이크를 사용할 수 없어요. 다른 앱이 마이크를 쓰고 있는지 확인하거나 아래에 직접 입력해주세요.',
+  busy: '음성 인식이 이미 사용 중이에요. 잠시 후 다시 말하거나 아래에 직접 입력해주세요.',
+};
+const voiceErrorFallback = '음성을 인식하지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.';
 const toLabel = (value: string) => conditionLabels[value] ?? value;
 const toValue = (value: string, field: string) => {
   if (field === 'preferences' && value === '차') return 'category:tea';
@@ -35,6 +47,50 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [shipping, setShipping] = useState<boolean | null>(null);
   const [error, setError] = useState('');
+  const [voiceError, setVoiceError] = useState('');
+  const [stopping, setStopping] = useState(false);
+  // App.tsx mounts two ChatTools at once; only the instance that started recognition handles events.
+  const listeningRef = useRef(false);
+  const voiceOpenRef = useRef(false);
+  const heardRef = useRef('');
+  useSpeechRecognitionEvent('result', event => {
+    if (!listeningRef.current) return;
+    heardRef.current = event.results[0]?.transcript ?? '';
+    setTranscript(heardRef.current);
+  });
+  useSpeechRecognitionEvent('error', event => {
+    if (!listeningRef.current || event.error === 'aborted') return;
+    setVoiceError(voiceErrors[event.error] ?? voiceErrorFallback);
+  });
+  useSpeechRecognitionEvent('end', () => {
+    if (!listeningRef.current) return;
+    listeningRef.current = false;
+    setStopping(false);
+    if (!heardRef.current.trim()) setVoiceError(old => old || voiceErrorFallback);
+    setStage('review');
+  });
+  useEffect(() => () => { if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); } }, []);
+  const failVoice = (message: string) => { setVoiceError(message); setStage('review'); };
+  const startListening = async () => {
+    setTranscript(''); heardRef.current = ''; setVoiceError(''); setStopping(false);
+    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) return failVoice(voiceErrors['service-not-allowed']!);
+    try {
+      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!voiceOpenRef.current) return;
+      if (!permission.granted) return failVoice(voiceErrors['not-allowed']!);
+      listeningRef.current = true;
+      setStage('recording');
+      ExpoSpeechRecognitionModule.start({ lang: 'ko-KR', interimResults: true, continuous: false });
+    } catch {
+      listeningRef.current = false;
+      if (voiceOpenRef.current) failVoice(voiceErrorFallback);
+    }
+  };
+  const stopListening = () => { setStopping(true); ExpoSpeechRecognitionModule.stop(); };
+  const openVoice = () => {
+    voiceOpenRef.current = true;
+    setStage('ready'); setTranscript(''); setVoiceError(''); setStopping(false); setPanel('voice');
+  };
   const openConditions = () => {
     setDraft(Object.fromEntries(fields.map(([key]) => {
       const value = key === 'amount' ? conditions.budget.amount_krw : conditions[key];
@@ -42,7 +98,12 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     })));
     setShipping(conditions.budget.shipping_included); setError(''); setPanel('conditions');
   };
-  const close = () => setPanel(null);
+  const close = () => {
+    voiceOpenRef.current = false;
+    // abort() also emits an 'aborted' error and 'end'; clearing the guard first makes this instance ignore them.
+    if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); }
+    setStopping(false); setPanel(null);
+  };
   const apply = () => {
     const amount = draft.amount.trim() ? Number(draft.amount.replaceAll(',', '')) : null;
     if (amount !== null && (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount))) {
@@ -76,7 +137,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
         </Pressable>)}
         <Pressable accessibilityRole="button" accessibilityLabel="조건 추가 및 전체 확인" onPress={openConditions} style={s.addChip}><Plus size={16} color={c.muted}/><Text style={s.note}>조건 추가</Text></Pressable>
       </View>}
-    </View> : <Pressable accessibilityRole="button" accessibilityLabel="음성 입력" onPress={() => { setStage('ready'); setTranscript(''); setPanel('voice'); }} style={s.micButton}><Mic size={22} color={c.primary}/></Pressable>}
+    </View> : <Pressable accessibilityRole="button" accessibilityLabel="음성 입력" onPress={openVoice} style={s.micButton}><Mic size={22} color={c.primary}/></Pressable>}
     <Modal visible={panel !== null} transparent animationType="slide" onRequestClose={close}>
       <View style={s.overlay}>
         <SafeAreaView edges={['bottom']} style={s.sheet}>
@@ -85,15 +146,18 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
             {panel === 'voice' ? <>
-              <Text style={s.note}>프로토타입 · 실제 녹음 없이 음성 입력 흐름을 체험해요.</Text>
-              <View style={s.voice}><Mic size={48} color={c.primary}/><Text style={s.title}>{stage === 'ready' ? '어떤 선물을 찾고 있나요?' : stage === 'recording' ? '듣고 있어요…' : '입력 내용을 확인해주세요'}</Text>
+              <Text style={s.note}>기기의 음성 인식 서비스로 한국어 말을 글자로 바꿔요. 기기 설정에 따라 음성이 인식 서비스 서버로 전송될 수 있어요. 결과는 바로 보내지 않고, 확인·수정한 뒤 입력창에 넣어요.</Text>
+              <View style={s.voice}><Mic size={48} color={c.primary}/><Text style={s.title}>{stage === 'ready' ? '어떤 선물을 찾고 있나요?' : stage === 'recording' ? (stopping ? '인식을 마무리하고 있어요…' : '듣고 있어요…') : '입력 내용을 확인해주세요'}</Text>
+                {stage === 'recording' && !!transcript && <Text accessibilityLiveRegion="polite" style={s.live}>{transcript}</Text>}
                 <Text style={s.note}>{stage === 'recording' ? '말하기를 마친 뒤 완료를 눌러주세요.' : '예: 부모님께 드릴 5만 원 이하 선물'}</Text></View>
-              {stage === 'review' && <TextInput accessibilityLabel="음성 인식 내용" multiline value={transcript} onChangeText={setTranscript} style={s.transcript}/>}
-              {stage !== 'review' ? <Pressable accessibilityRole="button" onPress={() => {
-                if (stage === 'ready') setStage('recording'); else { setTranscript('부모님께 드릴 선물, 5만 원 이하로 배송비 포함해서 추천해줘.'); setStage('review'); }
-              }} style={s.primary}><Square size={16} color={c.white}/><Text style={s.white}>{stage === 'ready' ? '말하기 시작' : '말하기 완료'}</Text></Pressable> : <>
+              {!!voiceError && <Text accessibilityRole="alert" style={s.error}>{voiceError}</Text>}
+              {stage === 'review' && <TextInput accessibilityLabel="음성 인식 내용" multiline value={transcript} onChangeText={setTranscript} placeholder="찾는 선물을 직접 입력할 수 있어요." style={s.transcript}/>}
+              {stage !== 'review' ? <>
+                <Pressable accessibilityRole="button" disabled={stopping} onPress={() => { if (stage === 'ready') void startListening(); else stopListening(); }} style={[s.primary, stopping && { opacity: 0.4 }]}><Square size={16} color={c.white}/><Text style={s.white}>{stage === 'ready' ? '말하기 시작' : '말하기 완료'}</Text></Pressable>
+                {stage === 'ready' && <Pressable accessibilityRole="button" onPress={() => setStage('review')} style={s.secondary}><Text style={s.toolText}>글로 입력하기</Text></Pressable>}
+              </> : <>
                 <Pressable accessibilityRole="button" disabled={!transcript.trim()} onPress={() => { onVoice(transcript); close(); }} style={[s.primary, !transcript.trim() && { opacity: 0.4 }]}><Text style={s.white}>입력창에 적용</Text></Pressable>
-                <Pressable accessibilityRole="button" onPress={() => { setTranscript(''); setStage('recording'); }} style={s.secondary}><Text style={s.toolText}>다시 말하기</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={() => void startListening()} style={s.secondary}><Text style={s.toolText}>다시 말하기</Text></Pressable>
               </>}
               <Pressable accessibilityRole="button" onPress={close} style={s.secondary}><Text style={s.note}>취소</Text></Pressable>
             </> : <>
@@ -126,7 +190,7 @@ const s = StyleSheet.create({
   sheet: { backgroundColor: c.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', paddingHorizontal: 20 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 }, close: { padding: 12 },
   title: { fontFamily: f.bold, fontSize: 18, color: c.text }, content: { gap: 14, paddingBottom: 20 }, note: { fontFamily: f.regular, fontSize: 13, lineHeight: 21, color: c.muted },
-  voice: { alignItems: 'center', gap: 16, paddingVertical: 24 }, transcript: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 16, minHeight: 100, fontFamily: f.regular, color: c.text },
+  voice: { alignItems: 'center', gap: 16, paddingVertical: 24 }, live: { fontFamily: f.medium, fontSize: 16, lineHeight: 24, color: c.text, textAlign: 'center' }, transcript: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 16, minHeight: 100, fontFamily: f.regular, color: c.text },
   primary: { minHeight: 48, padding: 14, borderRadius: 12, backgroundColor: c.primary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   white: { color: c.white, fontFamily: f.medium, fontSize: 15 }, secondary: { padding: 12, alignItems: 'center' }, field: { gap: 6 }, label: { fontFamily: f.medium, color: c.text, fontSize: 14 },
   input: { borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontFamily: f.regular, color: c.text }, error: { color: c.primary, fontFamily: f.regular },
