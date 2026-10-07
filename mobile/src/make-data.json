@@ -1,0 +1,513 @@
+{
+  "POPULAR_GIFTS": [
+    {
+      "id": 101,
+      "name": "오설록 프리미엄 티 세트",
+      "subtitle": "제주 유기농 한정 컬렉션",
+      "price": "₩52,000",
+      "rating": 4.9,
+      "tag": "전통차",
+      "image": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop&auto=format"
+    },
+    {
+      "id": 102,
+      "name": "이니스프리 스킨케어 세트",
+      "subtitle": "그린티 수분 라인 4종",
+      "price": "₩45,000",
+      "rating": 4.7,
+      "tag": "K-뷰티",
+      "image": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop&auto=format"
+    },
+    {
+      "id": 103,
+      "name": "전통 한과 세트",
+      "subtitle": "수제 약과·유과 선물 박스",
+      "price": "₩38,000",
+      "rating": 4.8,
+      "tag": "한과",
+      "image": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop&auto=format"
+    },
+    {
+      "id": 104,
+      "name": "마리몬드 에코백 세트",
+      "subtitle": "꽃 자수 파우치 포함 2종",
+      "price": "₩29,000",
+      "rating": 4.6,
+      "tag": "패션·잡화",
+      "image": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop&auto=format"
+    }
+  ],
+  "RECENT_GIFTS": [
+    {
+      "id": 201,
+      "name": "설화수 자음생 크림",
+      "subtitle": "한방 성분 집중 영양 케어",
+      "price": "₩85,000",
+      "rating": 4.9,
+      "tag": "K-뷰티",
+      "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=400&fit=crop&auto=format"
+    },
+    {
+      "id": 202,
+      "name": "한우 명품 선물세트",
+      "subtitle": "1++ 등심·채끝 각 200g",
+      "price": "₩165,000",
+      "rating": 4.9,
+      "tag": "프리미엄 식품",
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop&auto=format"
+    },
+    {
+      "id": 203,
+      "name": "탐앤탐스 텀블러 세트",
+      "subtitle": "보온병 350ml + 드립백 5종",
+      "price": "₩42,000",
+      "rating": 4.5,
+      "tag": "카페 선물",
+      "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop&auto=format"
+    }
+  ],
+  "GIFT_CATEGORIES": [
+    {
+      "label": "생일",
+      "emoji": "🎂"
+    },
+    {
+      "label": "결혼",
+      "emoji": "💍"
+    },
+    {
+      "label": "졸업",
+      "emoji": "🎓"
+    },
+    {
+      "label": "부모님",
+      "emoji": "🧡"
+    },
+    {
+      "label": "아이",
+      "emoji": "🧸"
+    },
+    {
+      "label": "연인",
+      "emoji": "💝"
+    },
+    {
+      "label": "직장",
+      "emoji": "💼"
+    },
+    {
+      "label": "명절",
+      "emoji": "🏮"
+    }
+  ],
+  "RANKING_DATA": {
+    "전체": [
+      {
+        "id": 301,
+        "name": "한우 1++ 등급 선물세트",
+        "subtitle": "등심·안심 각 300g 진공포장, 냉장 배송",
+        "price": "₩185,000",
+        "rating": 4.9,
+        "tag": "프리미엄 식품",
+        "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 12847
+      },
+      {
+        "id": 302,
+        "name": "설화수 자음생 크림",
+        "subtitle": "한방 성분 집중 영양 케어, 50ml 정품",
+        "price": "₩85,000",
+        "rating": 4.9,
+        "tag": "K-뷰티",
+        "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 11203
+      },
+      {
+        "id": 303,
+        "name": "오설록 프리미엄 티 세트",
+        "subtitle": "제주 유기농 녹차·발효차 한정 컬렉션",
+        "price": "₩52,000",
+        "rating": 4.8,
+        "tag": "전통차",
+        "image": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 9876
+      },
+      {
+        "id": 304,
+        "name": "이니스프리 그린티 세트",
+        "subtitle": "토너·에센스·크림 풀 라인 4종 구성",
+        "price": "₩45,000",
+        "rating": 4.7,
+        "tag": "K-뷰티",
+        "image": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 8541
+      },
+      {
+        "id": 305,
+        "name": "전통 한과 명품 세트",
+        "subtitle": "유과·약과·강정 수제 프리미엄 12종",
+        "price": "₩65,000",
+        "rating": 4.7,
+        "tag": "한과",
+        "image": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 7932
+      },
+      {
+        "id": 306,
+        "name": "모나미 만년필 선물세트",
+        "subtitle": "전용 잉크·케이스·카드 포함 3종",
+        "price": "₩38,000",
+        "rating": 4.6,
+        "tag": "문구·리빙",
+        "image": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6217
+      },
+      {
+        "id": 307,
+        "name": "마리몬드 에코백 세트",
+        "subtitle": "꽃 자수 파우치 포함 2종, 한정판",
+        "price": "₩29,000",
+        "rating": 4.6,
+        "tag": "패션·잡화",
+        "image": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5884
+      },
+      {
+        "id": 308,
+        "name": "탐앤탐스 커피 선물카드",
+        "subtitle": "10만원 금액권 + 시그니처 텀블러",
+        "price": "₩108,000",
+        "rating": 4.5,
+        "tag": "카페 선물",
+        "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5123
+      },
+      {
+        "id": 309,
+        "name": "제주 감귤 선물 박스",
+        "subtitle": "산지 직배송 당일 수확 3kg 프리미엄",
+        "price": "₩32,000",
+        "rating": 4.5,
+        "tag": "신선 과일",
+        "image": "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 4567
+      },
+      {
+        "id": 310,
+        "name": "다이슨 수퍼소닉 헤어드라이어",
+        "subtitle": "국내 정품, 1년 AS 보증 포함",
+        "price": "₩299,000",
+        "rating": 4.8,
+        "tag": "가전·뷰티기기",
+        "image": "https://images.unsplash.com/photo-1527443224154-c4a573d5b6d4?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3891
+      }
+    ],
+    "부모님": [
+      {
+        "id": 401,
+        "name": "한우 1++ 등급 선물세트",
+        "subtitle": "등심·안심 각 300g 냉장 배송",
+        "price": "₩185,000",
+        "rating": 4.9,
+        "tag": "프리미엄 식품",
+        "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 9203
+      },
+      {
+        "id": 402,
+        "name": "정관장 홍삼정 선물세트",
+        "subtitle": "6년근 홍삼 농축액 100g × 3입",
+        "price": "₩148,000",
+        "rating": 4.9,
+        "tag": "건강 식품",
+        "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 8714
+      },
+      {
+        "id": 403,
+        "name": "오설록 프리미엄 티 세트",
+        "subtitle": "제주 유기농 한정 컬렉션 3종",
+        "price": "₩52,000",
+        "rating": 4.8,
+        "tag": "전통차",
+        "image": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 7645
+      },
+      {
+        "id": 404,
+        "name": "설화수 자음 2종 세트",
+        "subtitle": "안티에이징 집중 케어 크림 + 에센스",
+        "price": "₩128,000",
+        "rating": 4.9,
+        "tag": "K-뷰티",
+        "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6932
+      },
+      {
+        "id": 405,
+        "name": "전통 한과 명품 세트",
+        "subtitle": "수제 약과·유과·강정 고급 12종",
+        "price": "₩65,000",
+        "rating": 4.7,
+        "tag": "한과",
+        "image": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6218
+      },
+      {
+        "id": 406,
+        "name": "안마의자 체험권",
+        "subtitle": "바디프랜드 60분 체험권 + 쿠폰",
+        "price": "₩55,000",
+        "rating": 4.6,
+        "tag": "웰니스",
+        "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5441
+      },
+      {
+        "id": 407,
+        "name": "지리산 천연 벌꿀 세트",
+        "subtitle": "아카시아·잡화 원료 580g × 2병",
+        "price": "₩48,000",
+        "rating": 4.7,
+        "tag": "건강 식품",
+        "image": "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 4877
+      },
+      {
+        "id": 408,
+        "name": "청자 머그컵 선물세트",
+        "subtitle": "전통 청자 2P + 고급 선물 박스",
+        "price": "₩42,000",
+        "rating": 4.5,
+        "tag": "생활·리빙",
+        "image": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3992
+      },
+      {
+        "id": 409,
+        "name": "제주 감귤 선물 박스",
+        "subtitle": "산지 직배송 3kg 당일 수확 프리미엄",
+        "price": "₩32,000",
+        "rating": 4.5,
+        "tag": "신선 과일",
+        "image": "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3541
+      },
+      {
+        "id": 410,
+        "name": "제주 생수 선물세트",
+        "subtitle": "2L × 12병 + 탄산수 6병 묶음",
+        "price": "₩28,000",
+        "rating": 4.4,
+        "tag": "음료·건강",
+        "image": "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 2883
+      }
+    ],
+    "친구": [
+      {
+        "id": 501,
+        "name": "이니스프리 그린티 세트",
+        "subtitle": "토너·에센스·크림 미니어처 4종",
+        "price": "₩45,000",
+        "rating": 4.7,
+        "tag": "K-뷰티",
+        "image": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 8102
+      },
+      {
+        "id": 502,
+        "name": "다이슨 수퍼소닉 헤어드라이어",
+        "subtitle": "국내 정품, 1년 AS 보증",
+        "price": "₩299,000",
+        "rating": 4.8,
+        "tag": "가전·뷰티기기",
+        "image": "https://images.unsplash.com/photo-1527443224154-c4a573d5b6d4?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 7435
+      },
+      {
+        "id": 503,
+        "name": "조말론 우드세이지 향수",
+        "subtitle": "30ml 정품 + 브랜드 파우치 포함",
+        "price": "₩135,000",
+        "rating": 4.8,
+        "tag": "향수·뷰티",
+        "image": "https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6891
+      },
+      {
+        "id": 504,
+        "name": "탐앤탐스 커피 선물카드",
+        "subtitle": "10만원 금액권 + 시그니처 텀블러",
+        "price": "₩108,000",
+        "rating": 4.5,
+        "tag": "카페 선물",
+        "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6244
+      },
+      {
+        "id": 505,
+        "name": "마리몬드 에코백 세트",
+        "subtitle": "꽃 자수 파우치 포함 2종 한정판",
+        "price": "₩29,000",
+        "rating": 4.6,
+        "tag": "패션·잡화",
+        "image": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5672
+      },
+      {
+        "id": 506,
+        "name": "스타벅스 리저브 텀블러",
+        "subtitle": "355ml 스테인리스 한정판 디자인",
+        "price": "₩52,000",
+        "rating": 4.6,
+        "tag": "카페 선물",
+        "image": "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5018
+      },
+      {
+        "id": 507,
+        "name": "제주 감귤 선물 박스",
+        "subtitle": "산지 직배송 3kg 당일 수확",
+        "price": "₩32,000",
+        "rating": 4.5,
+        "tag": "신선 과일",
+        "image": "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 4331
+      },
+      {
+        "id": 508,
+        "name": "마리몬드 다이어리 세트",
+        "subtitle": "2025 한정판 스케줄러 + 스티커팩",
+        "price": "₩32,000",
+        "rating": 4.6,
+        "tag": "문구·다이어리",
+        "image": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3887
+      },
+      {
+        "id": 509,
+        "name": "모나미 만년필 선물세트",
+        "subtitle": "전용 잉크·케이스·카드 3종",
+        "price": "₩38,000",
+        "rating": 4.6,
+        "tag": "문구·리빙",
+        "image": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3214
+      },
+      {
+        "id": 510,
+        "name": "쿠팡 기프트카드",
+        "subtitle": "5만원 금액권, 유효기간 1년",
+        "price": "₩50,000",
+        "rating": 4.4,
+        "tag": "기프트카드",
+        "image": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 2765
+      }
+    ],
+    "직장동료": [
+      {
+        "id": 601,
+        "name": "오설록 프리미엄 티 세트",
+        "subtitle": "제주 유기농 한정 컬렉션 3종",
+        "price": "₩52,000",
+        "rating": 4.8,
+        "tag": "전통차",
+        "image": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 7812
+      },
+      {
+        "id": 602,
+        "name": "전통 한과 명품 세트",
+        "subtitle": "수제 약과·유과·강정 고급 12종",
+        "price": "₩65,000",
+        "rating": 4.7,
+        "tag": "한과",
+        "image": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6905
+      },
+      {
+        "id": 603,
+        "name": "스타벅스 기프트카드",
+        "subtitle": "5만원 금액권 + 전용 카드지갑",
+        "price": "₩52,000",
+        "rating": 4.6,
+        "tag": "카페 선물",
+        "image": "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 6234
+      },
+      {
+        "id": 604,
+        "name": "모나미 만년필 선물세트",
+        "subtitle": "전용 잉크·케이스·카드 3종",
+        "price": "₩38,000",
+        "rating": 4.6,
+        "tag": "문구·리빙",
+        "image": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 5541
+      },
+      {
+        "id": 605,
+        "name": "이니스프리 그린티 세트",
+        "subtitle": "토너·에센스·크림 미니어처 4종",
+        "price": "₩45,000",
+        "rating": 4.7,
+        "tag": "K-뷰티",
+        "image": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 4873
+      },
+      {
+        "id": 606,
+        "name": "탐앤탐스 커피 선물카드",
+        "subtitle": "5만원 금액권 + 드립백 5종",
+        "price": "₩58,000",
+        "rating": 4.5,
+        "tag": "카페 선물",
+        "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 4112
+      },
+      {
+        "id": 607,
+        "name": "동원 참치 선물세트",
+        "subtitle": "프리미엄 참치·고등어·김 15캔 구성",
+        "price": "₩42,000",
+        "rating": 4.5,
+        "tag": "식품 선물",
+        "image": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3688
+      },
+      {
+        "id": 608,
+        "name": "제주 감귤 선물 박스",
+        "subtitle": "산지 직배송 3kg 당일 수확",
+        "price": "₩32,000",
+        "rating": 4.5,
+        "tag": "신선 과일",
+        "image": "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 3241
+      },
+      {
+        "id": 609,
+        "name": "고급 손수건 선물세트",
+        "subtitle": "100% 이집트 면 자수 로고 3장",
+        "price": "₩25,000",
+        "rating": 4.4,
+        "tag": "패션·리빙",
+        "image": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 2814
+      },
+      {
+        "id": 610,
+        "name": "제주 수제 초콜릿 세트",
+        "subtitle": "다크·밀크·화이트 18구 선물 박스",
+        "price": "₩35,000",
+        "rating": 4.6,
+        "tag": "초콜릿·디저트",
+        "image": "https://images.unsplash.com/photo-1511381939415-e44015466834?w=400&h=400&fit=crop&auto=format",
+        "likeCount": 2391
+      }
+    ]
+  }
+}
