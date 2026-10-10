@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent, type ExpoSpeechRecognitionErrorCode } from 'expo-speech-recognition';
 import { colors as c, fonts as f } from './theme';
 import { Chip } from './components';
+import { createVoiceSession } from './voiceSession.mjs';
 
 type Conditions = {
   recipients: string[]; occasion: string | null;
@@ -59,11 +60,12 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   const [error, setError] = useState('');
   const [voiceError, setVoiceError] = useState('');
   const [stopping, setStopping] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [needsModel, setNeedsModel] = useState(false);
   const [modelNote, setModelNote] = useState('');
   // App.tsx mounts two ChatTools at once; only the instance that started recognition handles events.
   const listeningRef = useRef(false);
-  const voiceOpenRef = useRef(false);
+  const voiceSessionRef = useRef(createVoiceSession());
   const heardRef = useRef('');
   useSpeechRecognitionEvent('result', event => {
     if (!listeningRef.current) return;
@@ -84,31 +86,44 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     if (!heardRef.current.trim()) setVoiceError(old => old || voiceErrorFallback);
     setStage('review');
   });
-  useEffect(() => () => { if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); } }, []);
+  useEffect(() => () => {
+    voiceSessionRef.current.close();
+    if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); }
+  }, []);
   const failVoice = (message: string) => { setVoiceError(message); setStage('review'); };
   const startListening = async () => {
+    if (listeningRef.current) return;
+    const session = voiceSessionRef.current;
+    const requestId = session.begin();
+    if (requestId === null) return;
+    setPreparing(true);
     setTranscript(''); heardRef.current = ''; setVoiceError(''); setStopping(false); setNeedsModel(false); setModelNote('');
-    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) return failVoice(voiceErrors['service-not-allowed']!);
-    if (onDeviceOnly && !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) return failVoice(onDeviceUnsupported);
     try {
+      if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) return failVoice(voiceErrors['service-not-allowed']!);
+      // iOS support is locale-specific. The native patch forces on-device recognition for ko-KR.
+      if (Platform.OS === 'android' && !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) return failVoice(onDeviceUnsupported);
       if (onDeviceOnly && Platform.OS === 'android') {
-        // installedLocales is only meaningful for the on-device service package; if the lookup fails, let start() report errors.
-        const locales = await ExpoSpeechRecognitionModule.getSupportedLocales({ androidRecognitionServicePackage: 'com.google.android.as' }).catch(() => null);
-        if (!voiceOpenRef.current) return;
+        // Query the same on-device service used by start(); let start() report lookup failures.
+        const locales = await ExpoSpeechRecognitionModule.getSupportedLocales({}).catch(() => null);
+        if (!session.isCurrent(requestId)) return;
         if (locales && !hasKorean(locales.installedLocales)) { setNeedsModel(true); return failVoice(koreanModelMissing); }
       }
       // On-device recognition only needs the microphone; the speech recognizer permission is for network recognition on iOS.
       const permission = onDeviceOnly
         ? await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync()
         : await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!voiceOpenRef.current) return;
+      if (!session.isCurrent(requestId)) return;
       if (!permission.granted) return failVoice(voiceErrors['not-allowed']!);
       listeningRef.current = true;
       setStage('recording');
       ExpoSpeechRecognitionModule.start({ lang: 'ko-KR', interimResults: true, continuous: false, requiresOnDeviceRecognition: onDeviceOnly });
     } catch {
-      listeningRef.current = false;
-      if (voiceOpenRef.current) failVoice(voiceErrorFallback);
+      if (session.isCurrent(requestId)) {
+        listeningRef.current = false;
+        failVoice(voiceErrorFallback);
+      }
+    } finally {
+      if (session.finish(requestId)) setPreparing(false);
     }
   };
   const stopListening = () => { setStopping(true); ExpoSpeechRecognitionModule.stop(); };
@@ -121,7 +136,8 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     }
   };
   const openVoice = () => {
-    voiceOpenRef.current = true;
+    voiceSessionRef.current.open();
+    setPreparing(false);
     setStage('ready'); setTranscript(''); setVoiceError(''); setStopping(false); setNeedsModel(false); setModelNote(''); setPanel('voice');
   };
   const openConditions = () => {
@@ -132,7 +148,8 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     setShipping(conditions.budget.shipping_included); setError(''); setPanel('conditions');
   };
   const close = () => {
-    voiceOpenRef.current = false;
+    voiceSessionRef.current.close();
+    setPreparing(false);
     // abort() also emits an 'aborted' error and 'end'; clearing the guard first makes this instance ignore them.
     if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); }
     setStopping(false); setPanel(null);
@@ -190,11 +207,11 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
               {!!modelNote && <Text accessibilityLiveRegion="polite" style={s.note}>{modelNote}</Text>}
               {stage === 'review' && <TextInput accessibilityLabel="음성 인식 내용" multiline value={transcript} onChangeText={setTranscript} placeholder="찾는 선물을 직접 입력할 수 있어요." style={s.transcript}/>}
               {stage !== 'review' ? <>
-                <Pressable accessibilityRole="button" disabled={stopping} onPress={() => { if (stage === 'ready') void startListening(); else stopListening(); }} style={[s.primary, stopping && { opacity: 0.4 }]}><Square size={16} color={c.white}/><Text style={s.white}>{stage === 'ready' ? '말하기 시작' : '말하기 완료'}</Text></Pressable>
-                {stage === 'ready' && <Pressable accessibilityRole="button" onPress={() => setStage('review')} style={s.secondary}><Text style={s.toolText}>글로 입력하기</Text></Pressable>}
+                <Pressable accessibilityRole="button" disabled={preparing || stopping} onPress={() => { if (stage === 'ready') void startListening(); else stopListening(); }} style={[s.primary, (preparing || stopping) && { opacity: 0.4 }]}><Square size={16} color={c.white}/><Text style={s.white}>{preparing ? '음성 입력을 준비하고 있어요…' : stage === 'ready' ? '말하기 시작' : '말하기 완료'}</Text></Pressable>
+                {stage === 'ready' && <Pressable accessibilityRole="button" disabled={preparing} onPress={() => setStage('review')} style={s.secondary}><Text style={s.toolText}>글로 입력하기</Text></Pressable>}
               </> : <>
                 <Pressable accessibilityRole="button" disabled={!transcript.trim()} onPress={() => { onVoice(transcript); close(); }} style={[s.primary, !transcript.trim() && { opacity: 0.4 }]}><Text style={s.white}>입력창에 적용</Text></Pressable>
-                <Pressable accessibilityRole="button" onPress={() => void startListening()} style={s.secondary}><Text style={s.toolText}>다시 말하기</Text></Pressable>
+                <Pressable accessibilityRole="button" disabled={preparing} onPress={() => void startListening()} style={[s.secondary, preparing && { opacity: 0.4 }]}><Text style={s.toolText}>다시 말하기</Text></Pressable>
               </>}
               <Pressable accessibilityRole="button" onPress={close} style={s.secondary}><Text style={s.note}>취소</Text></Pressable>
             </> : <>
