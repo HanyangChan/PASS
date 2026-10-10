@@ -46,3 +46,10 @@ next-env.d.ts
 
 # Public configuration template only
 !mobile/.env.example
+
+# Standalone API secrets and local tools
+/api/.dev.vars*
+!/api/.dev.vars.example
+/api/.wrangler/
+/api/node_modules/
+/api/dist/

@@ -1,0 +1,15 @@
+{
+  "name": "pass-recommendation-api",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-10",
+  "vars": {
+    "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_replace_me",
+    "APP_ORIGINS": "",
+    "GEMINI_MODEL": "gemini-3.6-flash"
+  },
+  "ratelimits": [
+    { "name": "IP_LIMITER", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
+    { "name": "USER_LIMITER", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } }
+  ]
+}

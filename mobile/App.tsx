@@ -3,6 +3,7 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useMemo,
   useState,
 } from 'react';
 import { useRouter } from 'expo-router';
@@ -55,6 +56,7 @@ import { chatService, giftRepository } from './src/services/localServices';
 import { createCloudRecords } from './src/services/cloudRecords';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
+import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
 import type { ChatSession, ChatMessage } from './src/domain';
 import {
   Chip,
@@ -64,6 +66,11 @@ import {
   SectionHeader,
   won,
 } from './src/components';
+let chatConfigurationError = '';
+const chatEndpoint = (() => {
+  try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
+  catch (error) { chatConfigurationError = (error as Error).message; return null; }
+})();
 type Screen = 'home' | 'chat' | 'ranking' | 'mypage';
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
@@ -103,6 +110,12 @@ export function AppContent({
     setNotice,
     syncFailed,
     retrySave,
+    recommendation,
+    chatPending,
+    chatError,
+    sendChat,
+    changeChatConditions,
+    resetChat,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -118,7 +131,6 @@ export function AppContent({
     sort,
     setSort,
     session,
-    setSession,
     messages,
     setMessages,
     input,
@@ -187,20 +199,12 @@ export function AppContent({
         ? old.filter((p) => p.id !== g.id)
         : [...old, g],
     );
-  const { question, result, comparison } = chatService.view(session);
+  const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
   const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
     chatService.toGift(product, session.state);
-  const send = (text: string) => {
+  const send = (text: string, source: 'typed' | 'quick_reply' = 'typed') => {
     if (!text.trim()) return;
-    const turn = chatService.send(session, text);
-    setSession(turn.session);
-    setMessages((old) => [
-      ...old,
-      { role: 'user', text: text.trim() },
-      { role: 'assistant', text: turn.message },
-    ]);
-    setInput('');
-    setComparisonId(null);
+    void sendChat(text, source).then(ok => { if (ok) { setInput(''); setComparisonId(null); } });
   };
   const chat = (label?: string) => {
     navigate('chat');
@@ -208,14 +212,7 @@ export function AppContent({
       send(label === '부모님' ? '부모님' : `${label} 선물을 찾고 있어요`);
   };
   const changeBudget = (a: any) => {
-    const turn = chatService.updateConditions(session, a.patch, false);
-    setSession(turn.session);
-    setMessages((old) => [
-      ...old,
-      { role: 'user', text: `예산을 ${won(a.amount)}으로 변경해줘.` },
-      { role: 'assistant', text: turn.message },
-    ]);
-    setComparisonId(null);
+    void changeChatConditions(a.patch, `예산을 ${won(a.amount)}으로 변경해줘.`, false).then(ok => { if (ok) setComparisonId(null); });
   };
   const cards = (gifts: Gift[], ranked = false) =>
     gifts.map((g, i) => (
@@ -655,8 +652,7 @@ export function AppContent({
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
-                      setSession(chatService.createSession());
-                      setMessages([]);
+                      resetChat();
                       setInput('');
                       setComparisonId(null);
                       setAttachments([]);
@@ -667,11 +663,8 @@ export function AppContent({
                   </Pressable>
                 </View>
                 <ChatTools conditions={session.state} onVoice={setInput} onApply={(patch) => {
-                    const turn = chatService.updateConditions(session, patch);
-                    setSession(turn.session);
-                    setComparisonId(null);
-                    setMessages(old => [...old, { role: 'user', text: '추천 조건을 변경했어요.' }, { role: 'assistant', text: turn.message }]);
-                  }} />
+                  void changeChatConditions(patch, '추천 조건을 변경했어요.').then(ok => { if (ok) setComparisonId(null); });
+                }} />
                 <ScrollView
                   ref={chatRef}
                   style={s.flex}
@@ -682,11 +675,12 @@ export function AppContent({
                   keyboardShouldPersistTaps="handled"
                 >
                   <Text style={s.demoNote}>
-                    규칙 기반 해석 · 식품 선물 데모
+                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · 식품 선물 데모' : recommendation ? '서버 규칙 기반 해석 · 식품 선물 데모' : '기기 규칙 기반 해석 · 식품 선물 데모'}
                   </Text>
                   <Text style={s.assistant}>
                     식품 선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
+                  {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
                       key={i}
@@ -699,8 +693,7 @@ export function AppContent({
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
                     <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
                     <Button label="제외 조건 풀어보기" onPress={() => {
-                      const turn = chatService.updateConditions(session, { excluded_categories: [], excluded_ingredients: [] });
-                      setSession(turn.session); setMessages(old => [...old, { role: 'assistant', text: turn.message }]);
+                      void changeChatConditions({ excluded_categories: [], excluded_ingredients: [] }, '제외 조건을 풀어줘.');
                     }}/>
                   </View>}
                   {!question.key && result.items.length > 0 && (
@@ -734,7 +727,7 @@ export function AppContent({
                       <Chip
                         key={choice}
                         label={choice}
-                        onPress={() => send(choice)}
+                        onPress={() => send(choice, 'quick_reply')}
                       />
                     ))}
                   </ScrollView>
@@ -757,7 +750,7 @@ export function AppContent({
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="메시지 보내기"
-                      disabled={!input.trim() && attachments.length === 0}
+                      disabled={chatPending || (!input.trim() && attachments.length === 0)}
                       onPress={() => {
                         if (attachments.length) {
                           setMessages(old => [...old, { role: 'user', text: `예시 첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '예시 첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 실제 파일 분석은 제공하지 않아요.' }]);
@@ -925,6 +918,48 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
+  const [chatPending, setChatPending] = useState(false);
+  const [chatError, setChatError] = useState(chatConfigurationError);
+  const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
+  useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
+    if (!ready || chatFlight.current.controller) return false;
+    if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
+    const controller = new AbortController();
+    const revision = ++chatFlight.current.revision;
+    chatFlight.current.controller = controller; setChatPending(true); setChatError('');
+    try {
+      const turn = serverChat
+        ? operation === 'turn' ? await serverChat.send(session, text, messages, source, controller.signal)
+          : operation === 'conditions' ? await serverChat.updateConditions(session, patch!, clearIssues, controller.signal)
+          : await serverChat.view(session, controller.signal)
+        : operation === 'turn' ? chatService.send(session, text) : chatService.updateConditions(session, patch ?? {}, clearIssues);
+      if (chatFlight.current.revision !== revision) return false;
+      if (operation !== 'view') {
+        setSession(turn.session);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
+      }
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode });
+      return true;
+    } catch (error) {
+      if (chatFlight.current.revision === revision) setChatError((error as Error).message || '추천 요청에 실패했어요. 다시 보내주세요.');
+      return false;
+    } finally {
+      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+    }
+  };
+  useEffect(() => {
+    if (ready && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
+    // Hydrate server ranking once after restoration; successful turns already include it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, serverChat]);
+  const resetChat = () => {
+    chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
+    setChatPending(false); setChatError(''); setRecommendation(null);
+    setSession(chatService.createSession()); setMessages([]);
+  };
   useEffect(() => {
     let mounted = true;
     const repository = owner && supabase ? createCloudRecords(supabase, owner, randomUUID) : null;
@@ -973,6 +1008,12 @@ function usePassState() {
     setNotice,
     syncFailed,
     retrySave: () => setSaveAttempt(value => value + 1),
+    recommendation,
+    chatPending,
+    chatError,
+    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
+    changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
+    resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     heroFailed,
