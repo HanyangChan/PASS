@@ -44,7 +44,7 @@ import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
-import { usePrototype } from './src/PrototypeFlows';
+import { useAuth } from './src/auth/AuthProvider';
 import {
   Gift,
   popularGifts,
@@ -126,7 +126,8 @@ export function AppContent({
     setAllRecent,
   } = state;
   const router = useRouter();
-  const { loggedIn } = usePrototype();
+  const { user } = useAuth();
+  const loggedIn = user !== null;
   const [attachments, setAttachments] = useState<string[]>([]);
   const [priceLimit, setPriceLimit] = useState<number | null>(null);
   const [draftFilter, setDraftFilter] = useState('전체');
@@ -485,7 +486,7 @@ export function AppContent({
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={loggedIn ? '마이 페이지 열기' : '로그인 체험하기'}
+                    accessibilityLabel={loggedIn ? '마이 페이지 열기' : '로그인하기'}
                     onPress={() => loggedIn ? navigate('mypage') : router.push('/login')}
                     style={s.profile}
                   >
@@ -772,8 +773,8 @@ export function AppContent({
                 </View>
                 <View style={s.myIntro}>
                   <User size={32} color={c.primary} />
-                  <Text style={s.sectionTitle}>{loggedIn ? '체험 사용자' : '로그인하면 이어서 볼 수 있어요'}</Text>
-                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인 체험하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
+                  <Text style={s.sectionTitle}>{loggedIn ? (user?.email ?? '로그인한 사용자') : '로그인하면 이어서 볼 수 있어요'}</Text>
+                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
                   {!loggedIn && <Button label="이 기기의 선물 준비 기록" onPress={() => router.push('/account')}/> }
                   <Text style={s.subtitle}>
                     찜과 최근 본 선물은 이 기기에 저장돼요.
