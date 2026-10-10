@@ -11,6 +11,8 @@
 
 대상 프로젝트를 확인한 뒤 Supabase SQL Editor에서 마이그레이션 전체를 한 번 실행합니다. Supabase CLI를 사용하는 프로젝트라면 기존 원격 마이그레이션 이력을 먼저 동기화하고 `supabase db push`로 적용하세요. 공개 키로는 DB 구조를 바꿀 수 없습니다.
 
+SQL Editor에서 직접 실행한 경우 Supabase CLI의 마이그레이션 이력에는 자동 등록되지 않습니다. 이 파일을 이미 적용한 프로젝트를 나중에 CLI로 관리한다면, 대상 프로젝트를 `supabase link`로 확인한 뒤 `supabase migration repair 202610100001 --status applied`로 이력을 맞추고 다음 마이그레이션을 적용하세요. 이미 적용된 SQL을 다시 실행하지 마세요.
+
 적용 후 SQL Editor에서 다음을 확인합니다.
 
 ```sql
