@@ -20,6 +20,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
   let active = true;
   let queue: Promise<void> = Promise.resolve();
   let previous: GiftRecords = { saved: [], recent: [] };
+  const attemptedKeys = { saved: new Set<string>(), recent: new Set<string>() };
   let conversationId: string | null = null;
   let messageIds: string[] = [];
   let messageTimes: string[] = [];
@@ -96,16 +97,24 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
           const after = new Map(snapshot[kind].map((gift, position) => [keyOf(gift), { ...gift, _pass_position: position }]));
           const changed = [...after].filter(([key, gift]) => JSON.stringify(before.get(key)) !== JSON.stringify(gift));
           if (changed.length) {
+            // A failed response can still follow a successful server write. Track all
+            // attempted additions until the complete collection save is acknowledged.
+            for (const [key] of changed) attemptedKeys[kind].add(key);
+            const changedKeys = new Set(changed.map(([key]) => key));
+            previous[kind] = previous[kind].filter(gift => !changedKeys.has(keyOf(gift)));
             const result = await client.from('gift_records').upsert(changed.map(([key, gift]) => ({ user_id: owner, kind, gift_key: key, snapshot: gift })), { onConflict: 'user_id,kind,gift_key' });
             check(result.error);
           }
           // Delete only items actually removed here, preserving unseen records from other devices.
-          const removed = [...before.keys()].filter(key => !after.has(key));
+          const removed = [...new Set([...before.keys(), ...attemptedKeys[kind]])].filter(key => !after.has(key));
           if (removed.length) {
+            for (const key of removed) attemptedKeys[kind].add(key);
+            previous[kind] = previous[kind].filter(gift => !removed.includes(keyOf(gift)));
             const result = await client.from('gift_records').delete().eq('user_id', owner).eq('kind', kind).in('gift_key', removed);
             check(result.error);
           }
           previous[kind] = copy(snapshot[kind]);
+          attemptedKeys[kind].clear();
         }
       });
     },

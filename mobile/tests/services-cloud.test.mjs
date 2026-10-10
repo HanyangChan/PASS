@@ -7,7 +7,7 @@ const gift = id => ({ id, name: '선물', category: '차', price: 30000, descrip
 const message = text => ({ role: 'user', text });
 function fixture() {
   const rows = { gift_records: [], conversations: [], messages: [] }, writes = [];
-  let counter = 0, owner = 'owner', fail = '', stamp = 0;
+  let counter = 0, owner = 'owner', fail = '', failAfter = '', stamp = 0;
   const client = {
     auth: { getSession: async () => ({ data: { session: { user: { id: owner } } }, error: null }) },
     from(table) {
@@ -40,13 +40,14 @@ function fixture() {
             if (sorting) selected.sort((a, b) => (a[sorting[0]] > b[sorting[0]] ? 1 : -1) * (sorting[1] ? 1 : -1));
             selected = selected.slice(start, start + maximum);
           }
+          if (failAfter === `${table}:${operation}`) { failAfter = ''; return resolve({ error: { message: 'lost acknowledgement' }, data: null }); }
           resolve({ data: structuredClone(selected), error: null });
         },
       };
       return query;
     },
   };
-  return { rows, writes, client, repo: () => createCloudRecords(client, 'owner', () => `uuid-${++counter}`), fail: value => { fail = value; }, switchOwner: () => { owner = 'other'; } };
+  return { rows, writes, client, repo: () => createCloudRecords(client, 'owner', () => `uuid-${++counter}`), fail: value => { fail = value; }, failAfter: value => { failAfter = value; }, switchOwner: () => { owner = 'other'; } };
 }
 
 test('cloud gifts round trip preserves order, removal and unseen records on other devices', async () => {
@@ -118,4 +119,26 @@ test('large gift collections page beyond the server default row limit', async ()
   const f = fixture();
   for (let index = 0; index < 1205; index++) f.rows.gift_records.push({ id: String(index).padStart(4, '0'), user_id: 'owner', kind: 'saved', snapshot: gift(String(index)), updated_at: 1 });
   assert.equal((await f.repo().load(empty())).saved.length, 1205);
+});
+
+test('reverting an edit after a partial write removes the already-uploaded addition', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveGifts({ saved: [gift('a')], recent: [] });
+  f.fail('gift_records:delete');
+  await assert.rejects(repo.saveGifts({ saved: [gift('b')], recent: [] }), /network failed/);
+  await repo.saveGifts({ saved: [gift('a')], recent: [] });
+  assert.deepEqual((await f.repo().load(empty())).saved.map(g => g.id), ['a']);
+});
+
+test('lost update/delete acknowledgements do not prevent restoring the previous selection', async () => {
+  for (const operation of ['upsert', 'delete']) {
+    const f = fixture(), repo = f.repo(); await repo.load(empty());
+    await repo.saveGifts({ saved: [gift('a')], recent: [] });
+    f.failAfter(`gift_records:${operation}`);
+    const edit = operation === 'upsert' ? { ...gift('a'), price: 10000 } : gift('b');
+    await assert.rejects(repo.saveGifts({ saved: [edit], recent: [] }), /lost acknowledgement/);
+    await repo.saveGifts({ saved: [gift('a')], recent: [] });
+    const restored = await f.repo().load(empty());
+    assert.deepEqual(restored.saved.map(g => [g.id, g.price]), [['a', 30000]]);
+  }
 });
