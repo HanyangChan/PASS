@@ -44,7 +44,7 @@ import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
-import { usePrototype } from './src/PrototypeFlows';
+import { useAuth } from './src/auth/AuthProvider';
 import {
   Gift,
   popularGifts,
@@ -52,6 +52,10 @@ import {
   categories,
 } from './src/catalog';
 import { chatService, giftRepository } from './src/services/localServices';
+import { createCloudRecords } from './src/services/cloudRecords';
+import { createSnapshotPersistence } from './src/services/snapshotPersistence';
+import { supabase } from './src/auth/client';
+import { randomUUID } from 'expo-crypto';
 import type { ChatSession, ChatMessage } from './src/domain';
 import {
   Chip,
@@ -98,6 +102,8 @@ export function AppContent({
     ready,
     notice,
     setNotice,
+    syncFailed,
+    retrySave,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -126,7 +132,8 @@ export function AppContent({
     setAllRecent,
   } = state;
   const router = useRouter();
-  const { loggedIn } = usePrototype();
+  const { user } = useAuth();
+  const loggedIn = user !== null;
   const [attachments, setAttachments] = useState<string[]>([]);
   const [priceLimit, setPriceLimit] = useState<number | null>(null);
   const [draftFilter, setDraftFilter] = useState('전체');
@@ -283,6 +290,7 @@ export function AppContent({
             {notice}
           </Text>
         )}
+        {syncFailed && <Pressable accessibilityRole="button" onPress={retrySave}><Text style={s.note}>기록 저장 다시 시도</Text></Pressable>}
         {detail ? (
           <>
             <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
@@ -485,7 +493,7 @@ export function AppContent({
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={loggedIn ? '마이 페이지 열기' : '로그인 체험하기'}
+                    accessibilityLabel={loggedIn ? '마이 페이지 열기' : '로그인하기'}
                     onPress={() => loggedIn ? navigate('mypage') : router.push('/login')}
                     style={s.profile}
                   >
@@ -772,11 +780,11 @@ export function AppContent({
                 </View>
                 <View style={s.myIntro}>
                   <User size={32} color={c.primary} />
-                  <Text style={s.sectionTitle}>{loggedIn ? '체험 사용자' : '로그인하면 이어서 볼 수 있어요'}</Text>
-                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인 체험하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
+                  <Text style={s.sectionTitle}>{loggedIn ? (user?.email ?? '로그인한 사용자') : '로그인하면 이어서 볼 수 있어요'}</Text>
+                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
                   {!loggedIn && <Button label="이 기기의 선물 준비 기록" onPress={() => router.push('/account')}/> }
                   <Text style={s.subtitle}>
-                    찜과 최근 본 선물은 이 기기에 저장돼요.
+                    {loggedIn ? '찜·최근 본 선물과 대화는 계정에 저장돼요.' : '찜과 최근 본 선물은 이 기기에 저장돼요.'}
                   </Text>
                 </View>
                 <View style={s.homeSection}>
@@ -815,9 +823,8 @@ export function AppContent({
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
                     랭킹에는 프로토타입의 예시 상품이, 대화에는 기존 식품
-                    카탈로그가 사용돼요. 실제 로그인·결제·배송 기능은 준비
-                    중입니다. 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은
-                    기기에 남아요.
+                    카탈로그가 사용돼요. 실제 결제·배송 기능은 준비
+                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 마지막 대화와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
               </ScrollView>
@@ -891,6 +898,15 @@ export function usePassContext() {
   return state;
 }
 function usePassState() {
+  const { user } = useAuth();
+  const owner = user?.id;
+  const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
+  const persistence = useRef(createSnapshotPersistence());
+  const saveRevision = useRef(0);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [saveAttempt, setSaveAttempt] = useState(0);
   const [screen, setScreen] = useState<Screen>('home'),
     [detail, setDetail] = useState<Gift | null>(null),
     [saved, setSaved] = useState<Gift[]>([]),
@@ -912,19 +928,41 @@ function usePassState() {
     [allRecent, setAllRecent] = useState(false);
   useEffect(() => {
     let mounted = true;
-    giftRepository.load().then(records => {
+    const repository = owner && supabase ? createCloudRecords(supabase, owner, randomUUID) : null;
+    cloud.current = repository;
+    setLoadError('');
+    const emptySession = chatService.createSession();
+    const restore = repository ? repository.load(emptySession) : giftRepository.load().then(records => ({ ...records, session: emptySession, messages: [] as ChatMessage[] }));
+    restore.then(records => {
       if (!mounted) return;
-      setSaved(records.saved);
-      setRecent(records.recent);
-      if (records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
+      setSaved(records.saved); setRecent(records.recent);
+      setSession(records.session); setMessages(records.messages);
+      persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
+      if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
+    }).catch(() => { if (mounted) setLoadError('계정 기록을 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.'); });
+    return () => { mounted = false; repository?.close(); };
+  }, [owner, loadAttempt]);
+  useEffect(() => {
+    if (!ready) return;
+    let mounted = true;
+    const revision = ++saveRevision.current;
+    const gifts = JSON.stringify({ saved, recent });
+    const chat = JSON.stringify({ session, messages });
+    const tasks: Promise<void>[] = [];
+    const giftWrite = persistence.current.write('gifts', gifts, () => cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent }));
+    if (giftWrite) tasks.push(giftWrite);
+    if (cloud.current) {
+      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages));
+      if (chatWrite) tasks.push(chatWrite);
+    }
+    if (tasks.length) Promise.all(tasks).then(() => {
+      if (mounted && revision === saveRevision.current) { setSyncFailed(false); setNotice(''); }
+    }).catch(() => {
+      if (mounted && revision === saveRevision.current) { setSyncFailed(true); setNotice(user ? '계정에 기록을 저장하지 못했어요. 다시 시도해주세요.' : '기기에 기록을 저장하지 못했어요.'); }
     });
     return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    if (ready) giftRepository.save({ saved, recent })
-      .catch(() => setNotice('기기에 기록을 저장하지 못했어요.'));
-  }, [saved, recent, ready]);
+  }, [saved, recent, session, messages, ready, saveAttempt, user]);
 
   return {
     screen,
@@ -938,6 +976,10 @@ function usePassState() {
     ready,
     notice,
     setNotice,
+    syncFailed,
+    retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
+    loadError,
+    retryLoad: () => setLoadAttempt(value => value + 1),
     heroFailed,
     setHeroFailed,
     recipient,
@@ -968,7 +1010,13 @@ function usePassState() {
 }
 const PassContext = createContext<ReturnType<typeof usePassState> | null>(null);
 export function PassProvider({ children }: { children: React.ReactNode }) {
+  const { user, ready } = useAuth();
+  if (!ready) return <View style={s.loading}><ActivityIndicator color={c.primary} /></View>;
+  return <AccountPassProvider key={user?.id ?? 'guest'}>{children}</AccountPassProvider>;
+}
+function AccountPassProvider({ children }: { children: React.ReactNode }) {
   const value = usePassState();
+  const { service } = useAuth();
   const [loaded, error] = useFonts({
     NotoSansKR_400Regular,
     NotoSansKR_500Medium,
@@ -980,6 +1028,7 @@ export function PassProvider({ children }: { children: React.ReactNode }) {
         <ActivityIndicator color={c.primary} />
       </View>
     );
+  if (value.loadError) return <View style={s.loading}><Text accessibilityRole="alert" style={s.note}>{value.loadError}</Text><Pressable accessibilityRole="button" onPress={value.retryLoad}><Text style={s.note}>기록 다시 불러오기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => { void service.signOut().catch(() => value.retryLoad()); }}><Text style={s.note}>로그아웃</Text></Pressable></View>;
   return (
     <SafeAreaProvider>
       <PassContext.Provider value={value}>{children}</PassContext.Provider>

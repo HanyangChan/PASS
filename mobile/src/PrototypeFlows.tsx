@@ -1,17 +1,25 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Check, Eye, EyeOff, Gift as GiftIcon, X } from 'lucide-react-native';
+import { ArrowLeft, Check, X } from 'lucide-react-native';
 import { colors as c, fonts as f } from './theme';
 import { Gift } from './catalog';
 import { GiftImage, won } from './components';
 import { usePassContext } from '../App';
+import { useAuth } from './auth/AuthProvider';
+import { AuthPanel } from './auth/AuthPanel';
+import { authErrorMessage } from './services/authService';
 const PrototypeContext = createContext<ReturnType<typeof usePrototypeState> | null>(null);
 function usePrototypeState() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [prepared, setPrepared] = useState<Gift[]>([]);
-  return { loggedIn, setLoggedIn, prepared, setPrepared };
+  const { user } = useAuth();
+  const [records, setRecords] = useState<Record<string, Gift[]>>({});
+  const owner = user?.id ?? 'guest';
+  const prepared = records[owner] ?? [];
+  const setPrepared: React.Dispatch<React.SetStateAction<Gift[]>> = update => {
+    setRecords(previous => ({ ...previous, [owner]: typeof update === 'function' ? update(previous[owner] ?? []) : update }));
+  };
+  return { prepared, setPrepared };
 }
 export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   return <PrototypeContext.Provider value={usePrototypeState()}>{children}</PrototypeContext.Provider>;
@@ -27,37 +35,28 @@ function Action({ label, onPress, secondary = false }: { label: string; onPress:
 export function PrototypePage({ kind }: { kind: 'login' | 'account' | 'confirm' | 'complete' }) {
   const router = useRouter();
   const { detail, session } = usePassContext();
-  const { loggedIn, setLoggedIn, prepared, setPrepared } = usePrototype();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const { prepared, setPrepared } = usePrototype();
+  const { user, service } = useAuth();
+  const loggedIn = user !== null;
   const [error, setError] = useState('');
   const [modal, setModal] = useState<'seller' | 'purchase' | null>(null);
-  const [auxiliary, setAuxiliary] = useState<string | null>(null);
   const back = () => router.canGoBack() ? router.back() : router.replace('/');
-  const login = () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6) {
-      setError('로그인하지 못했어요. 이메일 형식과 6자 이상의 비밀번호를 확인해주세요.'); return;
-    }
-    setLoggedIn(true); setPassword(''); router.replace('/mypage');
+  const logout = async () => {
+    setError('');
+    try { await service.signOut(); router.replace('/mypage'); }
+    catch (failure) { setError(authErrorMessage(failure)); }
   };
   return <SafeAreaView style={s.safe}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="이전 화면" onPress={back} style={s.icon}><ArrowLeft size={22} color={c.text}/></Pressable><Text style={s.title}>{kind === 'login' ? '로그인' : kind === 'account' ? '계정과 선물 기록' : kind === 'confirm' ? '선물 확인' : '선물 준비 완료'}</Text></View>
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       {kind === 'login' ? <>
-        <View style={s.brand}><GiftIcon color={c.primary} size={24}/><Text style={s.title}>PASS</Text></View>
-        <Text style={s.note}>로그인 흐름을 체험해보세요. 예시 이메일과 6자 이상의 임의 비밀번호를 사용해주세요. 입력값은 서버로 전송하거나 저장하지 않아요.</Text>
-        {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-        <Text style={s.label}>이메일</Text><TextInput accessibilityLabel="이메일" autoCapitalize="none" keyboardType="email-address" placeholder="demo@example.com" value={email} onChangeText={setEmail} style={s.input}/>
-        <Text style={s.label}>비밀번호</Text><View style={s.password}><TextInput accessibilityLabel="비밀번호" secureTextEntry={!showPassword} placeholder="체험용 비밀번호" value={password} onChangeText={setPassword} style={[s.input, s.flex]}/><Pressable accessibilityRole="button" accessibilityLabel="비밀번호 표시 전환" onPress={() => setShowPassword(v => !v)} style={s.icon}>{showPassword ? <EyeOff size={20} color={c.muted}/> : <Eye size={20} color={c.muted}/>}</Pressable></View>
-        <Action label="로그인 체험" onPress={login}/>
-        <View style={s.row}><Action label="비밀번호 찾기" secondary onPress={() => setAuxiliary('비밀번호 찾기')}/><Action label="회원가입" secondary onPress={() => setAuxiliary('회원가입')}/></View>
-        <Action label="로그인 없이 둘러보기" secondary onPress={() => router.replace('/')}/>
+        <AuthPanel/>
       </> : kind === 'account' ? <>
-        <Text style={s.title}>{loggedIn ? '체험 사용자' : '로그인 없이 이용 중'}</Text><Text style={s.note}>이 화면의 계정과 완료 기록은 프로토타입 체험용이며 앱을 다시 열면 초기화돼요.</Text>
+        <Text style={s.title}>{user?.email ?? '로그인 없이 이용 중'}</Text><Text style={s.note}>로그인은 계정에 연결돼요. 선물 준비 기록은 아직 이 화면의 체험 기록이며 계정과 동기화되지 않아요.</Text>
         <Text style={s.label}>선물 준비 기록 {prepared.length}개</Text>
         {prepared.length ? prepared.map((g, i) => <View key={`${g.id}-${i}`} style={s.card}><Text style={s.title}>{g.name}</Text><Text style={s.note}>{won(g.price)} · 준비 완료 체험</Text></View>) : <Text style={s.note}>선물 준비를 완료하면 여기에 표시돼요.</Text>}
-        <Action label={loggedIn ? '로그아웃' : '로그인 체험하기'} onPress={() => { if (loggedIn) { setLoggedIn(false); router.replace('/mypage'); } else router.push('/login'); }}/>
+        {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+        <Action label={loggedIn ? '로그아웃' : '로그인하기'} onPress={() => { if (loggedIn) void logout(); else router.push('/login'); }}/>
       </> : !detail ? <><Text style={s.note}>먼저 선물을 선택해주세요.</Text><Action label="선물 찾아보기" onPress={() => router.replace('/ranking')}/></> : kind === 'confirm' ? <>
         <Text style={s.title}>이 선물로 정할까요?</Text>
         <View style={s.product}><GiftImage gift={detail}/><View style={s.flex}><Text style={s.label}>{detail.name}</Text><Text style={s.note}>{detail.category}</Text></View></View>
@@ -69,12 +68,12 @@ export function PrototypePage({ kind }: { kind: 'login' | 'account' | 'confirm' 
         <View style={s.success}><Check size={34} color="#2D8061"/></View><Text style={[s.title,s.center]}>선물 준비를 마쳤어요</Text><Text style={[s.note,s.center]}>구매 완료 확인 흐름을 체험했어요. 실제 구매나 발송은 이루어지지 않았어요.</Text><View style={s.product}><GiftImage gift={detail}/><Text style={[s.label,s.flex]}>{detail.name}</Text></View><Action label="홈으로 가기" onPress={() => router.replace('/')}/><Action label="다른 선물 찾기" secondary onPress={() => router.replace('/ranking')}/>
       </>}
     </ScrollView>
-    <Modal visible={modal !== null || auxiliary !== null} transparent animationType="slide" onRequestClose={() => { setModal(null); setAuxiliary(null); }}>
-      <View style={s.overlay}><SafeAreaView edges={['bottom']} style={s.sheet}><View style={s.row}><Text style={[s.title,s.flex]}>{auxiliary || (modal === 'seller' ? '판매처로 이동할까요?' : '구매를 마치셨나요?')}</Text><Pressable accessibilityRole="button" accessibilityLabel="확인창 닫기" onPress={() => { setModal(null); setAuxiliary(null); }} style={s.icon}><X size={20} color={c.text}/></Pressable></View>
-        <Text style={s.note}>{auxiliary ? `${auxiliary} 화면은 준비 중이에요. 로그인 체험이나 게스트로 둘러보기를 이용해주세요.` : modal === 'seller' ? '예시 판매처 이동을 체험해요. 외부 사이트를 열거나 결제하지 않아요.' : '구매 완료를 확인하면 선물 준비 기록에 체험 결과를 남겨요.'}</Text>
-        <Action label={auxiliary ? '확인' : modal === 'seller' ? '이동하기 체험' : '네, 구매했어요 (체험)'} onPress={() => {
-          if (auxiliary) setAuxiliary(null); else if (modal === 'seller') setModal('purchase'); else { if (detail) setPrepared(old => [detail, ...old]); setModal(null); router.replace('/gift-complete'); }
-        }}/><Action label="취소" secondary onPress={() => { setModal(null); setAuxiliary(null); }}/>
+    <Modal visible={modal !== null} transparent animationType="slide" onRequestClose={() => { setModal(null); }}>
+      <View style={s.overlay}><SafeAreaView edges={['bottom']} style={s.sheet}><View style={s.row}><Text style={[s.title,s.flex]}>{modal === 'seller' ? '판매처로 이동할까요?' : '구매를 마치셨나요?'}</Text><Pressable accessibilityRole="button" accessibilityLabel="확인창 닫기" onPress={() => { setModal(null); }} style={s.icon}><X size={20} color={c.text}/></Pressable></View>
+        <Text style={s.note}>{modal === 'seller' ? '예시 판매처 이동을 체험해요. 외부 사이트를 열거나 결제하지 않아요.' : '구매 완료를 확인하면 선물 준비 기록에 체험 결과를 남겨요.'}</Text>
+        <Action label={modal === 'seller' ? '이동하기 체험' : '네, 구매했어요 (체험)'} onPress={() => {
+          if (modal === 'seller') setModal('purchase'); else { if (detail) setPrepared(old => [detail, ...old]); setModal(null); router.replace('/gift-complete'); }
+        }}/><Action label="취소" secondary onPress={() => { setModal(null); }}/>
       </SafeAreaView></View>
     </Modal>
   </SafeAreaView>;

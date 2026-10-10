@@ -43,3 +43,6 @@ next-env.d.ts
 /mobile/dist/
 /mobile/ios/
 /mobile/android/
+
+# Public configuration template only
+!mobile/.env.example
