@@ -1,0 +1,6 @@
+# Local development only. Copy to .dev.vars and never commit real keys.
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_me
+APP_ORIGINS=http://127.0.0.1:8766
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.6-flash
