@@ -7,12 +7,7 @@ import { colors as c, fonts as f } from './theme';
 import { Chip } from './components';
 import { createVoiceSession } from './voiceSession.mjs';
 
-type Conditions = {
-  recipients: string[]; occasion: string | null;
-  budget: { amount_krw: number | null; shipping_included: boolean | null };
-  preferences: string[]; excluded_categories: string[]; excluded_ingredients: string[];
-  brand: string | null; delivery_by: string | null; packaging: string | null;
-};
+import type { Conditions } from './domain';
 const arrayFields = ['recipients', 'preferences', 'excluded_categories', 'excluded_ingredients'] as const;
 const fields = [
   ['recipients', '받는 분', '부모님, 친구'], ['occasion', '선물하는 날', '추석, 생일'],

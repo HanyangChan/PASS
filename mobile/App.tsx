@@ -26,7 +26,6 @@ import { useFonts } from 'expo-font';
 import { NotoSansKR_400Regular } from '@expo-google-fonts/noto-sans-kr/400Regular';
 import { NotoSansKR_500Medium } from '@expo-google-fonts/noto-sans-kr/500Medium';
 import { NotoSansKR_700Bold } from '@expo-google-fonts/noto-sans-kr/700Bold';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Home,
   Sparkles,
@@ -51,9 +50,9 @@ import {
   popularGifts,
   rankingByRecipient,
   categories,
-  categoryNames,
 } from './src/catalog';
-import { savedKey, recentKey, decodeGifts } from './src/storage';
+import { chatService, giftRepository } from './src/services/localServices';
+import type { ChatSession, ChatMessage } from './src/domain';
 import {
   Chip,
   GiftCard,
@@ -62,16 +61,6 @@ import {
   SectionHeader,
   won,
 } from './src/components';
-import {
-  singleInitial,
-  singleQuestion,
-  singleTurn,
-  engineState,
-  finishSingle,
-} from '../lib/single-gift.mjs';
-import { recommend, apply } from '../lib/engine.mjs';
-import { budgetAlternatives } from '../lib/counterfactual.mjs';
-import products from '../lib/products.json';
 type Screen = 'home' | 'chat' | 'ranking' | 'mypage';
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
@@ -192,24 +181,12 @@ export function AppContent({
         ? old.filter((p) => p.id !== g.id)
         : [...old, g],
     );
-  const question = singleQuestion(session),
-    result = recommend(products, engineState(session.state)),
-    comparison = budgetAlternatives(products, engineState(session.state));
-  const toGift = (p: any): Gift => ({
-    id: p.id,
-    name: p.name.replace('가상 ', ''),
-    category: categoryNames[p.category],
-    price: p.total,
-    description: p.description,
-    icon: p.category === 'fruit' ? 'fruit' : 'gift',
-    source: 'engine',
-    shippingIncluded: session.state.budget.shipping_included === true,
-    packaging: p.packaging === 'formal' ? '격식 있는 포장' : '기본 포장',
-    arrival: p.arrival_date,
-  });
+  const { question, result, comparison } = chatService.view(session);
+  const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
+    chatService.toGift(product, session.state);
   const send = (text: string) => {
     if (!text.trim()) return;
-    const turn = singleTurn(session, text.trim(), products);
+    const turn = chatService.send(session, text);
     setSession(turn.session);
     setMessages((old) => [
       ...old,
@@ -225,8 +202,7 @@ export function AppContent({
       send(label === '부모님' ? '부모님' : `${label} 선물을 찾고 있어요`);
   };
   const changeBudget = (a: any) => {
-    const next = apply(session.state, a.patch),
-      turn = finishSingle(session.state, next, session.issues, products);
+    const turn = chatService.updateConditions(session, a.patch, false);
     setSession(turn.session);
     setMessages((old) => [
       ...old,
@@ -672,7 +648,7 @@ export function AppContent({
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
-                      setSession({ state: singleInitial(), issues: [] });
+                      setSession(chatService.createSession());
                       setMessages([]);
                       setInput('');
                       setComparisonId(null);
@@ -684,7 +660,7 @@ export function AppContent({
                   </Pressable>
                 </View>
                 <ChatTools conditions={session.state} onVoice={setInput} onApply={(patch) => {
-                    const turn = finishSingle(session.state, apply(session.state, patch), [], products);
+                    const turn = chatService.updateConditions(session, patch);
                     setSession(turn.session);
                     setComparisonId(null);
                     setMessages(old => [...old, { role: 'user', text: '추천 조건을 변경했어요.' }, { role: 'assistant', text: turn.message }]);
@@ -716,7 +692,7 @@ export function AppContent({
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
                     <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
                     <Button label="제외 조건 풀어보기" onPress={() => {
-                      const turn = finishSingle(session.state, apply(session.state, { excluded_categories: [], excluded_ingredients: [] }), [], products);
+                      const turn = chatService.updateConditions(session, { excluded_categories: [], excluded_ingredients: [] });
                       setSession(turn.session); setMessages(old => [...old, { role: 'assistant', text: turn.message }]);
                     }}/>
                   </View>}
@@ -928,38 +904,26 @@ function usePassState() {
     [filter, setFilter] = useState('전체'),
     [showFilter, setShowFilter] = useState(false),
     [sort, setSort] = useState('인기순');
-  const [session, setSession] = useState<any>(() => ({
-      state: singleInitial(),
-      issues: [],
-    })),
-    [messages, setMessages] = useState<{ role: string; text: string }[]>([]),
+  const [session, setSession] = useState<ChatSession>(() => chatService.createSession()),
+    [messages, setMessages] = useState<ChatMessage[]>([]),
     [input, setInput] = useState(''),
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const writes = useRef(Promise.resolve());
   useEffect(() => {
-    Promise.allSettled([
-      AsyncStorage.getItem(savedKey).then((raw) => setSaved(decodeGifts(raw))),
-      AsyncStorage.getItem(recentKey).then((raw) =>
-        setRecent(decodeGifts(raw)),
-      ),
-    ]).then((r) => {
-      if (r.some((v) => v.status === 'rejected'))
-        setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
+    let mounted = true;
+    giftRepository.load().then(records => {
+      if (!mounted) return;
+      setSaved(records.saved);
+      setRecent(records.recent);
+      if (records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
     });
+    return () => { mounted = false; };
   }, []);
   useEffect(() => {
-    if (ready)
-      writes.current = writes.current
-        .then(() =>
-          AsyncStorage.multiSet([
-            [savedKey, JSON.stringify(saved)],
-            [recentKey, JSON.stringify(recent)],
-          ]),
-        )
-        .catch(() => setNotice('기기에 기록을 저장하지 못했어요.'));
+    if (ready) giftRepository.save({ saved, recent })
+      .catch(() => setNotice('기기에 기록을 저장하지 못했어요.'));
   }, [saved, recent, ready]);
 
   return {

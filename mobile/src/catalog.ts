@@ -1,19 +1,6 @@
 import data from './make-data.json';
-export type Gift = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  description: string;
-  icon: 'fruit' | 'gift';
-  shippingIncluded?: boolean;
-  image?: string;
-  rating?: number;
-  likeCount?: number;
-  source?: 'prototype' | 'engine';
-  packaging?: string;
-  arrival?: string;
-};
+import type { Gift } from './domain';
+export type { Gift } from './domain';
 type PrototypeGift = {
   id: number;
   name: string;

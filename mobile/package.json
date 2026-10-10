@@ -38,7 +38,9 @@
     "lint": "expo lint",
     "build:web": "expo export --platform web",
     "postinstall": "node scripts/patch-speech-recognition.cjs",
-    "test:voice": "node --test tests/*.test.mjs"
+    "test:voice": "node --test tests/voice-session.test.mjs tests/speech-privacy.test.mjs",
+    "test:services": "node --experimental-strip-types --test tests/services-*.test.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "private": true
 }

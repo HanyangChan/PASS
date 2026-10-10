@@ -1,4 +1,4 @@
-import type { Gift } from './catalog';
+import type { Gift } from './domain';
 export const savedKey = 'pass.saved-gifts.v1';
 export const recentKey = 'pass.recent-gifts.v1';
 export function decodeGifts(raw: string | null): Gift[] {
