@@ -53,6 +53,7 @@ import {
 } from './src/catalog';
 import { chatService, giftRepository } from './src/services/localServices';
 import { createCloudRecords } from './src/services/cloudRecords';
+import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import type { ChatSession, ChatMessage } from './src/domain';
@@ -900,7 +901,7 @@ function usePassState() {
   const { user } = useAuth();
   const owner = user?.id;
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
-  const baseline = useRef({ gifts: '', chat: '' });
+  const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadError, setLoadError] = useState('');
@@ -936,7 +937,7 @@ function usePassState() {
       if (!mounted) return;
       setSaved(records.saved); setRecent(records.recent);
       setSession(records.session); setMessages(records.messages);
-      baseline.current = { gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) };
+      persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
     }).catch(() => { if (mounted) setLoadError('계정 기록을 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.'); });
@@ -949,8 +950,12 @@ function usePassState() {
     const gifts = JSON.stringify({ saved, recent });
     const chat = JSON.stringify({ session, messages });
     const tasks: Promise<void>[] = [];
-    if (gifts !== baseline.current.gifts) tasks.push((cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent })).then(() => { baseline.current.gifts = gifts; }));
-    if (cloud.current && chat !== baseline.current.chat) tasks.push(cloud.current.saveChat(session, messages).then(() => { baseline.current.chat = chat; }));
+    const giftWrite = persistence.current.write('gifts', gifts, () => cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent }));
+    if (giftWrite) tasks.push(giftWrite);
+    if (cloud.current) {
+      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages));
+      if (chatWrite) tasks.push(chatWrite);
+    }
     if (tasks.length) Promise.all(tasks).then(() => {
       if (mounted && revision === saveRevision.current) { setSyncFailed(false); setNotice(''); }
     }).catch(() => {
@@ -972,7 +977,7 @@ function usePassState() {
     notice,
     setNotice,
     syncFailed,
-    retrySave: () => setSaveAttempt(value => value + 1),
+    retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     heroFailed,
