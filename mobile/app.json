@@ -25,7 +25,14 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "음성으로 선물 조건을 입력하기 위해 마이크를 사용합니다.",
+          "speechRecognitionPermission": "말한 내용을 글자로 바꿔 입력창에 넣기 위해 음성 인식을 사용합니다."
+        }
+      ]
     ],
     "scheme": "pass"
   }
