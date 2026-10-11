@@ -1,0 +1,8 @@
+api/
+supabase/
+.env*
+mobile/.env*
+node_modules/
+mobile/node_modules/
+mobile/dist/
+.git/
