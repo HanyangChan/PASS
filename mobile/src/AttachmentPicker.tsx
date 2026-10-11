@@ -1,17 +1,58 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Paperclip, Camera, Image, FileText, X } from 'lucide-react-native';
+import { Paperclip, Camera, Image as ImageIcon, FileText, X } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors as c, fonts as f } from './theme';
 export function AttachmentPicker({ onSelect }: { onSelect: (name: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const fail = (message: string) => Alert.alert('첨부할 수 없어요', message);
+  const takePhoto = async () => {
+    setBusy(true);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) return fail('카메라 권한이 필요해요. 기기 설정에서 허용해주세요.');
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+      if (!result.canceled && result.assets[0]) {
+        onSelect(result.assets[0].fileName ?? result.assets[0].uri.split('/').pop() ?? '사진.jpg');
+        setOpen(false);
+      }
+    } catch { fail('카메라를 열지 못했어요.'); }
+    finally { setBusy(false); }
+  };
+  const pickFromAlbum = async () => {
+    setBusy(true);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return fail('사진 라이브러리 권한이 필요해요. 기기 설정에서 허용해주세요.');
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (!result.canceled && result.assets[0]) {
+        onSelect(result.assets[0].fileName ?? result.assets[0].uri.split('/').pop() ?? '이미지.jpg');
+        setOpen(false);
+      }
+    } catch { fail('앨범을 열지 못했어요.'); }
+    finally { setBusy(false); }
+  };
+  const pickFile = async () => {
+    setBusy(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: '*/*' });
+      if (!result.canceled && result.assets[0]) {
+        onSelect(result.assets[0].name);
+        setOpen(false);
+      }
+    } catch { fail('파일을 열지 못했어요.'); }
+    finally { setBusy(false); }
+  };
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel="첨부하기" onPress={() => setOpen(true)} style={s.trigger}><Paperclip size={22} color={c.text}/></Pressable>
     <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
       <View style={s.overlay}><SafeAreaView edges={['bottom']} style={s.sheet}>
         <View style={s.header}><Text style={s.title}>무엇을 첨부할까요?</Text><Pressable accessibilityRole="button" accessibilityLabel="첨부창 닫기" onPress={() => setOpen(false)} style={s.close}><X size={20} color={c.text}/></Pressable></View>
-        {([{ label: '사진 찍기', note: '선물 사진 촬영 체험', name: '선물사진.jpg', Icon: Camera }, { label: '앨범에서 고르기', note: '예시 이미지 첨부', name: '위시리스트.png', Icon: Image }, { label: '파일 선택', note: '예시 PDF 첨부', name: '선물목록.pdf', Icon: FileText }]).map(({ label, note, name, Icon }) => <Pressable key={label} accessibilityRole="button" onPress={() => { onSelect(name); setOpen(false); }} style={s.option}><Icon size={22} color={c.primary}/><View><Text style={s.label}>{label}</Text><Text style={s.note}>{note}</Text></View></Pressable>)}
-        <Text style={s.note}>프로토타입에서는 예시 첨부를 사용해요. 카메라·앨범·파일에 접근하거나 실제 파일을 전송하지 않아요.</Text>
+        {([{ label: '사진 찍기', note: '받는 분 취향이 보이는 사진', Icon: Camera, onPress: takePhoto }, { label: '앨범에서 고르기', note: '위시리스트나 대화 캡처', Icon: ImageIcon, onPress: pickFromAlbum }, { label: '파일 선택', note: 'PDF 등 문서 파일', Icon: FileText, onPress: pickFile }]).map(({ label, note, Icon, onPress }) => <Pressable key={label} accessibilityRole="button" disabled={busy} onPress={() => void onPress()} style={[s.option, busy && { opacity: 0.5 }]}><Icon size={22} color={c.primary}/><View><Text style={s.label}>{label}</Text><Text style={s.note}>{note}</Text></View></Pressable>)}
+        <Text style={s.note}>첨부한 파일은 입력창에 이름만 표시돼요. 추천에 자동으로 반영되지 않으며, 서버로 전송하거나 분석하지 않아요.</Text>
       </SafeAreaView></View>
     </Modal>
   </>;

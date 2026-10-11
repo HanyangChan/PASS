@@ -33,6 +33,13 @@
           "speechRecognitionPermission": "말한 내용을 글자로 바꿔 입력창에 넣기 위해 음성 인식을 사용합니다."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "받는 분 취향을 참고할 사진을 첨부하기 위해 앨범에 접근합니다.",
+          "cameraPermission": "선물 참고 사진을 촬영하기 위해 카메라를 사용합니다."
+        }
+      ],
       "expo-secure-store"
     ],
     "scheme": "pass"

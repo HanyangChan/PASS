@@ -1,10 +1,11 @@
+export type GiftIcon = 'fruit' | 'hangwa' | 'nuts' | 'tea' | 'coffee' | 'oil' | 'gift';
 export type Gift = {
   id: string;
   name: string;
   category: string;
   price: number;
   description: string;
-  icon: 'fruit' | 'gift';
+  icon: GiftIcon;
   shippingIncluded?: boolean;
   image?: string;
   rating?: number;
@@ -12,6 +13,11 @@ export type Gift = {
   source?: 'prototype' | 'engine';
   packaging?: string;
   arrival?: string;
+  ingredients?: string[];
+  sweetness?: string;
+  brand?: string;
+  allergensDeclared?: string[];
+  allergenInfoComplete?: boolean;
 };
 
 export type Conditions = {

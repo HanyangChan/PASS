@@ -38,6 +38,8 @@ import {
   Share2,
   ArrowUp,
   ChevronDown,
+  ChevronRight,
+  ArrowLeftRight,
   Star,
 } from 'lucide-react-native';
 import SearchIcon from './assets/figma/search.svg';
@@ -77,7 +79,7 @@ const nav = [
   { key: 'home', label: '홈', Icon: Home },
   { key: 'chat', label: 'AI 추천', Icon: Sparkles },
   { key: 'ranking', label: '선물 랭킹', Icon: Trophy },
-  { key: 'mypage', label: '마이', Icon: User },
+  { key: 'mypage', label: '마이페이지', Icon: User },
 ] as const;
 function Button({ label, onPress }: { label: string; onPress: () => void }) {
   return (
@@ -205,7 +207,13 @@ export function AppContent({
     chatService.toGift(product, session.state);
   const send = (text: string, source: 'typed' | 'quick_reply' = 'typed') => {
     if (!text.trim()) return;
-    void sendChat(text, source).then(ok => { if (ok) { setInput(''); setComparisonId(null); } });
+    // Clear optimistically so a slow (e.g. LLM) round trip can't let further typing
+    // pile onto the just-sent text; restore it only if the send actually fails.
+    if (source === 'typed') setInput('');
+    void sendChat(text, source).then(ok => {
+      if (ok) setComparisonId(null);
+      else if (source === 'typed') setInput(text);
+    });
   };
   const chat = (label?: string) => {
     navigate('chat');
@@ -240,7 +248,7 @@ export function AppContent({
       contentContainerStyle={s.horizontal}
     >
       {gifts.map((g) => (
-        <Tile key={g.id} gift={g} onOpen={() => open(g)} />
+        <Tile key={g.id} gift={g} onOpen={() => open(g)} saved={liked(g)} onSave={() => save(g)} />
       ))}
     </ScrollView>
   );
@@ -252,15 +260,27 @@ export function AppContent({
     ranked = [...ranked].sort((a, b) =>
       sort === '낮은 가격순' ? a.price - b.price : b.price - a.price,
     );
+  const sweetnessLabel: Record<string, string> = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
   const info =
     detail?.source === 'engine'
       ? [
+          ['구성', detail.ingredients?.join(', ') || '미지정'],
+          ...(detail.sweetness ? [['단맛', sweetnessLabel[detail.sweetness] ?? detail.sweetness]] : []),
+          ['포장', detail.packaging || '미지정'],
+          ...(detail.brand ? [['브랜드', detail.brand]] : []),
+          [
+            '알레르기·원재료',
+            detail.allergenInfoComplete
+              ? detail.allergensDeclared?.length
+                ? `${detail.allergensDeclared.join(', ')} 포함`
+                : '표시된 알레르기 성분 없음'
+              : '정보 확인 필요 · 구매 전 판매처 확인',
+          ],
           ['배송', `모의 도착일 ${detail.arrival}`],
           [
             '배송비',
             detail.shippingIncluded ? '표시 금액에 포함' : '상품값에서 별도',
           ],
-          ['포장', detail.packaging || '미지정'],
           ['구매', '실험용 가상 상품 · 실제 판매 없음'],
         ]
       : [
@@ -713,7 +733,14 @@ export function AppContent({
                         })}
                       </ScrollView>
                       <View style={s.resultButton}>
-                        <Pressable accessibilityRole="button" onPress={() => setResultsOpen(true)} style={s.compareButton}><Sparkles size={20} color={c.primary}/><Text style={s.compareText}>조건을 바꾸면 어떻게 달라질까요?</Text><ChevronDown size={18} color={c.primary}/></Pressable>
+                        <Pressable accessibilityRole="button" accessibilityLabel="조건을 바꾸면 추천이 어떻게 달라지는지 비교해보기" onPress={() => setResultsOpen(true)} style={s.compareButton}>
+                          <View style={s.compareIcon}><ArrowLeftRight size={18} color={c.white}/></View>
+                          <View style={s.flex}>
+                            <Text style={s.compareTitle}>조건을 바꾸면 어떻게 달라질까요?</Text>
+                            <Text style={s.compareSubtitle}>예산·조건별 추천 비교해보기</Text>
+                          </View>
+                          <ChevronRight size={20} color={c.primary}/>
+                        </Pressable>
                       </View>
                     </>
                   )}
@@ -741,10 +768,11 @@ export function AppContent({
                       accessibilityLabel="선물 조건 입력"
                       value={input}
                       onChangeText={setInput}
-                      placeholder="받는 분, 예산을 말해 주세요"
+                      editable={!chatPending}
+                      placeholder={chatPending ? '보내는 중…' : '받는 분, 예산을 말해 주세요'}
                       maxLength={1200}
                       multiline
-                      style={[s.input, s.flex]}
+                      style={[s.input, s.flex, chatPending && s.inputDisabled]}
                     />
                     <ChatTools mode="voice" conditions={session.state} onVoice={setInput} onApply={() => {}} />
                     </View>
@@ -754,7 +782,7 @@ export function AppContent({
                       disabled={chatPending || (!input.trim() && attachments.length === 0)}
                       onPress={() => {
                         if (attachments.length) {
-                          setMessages(old => [...old, { role: 'user', text: `예시 첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '예시 첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 실제 파일 분석은 제공하지 않아요.' }]);
+                          setMessages(old => [...old, { role: 'user', text: `첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 첨부 파일 내용은 분석하지 않아요.' }]);
                           setAttachments([]);
                         }
                         if (input.trim()) send(input);
@@ -1349,6 +1377,7 @@ const s = StyleSheet.create({
     maxHeight: 120,
     minHeight: 44,
   },
+  inputDisabled: { color: c.muted },
   send: {
     width: 44,
     height: 44,
@@ -1364,9 +1393,11 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  resultButton: { marginHorizontal: 16 },
-  compareButton: { backgroundColor: c.tint, borderRadius: 14, minHeight: 48, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  compareText: { flex: 1, fontFamily: f.bold, fontSize: 13, color: c.primary },
+  resultButton: { marginHorizontal: 16, marginVertical: 4 },
+  compareButton: { backgroundColor: c.white, borderWidth: 1.5, borderColor: c.primary, borderRadius: 16, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  compareIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' },
+  compareTitle: { fontFamily: f.bold, fontSize: 14, color: c.text, marginBottom: 2 },
+  compareSubtitle: { fontFamily: f.regular, fontSize: 12, color: c.muted },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },

@@ -4,9 +4,22 @@ import { Star, ChevronRight } from 'lucide-react-native';
 import CheckIcon from '../assets/figma/check.svg';
 import HeartIcon from '../assets/figma/heart.svg';
 import FruitIcon from '../assets/figma/fruit.svg';
+import HangwaIcon from '../assets/figma/hangwa.svg';
+import NutsIcon from '../assets/figma/nuts.svg';
+import TeaIcon from '../assets/figma/tea.svg';
+import CoffeeIcon from '../assets/figma/coffee.svg';
+import OilIcon from '../assets/figma/oil.svg';
 import GiftIcon from '../assets/figma/gift.svg';
 import { colors as c, fonts as f } from './theme';
 import type { Gift } from './catalog';
+const categoryIcons: Record<string, typeof FruitIcon> = {
+  fruit: FruitIcon,
+  hangwa: HangwaIcon,
+  nuts: NutsIcon,
+  tea: TeaIcon,
+  coffee: CoffeeIcon,
+  oil: OilIcon,
+};
 export const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
 export function Chip({
   label,
@@ -32,7 +45,7 @@ export function Chip({
 export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
   const failed = !!gift.image && failedUrl === gift.image;
-  const Icon = gift.icon === 'fruit' ? FruitIcon : GiftIcon;
+  const Icon = categoryIcons[gift.icon] ?? GiftIcon;
   return (
     <View style={[s.image, { width: size, height: size }]}>
       {gift.image && !failed ? (
@@ -98,32 +111,54 @@ export function GiftCard({
         onPress={onSave}
         style={[s.heart, saved && s.selected]}
       >
-        <HeartIcon />
+        <HeartIcon color={saved ? c.primary : c.muted} />
       </Pressable>
     </View>
   );
 }
-export function Tile({ gift, onOpen }: { gift: Gift; onOpen: () => void }) {
+export function Tile({
+  gift,
+  onOpen,
+  saved,
+  onSave,
+}: {
+  gift: Gift;
+  onOpen: () => void;
+  saved?: boolean;
+  onSave?: () => void;
+}) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${gift.name} 상세 보기`}
-      onPress={onOpen}
-      style={s.tile}
-    >
+    <View style={s.tile}>
       <View>
-        <GiftImage gift={gift} size={160} />
-        <View style={s.tag}>
-          <Text style={s.small}>{gift.category}</Text>
-        </View>
-        {gift.rating && (
-          <View style={s.rating}>
-            <Star size={10} color="#F59E0B" fill="#F59E0B" />
-            <Text style={s.small}>{gift.rating}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${gift.name} 상세 보기`}
+          onPress={onOpen}
+        >
+          <GiftImage gift={gift} size={160} />
+          <View style={s.tag}>
+            <Text style={s.small}>{gift.category}</Text>
           </View>
+          {gift.rating && (
+            <View style={s.rating}>
+              <Star size={10} color="#F59E0B" fill="#F59E0B" />
+              <Text style={s.small}>{gift.rating}</Text>
+            </View>
+          )}
+        </Pressable>
+        {onSave && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${gift.name} ${saved ? '찜 해제' : '찜하기'}`}
+            accessibilityState={{ selected: saved }}
+            onPress={onSave}
+            style={[s.tileHeart, saved && s.selected]}
+          >
+            <HeartIcon color={saved ? c.primary : c.muted} />
+          </Pressable>
         )}
       </View>
-      <View style={s.tileBody}>
+      <Pressable accessibilityRole="button" onPress={onOpen} style={s.tileBody}>
         <Text numberOfLines={2} style={s.tileName}>
           {gift.name}
         </Text>
@@ -131,8 +166,8 @@ export function Tile({ gift, onOpen }: { gift: Gift; onOpen: () => void }) {
           {gift.description}
         </Text>
         <Text style={s.tilePrice}>{won(gift.price)}</Text>
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 export function SectionHeader({
@@ -247,6 +282,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
+  },
+  tileHeart: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFFEE',
   },
   tile: {
     width: 160,
