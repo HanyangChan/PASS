@@ -52,3 +52,7 @@ npm run deploy:api
 웹 업로드에서 서버·DB·로컬 환경 변수는 `.vercelignore`로 제외합니다. Worker 배치 지역과 허용 웹 주소는 `api/wrangler.jsonc`에 있습니다. 실행 지역이 Gemini에서 지원되지 않으면 API가 `location_unsupported` 오류를 반환합니다.
 
 상세 구현: [모바일](mobile/README.md), [API](api/README.md), [DB](supabase/README.md).
+
+## 아키텍처
+
+[현재 운영 구조와 배포 설정](docs/architecture.md) · [구조도](https://temporary-prompt-sable-s15js3l.vercel.app/architecture.svg)
