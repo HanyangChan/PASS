@@ -109,3 +109,17 @@ Vercel에는 브라우저 데모가 배포됩니다. 앱스토어용 iOS/Android
 로그인 사용자는 `EXPO_PUBLIC_CHAT_API_URL`이 설정되면 `serverChatService.ts`에서 Supabase access token으로 서버를 호출합니다. 전송/조건 편집/예산 대안 적용을 서버에서 처리하고 서버의 추천·비교 결과를 표시합니다. 기존 대화 복원 뒤에도 서버에서 추천을 다시 계산합니다. 미설정 상태와 게스트는 기기 엔진을 사용하며 화면에 방식을 구분합니다.
 
 전송 중 중복 요청을 막고 새 대화·계정 전환 시 진행 중 요청과 이전 응답을 폐기합니다. 실패 시 대화/조건/입력을 유지하고 같은 문장을 다시 보낼 수 있습니다. Gemini 키는 앱 환경 변수에 넣지 않습니다. 실행·배포·요청 제한·카탈로그 범위는 `../api/README.md`를 참고하세요.
+
+### 네이티브 배포 프로필
+
+`eas.json`의 production에 공개 API 주소·Supabase URL·Publishable key를 반영했습니다. preview는 APK 내부 배포, development는 개발 클라이언트 프로필이며 production 공개 설정을 상속합니다. 모두 같은 운영 백엔드에 연결됩니다. `.env.example`을 복사해도 동일한 공개 서버에 연결됩니다.
+
+```sh
+cp .env.example .env.local
+npx eas-cli@latest build --profile preview --platform android
+npx eas-cli@latest build --profile production --platform all
+```
+
+위 명령은 Expo 계정 로그인·EAS 프로젝트 연결과 앱 식별자·서명 설정을 완료한 후 실행합니다. 클라우드 네이티브 빌드나 앱스토어 제출은 아직 실행하지 않았습니다. 공개 변수는 앱 번들에 포함됩니다. Gemini 키와 관리자 키는 이 파일에 넣지 않습니다.
+
+[현재 아키텍처](../docs/architecture.md)를 참고하세요.

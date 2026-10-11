@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="970" viewBox="0 0 1400 970" role="img" aria-labelledby="title desc"><title id="title">PASS 운영 아키텍처</title><desc id="desc">모바일 앱, Vercel 웹, Supabase 로그인과 계정 기록, Cloudflare 추천 API, Gemini 조건 추출의 실제 연결 구조. EAS 네이티브 빌드는 설정 단계입니다.</desc><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#68788D"/></marker></defs><style>text{font-family:Arial,'Noto Sans KR','Apple SD Gothic Neo',sans-serif;fill:#202C39}.heading{font-size:23px;font-weight:700}.body{font-size:17px;fill:#526780}.label{font-size:15px;fill:#526780}.line{fill:none;stroke:#68788D;stroke-width:2;marker-end:url(#arrow)}</style><rect width="1400" height="970" rx="26" fill="#F6F8FB"/><text x="40" y="55" font-size="32" font-weight="700">PASS · 모바일 앱과 공개 서비스 아키텍처</text><text x="40" y="87" font-size="17" fill="#526780">2026-10-11 운영 기준 · 실선: 구현·연결 완료 / 점선: 네이티브 빌드 설정 완료, 빌드·서명 미완료</text>
+<rect x="40" y="125" width="310" height="120" rx="18" fill="#FFF7EE" stroke="#E6BD8F" stroke-width="1.5"/>
+<text class="heading" x="62" y="161">Vercel · 모바일 웹</text>
+<text class="body" x="62" y="194">Expo 정적 화면</text>
+<text class="body" x="62" y="223">공개 운영 웹 배포 완료</text>
+<rect x="40" y="290" width="310" height="125" rx="18" fill="#EEF4FF" stroke="#A7BEE8" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text class="heading" x="62" y="326">EAS · iOS / Android</text>
+<text class="body" x="62" y="359">개발·내부·운영 빌드 프로필</text>
+<text class="body" x="62" y="388">앱 식별자·프로젝트·서명: 후속</text>
+<rect x="40" y="480" width="310" height="170" rx="18" fill="#EEF4FF" stroke="#A7BEE8" stroke-width="1.5"/>
+<text class="heading" x="62" y="516">음성 입력 어댑터</text>
+<text class="body" x="62" y="549">네이티브: 기기 전용 한국어 인식</text>
+<text class="body" x="62" y="578">웹: 브라우저 음성 인식</text>
+<text class="body" x="62" y="607">사용자가 확인한 텍스트 전송</text>
+<rect x="435" y="125" width="400" height="270" rx="18" fill="#FFF1EC" stroke="#E9B0A1" stroke-width="1.5"/>
+<text class="heading" x="457" y="161">Expo / React Native 앱</text>
+<text class="body" x="457" y="194">Expo Router · 홈 / 추천 / 마이</text>
+<text class="body" x="457" y="223">auth · speech · chat · records</text>
+<text class="body" x="457" y="252">로그인 계정: 서버 추천 + 기록 복원</text>
+<text class="body" x="457" y="281">네이티브 세션: SecureStore</text>
+<text class="body" x="457" y="310">공개 URL·Publishable key만 포함</text>
+<rect x="965" y="125" width="390" height="155" rx="18" fill="#EDFAF4" stroke="#A2D7BE" stroke-width="1.5"/>
+<text class="heading" x="987" y="161">Supabase Auth</text>
+<text class="body" x="987" y="194">이메일 로그인 · 세션 / JWT</text>
+<text class="body" x="987" y="223">추천 API에서 토큰 유효성 확인</text>
+<text class="body" x="987" y="252">관리자 키를 앱에 포함하지 않음</text>
+<rect x="965" y="380" width="390" height="155" rx="18" fill="#EDFAF4" stroke="#A2D7BE" stroke-width="1.5"/>
+<text class="heading" x="987" y="416">Supabase · PostgreSQL</text>
+<text class="body" x="987" y="449">대화 · 메시지 · 찜 · 최근 기록</text>
+<text class="body" x="987" y="478">앱 → 사용자 JWT → 본인 RLS</text>
+<text class="body" x="987" y="507">상품 테이블은 추천 원본으로 미사용</text>
+<rect x="435" y="460" width="400" height="230" rx="18" fill="#FFF7EE" stroke="#E6BD8F" stroke-width="1.5"/>
+<text class="heading" x="457" y="496">추천 API · Cloudflare Workers</text>
+<text class="body" x="457" y="529">HTTPS · Bearer JWT 검증</text>
+<text class="body" x="457" y="558">입력 검증 · CORS · 요청 제한</text>
+<text class="body" x="457" y="587">Gemini 조건 검증 → 추천 / 예산 비교</text>
+<text class="body" x="457" y="616">Gemini 키는 서버 secret</text>
+<text class="body" x="457" y="645">실행 배치: gcp:us-east4 인근</text>
+<rect x="965" y="660" width="390" height="155" rx="18" fill="#EEF4FF" stroke="#A7BEE8" stroke-width="1.5"/>
+<text class="heading" x="987" y="696">Gemini · 조건 추출</text>
+<text class="body" x="987" y="729">텍스트 + 최근 대화 최대 6개</text>
+<text class="body" x="987" y="758">구조화 조건 반환 · 상품/가격 미생성</text>
+<text class="body" x="987" y="787">기기 원음·첨부 분석은 포함하지 않음</text>
+<rect x="435" y="740" width="400" height="140" rx="18" fill="#FFFFFF" stroke="#D5DFEB" stroke-width="1.5"/>
+<text class="heading" x="457" y="776">공유 추천 엔진 · 데모 카탈로그</text>
+<text class="body" x="457" y="809">lib/single-gift · engine · counterfactual</text>
+<text class="body" x="457" y="838">lib/products.json 합성 식품 상품</text>
+<text class="body" x="457" y="867">가격·배송 비교는 엔진이 결정</text>
+<rect x="40" y="740" width="310" height="140" rx="18" fill="#FFFFFF" stroke="#D5DFEB" stroke-width="1.5"/>
+<text class="heading" x="62" y="776">게스트 · 기기 저장</text>
+<text class="body" x="62" y="809">기기 추천 엔진 + AsyncStorage</text>
+<text class="body" x="62" y="838">찜·최근 기록은 기기에 유지</text>
+<text class="body" x="62" y="867">계정으로 자동 업로드하지 않음</text>
+<path class="line" d="M350 185H425"/>
+<text class="label" x="382" y="174">웹</text>
+<path class="line" d="M350 345H425" stroke-dasharray="7 5"/>
+<text class="label" x="358" y="329">네이티브</text>
+<path class="line" d="M350 545H395V275H425"/>
+<text class="label" x="355" y="454">확인한 텍스트</text>
+<path class="line" d="M635 395V450"/>
+<text class="label" x="485" y="435">HTTPS · 텍스트 / 조건 / JWT</text>
+<path class="line" d="M835 185H955"/>
+<text class="label" x="870" y="173">로그인</text>
+<path class="line" d="M835 330H920V445H955"/>
+<text class="label" x="935" y="351">앱이 직접 기록 저장 · RLS</text>
+<path class="line" d="M835 510H880V245H955"/>
+<text class="label" x="885" y="295">토큰 검증</text>
+<path class="line" d="M835 625H910V735H955"/>
+<text class="label" x="939" y="618">조건 추출 / JSON</text>
+<path class="line" d="M635 690V730"/>
+<text class="label" x="650" y="716">서버 추천 · 비교</text>
+<path class="line" d="M435 355H375V810H360"/>
+<text class="label" x="368" y="718">게스트</text>
+<text x="40" y="930" font-size="16" fill="#526780">현재 상품·가격·배송은 데모 데이터입니다. 주문·결제·상품 DB 추천·오프라인 영속 큐·실시간 충돌 병합은 후속입니다.</text></svg>
