@@ -1,6 +1,6 @@
 # PASS 추천 API
 
-공통 식품 데모 카탈로그/엔진과 기존 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 앱과 기존 웹 API가 같은 엔진 규칙을 사용합니다. 현재 카탈로그는 `lib/products.json`이며 실제 상품 DB 조회는 후속입니다.
+공통 식품 데모 카탈로그/엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 현재 카탈로그는 `lib/products.json`이며 실제 상품 DB 조회는 후속입니다.
 
 ## 로컬 시험
 
@@ -16,7 +16,7 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 `npm ci && npm run build`로 업로드 없이 번들을 검사합니다. 실제 배포 전에 `wrangler.jsonc`의 공개 Supabase URL/Publishable key를 설정하고, `APP_ORIGINS`에 실제 웹 앱 origin을 쉼표로 구분하여 넣습니다. 전체 URL 경로나 와일드카드를 넣지 않습니다. Gemini 키는 `npx wrangler secret put GEMINI_API_KEY`로 등록하고 설정한 모델 ID를 확인합니다. 클라우드 배포에는 Cloudflare 계정 인증이 필요합니다.
 
-`npm run deploy` 이후 모바일 빌드의 `EXPO_PUBLIC_CHAT_API_URL`을 해당 Worker HTTPS 기본 주소로 바꿉니다. 인증/기록 작업(PR #5)이 먼저 적용되어야 앱의 계정 연결을 사용할 수 있습니다. 기존 웹 `app/api/chat/route.ts`의 동일 origin 정책은 유지합니다.
+`npm run deploy` 이후 모바일 빌드의 `EXPO_PUBLIC_CHAT_API_URL`을 해당 Worker HTTPS 기본 주소로 바꿉니다. 인증/기록 작업(PR #5)이 먼저 적용되어야 앱의 계정 연결을 사용할 수 있습니다. 기존 연구 웹 API는 제거했습니다.
 
 ## 인증·제한·실패
 

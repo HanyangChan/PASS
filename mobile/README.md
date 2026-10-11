@@ -1,6 +1,6 @@
 # PASS mobile
 
-Expo / React Native iOS·Android 앱. 화면 이동은 Expo Router와 공유 상태 Provider로 구성했습니다. 모바일 소스는 `mobile/`, 기존 웹 앱과 서버는 저장소 루트에 있습니다.
+Expo / React Native iOS·Android 앱. 화면 이동은 Expo Router와 공유 상태 Provider로 구성했습니다. 모바일 소스는 `mobile/`, 공유 엔진은 `lib/`, 서버는 `api/`에 있습니다. 웹도 같은 Expo 화면을 사용하며 넓은 화면에서는 최대 480px 폭으로 표시합니다.
 
 ```sh
 cd mobile
@@ -20,7 +20,7 @@ npm start
 - 랭킹: 원본의 전체·부모님·친구·직장동료별 10개 데모 목록, 이름 검색, 상품군 필터, 가격 정렬.
 - 상세: 원본 이미지·상품 설명·전체 화면 상세, 공유, 찜. 선물하기는 구매 준비 중 안내를 표시합니다.
 - 마이: 찜/최근 본 선물과 도움말. 실제 계정이나 구매 이력을 꾸며 표시하지 않습니다.
-- 설문: 모바일 진입 경로 없음. 웹 `/study`도 홈으로 리다이렉트하며 설문 코드는 보존합니다.
+- 기존 연구 웹과 설문 화면은 제거했습니다.
 
 ## 디자인과 데이터
 
@@ -28,7 +28,7 @@ Make의 화면 구조와 제공된 상품 사진 URL/Lucide 아이콘을 사용�
 
 `src/make-data.json`은 첨부 소스의 데이터 리터럴에서 추출한 스냅샷입니다. 상품·가격·평점·인기 수치·배송 정책은 모두 프로토타입용이며 실제 판매나 검증된 상거래 정보가 아닙니다. 랭킹의 다양한 상품군과 기존 대화의 30개 식품 카탈로그는 구분됩니다. 원본 상품 사진은 제공된 Unsplash URL에서 로드하므로 인터넷이 필요합니다. 원본의 일부 사진 URL은 로드되지 않아 사진 로드 실패 안내를 표시합니다. SVG 7개와 한국어 폰트는 로컬에 포함됩니다. 저작권 출처는 `ATTRIBUTIONS.md`에 보존했습니다.
 
-찜과 최근 기록(최대 20개)은 AsyncStorage에 저장하고, 대화는 메모리에만 유지합니다. 모바일은 기존 Gemini 서버를 호출하지 않습니다. 서버는 같은 origin 요청만 허용하므로 모바일 API 인증/계약을 갖춘 후 LLM을 연결해야 합니다. Gemini API 키는 앱에 포함하지 않았습니다.
+게스트의 찜과 최근 기록은 AsyncStorage에 저장합니다. 로그인 계정의 대화와 기록은 Supabase에 저장하며, 추천은 인증된 Cloudflare API를 호출합니다. Gemini API 키는 서버 secret에만 보관합니다.
 
 ## 검증
 
@@ -83,7 +83,7 @@ Vercel에는 브라우저 데모가 배포됩니다. 앱스토어용 iOS/Android
 - `src/services/giftRepository.ts`: 기존 v1 찜·최근 기록 복원과 순차 저장. 한 기록의 읽기 실패가 다른 기록 복원을 막지 않으며 저장 실패 후 다음 저장은 계속됩니다.
 - `src/services/localServices.ts`: 제품 데이터와 AsyncStorage를 서비스에 연결하는 구성 지점. 추천은 로컬 엔진입니다. 게스트 기록은 AsyncStorage, 로그인 계정 기록은 cloudRecords를 통해 Supabase에 연결합니다.
 
-`npm run test:services`는 Node 22.13 이상에서 서비스 회귀 테스트를 실행합니다. Supabase 스키마/RLS·인증·계정 기록 저장이 연결되어 있습니다. 서버 추천 API 연결은 아래 서버 추천 API 항목을 참고하세요. 서버 호출은 비동기 상태·오류 처리 및 JWT 검증을 별도로 구현해야 합니다.
+`npm run test:services`는 Node 22.13 이상에서 서비스 회귀 테스트를 실행합니다. Supabase 스키마/RLS·인증·계정 기록 저장이 연결되어 있습니다. 서버 추천 API 연결은 아래 서버 추천 API 항목을 참고하세요. 서버 호출의 비동기 상태·오류 처리와 JWT 검증을 구현했습니다.
 
 ### Supabase 로그인
 

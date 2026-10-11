@@ -5,5 +5,12 @@
     "allowJs": true,
     "checkJs": false,
     "allowImportingTsExtensions": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".expo",
+    "ios",
+    "android"
+  ]
 }
