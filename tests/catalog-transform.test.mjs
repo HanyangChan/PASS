@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCsv,asinOf,priceKrw,imageUrl,candidates,toRow} from '../scripts/catalog/transform.mjs';
+import {parseCsv,asinOf,priceKrw,imageUrl,candidates,toRow,awkward} from '../scripts/catalog/transform.mjs';
 const csv='﻿name,main_category,sub_category,image,link,ratings,no_of_ratings,discount_price,actual_price\r\n'+
  '"Tata Tea Gold, 500g",grocery,"Coffee, Tea & Beverages",https://m.media-amazon.com/a.jpg,https://www.amazon.in/Tata/dp/B000000001/ref=sr_1,4.3,"1,200",₹285,₹300\r\n'+
  '"He said ""hi"" cookies",grocery,Snack Foods,https://m.media-amazon.com/b.jpg,https://www.amazon.in/x/dp/B000000002/ref=sr,3.9,50,,₹100\r\n';
@@ -22,6 +22,17 @@ test('colour variants sharing one review pool collapse to a single product',()=>
  const v=(asin,name,extra={})=>cand(asin,'Headphones',4100,{name,...extra});
  const out=candidates([v('B000000012','boAt BassHeads 100 (Black)'),v('B000000011','boAt BassHeads 100 (Mint)'),v('B000000013','boAt Rockerz 255',{no_of_ratings:'900'}),v('B000000014','JBL Tune 100')]);
  assert.deepEqual(out.map(c=>c.asin),['B000000011','B000000014','B000000013']);
+});
+test('awkward health products are dropped while common gift supplements stay',()=>{
+ const h=(asin,name,sub='Diet & Nutrition')=>cand(asin,sub,500,{name});
+ const out=candidates([h('B000000021','Dr. Tobias Optimum 14 Days Quick Colon Cleanse to Support Detox'),h('B000000022','Carbamide Forte Fat Burner for Men & Women'),
+  h('B000000023','JAIN Madhumardan Powder, Diabetes Care'),h('B000000024','Baidyanath Prostaid - 50 Tablets'),h('B000000025','Swisse Fish Oil with 1500mg Omega 3'),
+  h('B000000026','MuscleBlaze 100% Whey Protein'),h('B000000027','Hershey Chocolate Syrup 623g','Snack Foods')]);
+ assert.deepEqual(out.map(c=>c.asin).sort(),['B000000025','B000000026','B000000027']);
+});
+test('final-category check catches awkward health items outside Diet & Nutrition without hitting normal drinks',()=>{
+ for(const [name,category] of [['Glenberg Slim Detox Tea | Green Tea with Garcinia','coffee_tea'],['Dabur Giloy Juice Immunity Booster','health'],['Kapiva Dia Free Juice for Holistic Diabetes Care','health'],["Krishna's Diabic Care Juice",'health'],['Saffola FITTIFY HI PROTEIN SLIM MEAL-SHAKE','health']])assert.ok(awkward(name,category),name);
+ for(const [name,category] of [['Sleepy Owl Original Premium Instant Coffee','coffee_tea'],['Sepoy & Co. Indian Tonic Water','food'],['Swisse Fish Oil with 1500mg Omega 3','health'],['Walito Sauna Slim Belt','fitness'],['Organic India Tulsi Sleep Tea Bags','coffee_tea']])assert.ok(!awkward(name,category),name);
 });
 test('rows are deterministic with synthesized demo fields and allergen tags',()=>{
  const c={asin:'B000000009',name:'Sunfeast Gift Box cookies with milk',sub_category:'Snack Foods',image:'https://m.media-amazon.com/i.jpg',link:'https://www.amazon.in/dp/B000000009',inr:285,rating:4.2,count:500};

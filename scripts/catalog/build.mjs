@@ -2,7 +2,7 @@
 import {readFileSync,writeFileSync,readdirSync,existsSync,mkdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {parseArgs} from 'node:util';
-import {parseCsv,candidates,toRow,SUBCATEGORIES} from './transform.mjs';
+import {parseCsv,candidates,toRow,awkward,SUBCATEGORIES} from './transform.mjs';
 import {translateAll} from './translate.mjs';
 const {values:args}=parseArgs({options:{raw:{type:'string'},out:{type:'string',default:'data/products-amazon.json'},cache:{type:'string',default:'data/.gemini-cache.json'}}});
 if(!args.raw)throw Error('--raw <압축 해제 폴더>가 필요합니다.');
@@ -18,8 +18,8 @@ const cache=existsSync(args.cache)?JSON.parse(readFileSync(args.cache,'utf8')):{
 console.log(`rows ${rows.length} → candidates ${cands.length}, cached ${cands.filter(c=>cache[c.asin]).length}`);
 try{await translateAll(cands,cache,{apiKey,model:process.env.GEMINI_MODEL||undefined,onBatch:c=>{writeFileSync(args.cache,JSON.stringify(c));process.stdout.write('.');}});}
 finally{writeFileSync(args.cache,JSON.stringify(cache));}
-const kept=cands.filter(c=>cache[c.asin]&&cache[c.asin].category!=='exclude');
+const kept=cands.filter(c=>cache[c.asin]&&cache[c.asin].category!=='exclude'&&!awkward(c.name,cache[c.asin].category));
 const out=kept.map(c=>toRow(c,cache[c.asin]));
 writeFileSync(args.out,JSON.stringify(out,null,1));
-console.log(`\nwrote ${out.length} → ${args.out}; excluded ${cands.filter(c=>cache[c.asin]?.category==='exclude').length}; untranslated ${cands.filter(c=>!cache[c.asin]).length}`);
+console.log(`\nwrote ${out.length} → ${args.out}; excluded ${cands.filter(c=>cache[c.asin]?.category==='exclude').length}; awkward ${cands.filter(c=>cache[c.asin]&&awkward(c.name,cache[c.asin].category)).length}; untranslated ${cands.filter(c=>!cache[c.asin]).length}`);
 console.log(Object.fromEntries(Object.entries(Object.groupBy(out,r=>r.category)).map(([k,v])=>[k,v.length])));
