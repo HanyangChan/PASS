@@ -10,6 +10,7 @@ const config = (() => {
   try { return resolveAuthConfig(process.env.EXPO_PUBLIC_SUPABASE_URL, process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY); }
   catch (error) { configurationError = (error as Error).message; return null; }
 })();
+export const supabaseConfig = config;
 const nativeStorage = createSecureSessionStorage({
   getItemAsync: key => SecureStore.getItemAsync(key),
   setItemAsync: (key, value) => SecureStore.setItemAsync(key, value, { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }),

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -48,19 +49,15 @@ import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { useAuth } from './src/auth/AuthProvider';
-import {
-  Gift,
-  popularGifts,
-  rankingByRecipient,
-  categories,
-} from './src/catalog';
-import { chatService, giftRepository } from './src/services/localServices';
+import { Gift, categories, rankGifts } from './src/catalog';
+import { giftRepository, productRepository } from './src/services/localServices';
+import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
 import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
-import type { ChatSession, ChatMessage } from './src/domain';
+import type { ChatSession, ChatMessage, EngineProduct } from './src/domain';
 import {
   Chip,
   GiftCard,
@@ -144,6 +141,11 @@ export function AppContent({
     setAllSaved,
     allRecent,
     setAllRecent,
+    chatService,
+    rankingByRecipient,
+    popularGifts,
+    catalogError,
+    retryCatalog,
   } = state;
   const router = useRouter();
   const { user } = useAuth();
@@ -254,34 +256,25 @@ export function AppContent({
   );
   let ranked = rankingByRecipient[recipient].filter(
     (g) =>
-      (filter === '전체' || g.category === filter) && g.name.includes(search) && (priceLimit === null || g.price <= priceLimit),
+      (filter === '전체' || g.category === filter) && [g.name, g.nameEn ?? '', g.brand ?? ''].some(v => v.toLowerCase().includes(search.toLowerCase())) && (priceLimit === null || g.price <= priceLimit),
   );
   if (sort !== '인기순')
     ranked = [...ranked].sort((a, b) =>
       sort === '낮은 가격순' ? a.price - b.price : b.price - a.price,
     );
   const sweetnessLabel: Record<string, string> = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
+  const demoValue = (field: string, text: string) => (detail?.demoFields?.includes(field) ? `${text} · 데모 값` : text);
   const info =
     detail?.source === 'engine'
       ? [
-          ['구성', detail.ingredients?.join(', ') || '미지정'],
-          ...(detail.sweetness ? [['단맛', sweetnessLabel[detail.sweetness] ?? detail.sweetness]] : []),
-          ['포장', detail.packaging || '미지정'],
           ...(detail.brand ? [['브랜드', detail.brand]] : []),
-          [
-            '알레르기·원재료',
-            detail.allergenInfoComplete
-              ? detail.allergensDeclared?.length
-                ? `${detail.allergensDeclared.join(', ')} 포함`
-                : '표시된 알레르기 성분 없음'
-              : '정보 확인 필요 · 구매 전 판매처 확인',
-          ],
-          ['배송', `모의 도착일 ${detail.arrival}`],
-          [
-            '배송비',
-            detail.shippingIncluded ? '표시 금액에 포함' : '상품값에서 별도',
-          ],
-          ['구매', '실험용 가상 상품 · 실제 판매 없음'],
+          ...(detail.nameEn ? [['원제품명', detail.nameEn]] : []),
+          ...(detail.sweetness && detail.sweetness !== 'unknown' ? [['단맛', sweetnessLabel[detail.sweetness] ?? detail.sweetness]] : []),
+          ['알레르기', detail.allergensDeclared?.length ? `${detail.allergensDeclared.join(', ')} 포함 (상품명 기준 추정)` : '상품명에 표시된 알레르기 성분 없음 · 구매 전 성분표 확인'],
+          ['포장', demoValue('packaging', detail.packaging || '기본 포장')],
+          ['배송', demoValue('arrival_days', `도착 예정 ${detail.arrival}`)],
+          ['배송비', demoValue('shipping_fee_krw', detail.shippingIncluded ? '표시 금액에 포함' : '상품값에서 별도')],
+          ['구매', 'PASS에서는 구매할 수 없어요'],
         ]
       : [
           ['배송', '무료배송 · 2–3일 내 출고 (데모)'],
@@ -298,6 +291,11 @@ export function AppContent({
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style="dark" />
+      {catalogError ? (
+        <Pressable accessibilityRole="button" onPress={retryCatalog} style={s.catalogBanner}>
+          <Text style={s.catalogBannerText}>상품 정보를 불러오지 못했어요 · 다시 시도</Text>
+        </Pressable>
+      ) : null}
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -383,7 +381,7 @@ export function AppContent({
                         }
                       />
                     ))}
-                    <Text style={s.small}>{detail.rating} · 데모 평점</Text>
+                    <Text style={s.small}>{detail.rating}{detail.source === 'engine' ? (detail.ratingCount ? ` · 리뷰 ${detail.ratingCount.toLocaleString('ko-KR')}개` : '') : ' · 데모 평점'}</Text>
                   </View>
                 )}
                 <Text style={s.title}>{detail.name}</Text>
@@ -406,9 +404,15 @@ export function AppContent({
                     </Text>
                   </View>
                 )}
+                {detail.link && (
+                  <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(detail.link!)}>
+                    <Text style={s.sourceLink}>Amazon에서 보기</Text>
+                  </Pressable>
+                )}
                 <Text style={s.small}>
-                  상품·가격·평점은 프로토타입용 정보예요. 실제 구매는 제공하지
-                  않아요.
+                  {detail.source === 'engine'
+                    ? '상품 정보: Kaggle Amazon Products Dataset (Lokesh Parab), CC BY-NC 4.0. 가격·배송은 데모 값이에요.'
+                    : '상품·가격·평점은 프로토타입용 정보예요. 실제 구매는 제공하지 않아요.'}
                 </Text>
               </View>
             </ScrollView>
@@ -555,7 +559,7 @@ export function AppContent({
                   />
                   {tiles(popularGifts)}
                   <Text style={s.demoNote}>
-                    프로토타입의 데모 상품·가격·평점이에요.
+                    상품 정보: Kaggle Amazon Products Dataset (CC BY-NC 4.0) · 가격·배송은 데모 값이에요.
                   </Text>
                 </View>
                 <View style={s.homeSection}>
@@ -921,6 +925,19 @@ export function usePassContext() {
 function usePassState() {
   const { user } = useAuth();
   const owner = user?.id;
+  const [catalog, setCatalog] = useState<{ products: EngineProduct[]; error: string }>({ products: [], error: productRepository ? '' : '상품 서버 설정이 필요해요.' });
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  useEffect(() => {
+    if (!productRepository) return;
+    let live = true;
+    productRepository.load().then(
+      products => { if (live) setCatalog({ products, error: '' }); },
+      (error: Error) => { if (live) setCatalog(old => ({ ...old, error: error.message })); },
+    );
+    return () => { live = false; };
+  }, [catalogAttempt]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
+  const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
@@ -1052,6 +1069,11 @@ function usePassState() {
     resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
+    chatService,
+    rankingByRecipient,
+    popularGifts: rankingByRecipient['전체'].slice(0, 10),
+    catalogError: catalog.error,
+    retryCatalog: () => setCatalogAttempt(value => value + 1),
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1175,6 +1197,9 @@ const s = StyleSheet.create({
   buttonText: { fontFamily: f.bold, fontSize: 14, color: c.white },
   disabled: { backgroundColor: c.segment },
   horizontal: { paddingHorizontal: 20, gap: 12 },
+  sourceLink: { color: c.primary, fontFamily: f.medium, fontSize: 14, paddingVertical: 8 },
+  catalogBanner: { backgroundColor: '#FEF2F2', paddingVertical: 8, paddingHorizontal: 16 },
+  catalogBannerText: { color: '#B91C1C', fontFamily: f.medium, fontSize: 13, textAlign: 'center' },
   demoNote: {
     fontFamily: f.regular,
     fontSize: 12,
