@@ -7,13 +7,18 @@ export type CalendarStorage = {
 };
 
 export function createCalendarRepository(storage: CalendarStorage) {
+  let loaded = false;
   let writes: Promise<void> = Promise.resolve();
   return {
     async load(): Promise<CalendarEvent[]> {
-      try { return decodeCalendarEvents(await storage.getItem(calendarEventsKey)); }
-      catch { return []; }
+      loaded = false;
+      await writes;
+      const events = decodeCalendarEvents(await storage.getItem(calendarEventsKey));
+      loaded = true;
+      return events;
     },
     save(events: CalendarEvent[]) {
+      if (!loaded) return Promise.reject(new Error('Calendar has not loaded successfully'));
       // Snapshot at enqueue time so later UI updates cannot change this write.
       const value = JSON.stringify(events);
       const task = writes.then(() => storage.setItem(calendarEventsKey, value));

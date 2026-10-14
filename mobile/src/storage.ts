@@ -1,4 +1,5 @@
 import { giftIcons, calendarEventKinds, type Gift, type CalendarEvent } from './domain.ts';
+import { isValidMonthDay } from './services/calendarDates.ts';
 export const savedKey = 'pass.saved-gifts.v1';
 export const recentKey = 'pass.recent-gifts.v1';
 export const calendarEventsKey = 'pass.calendar-events.v1';
@@ -20,7 +21,6 @@ export function decodeGifts(raw: string | null): Gift[] {
         (typeof g.image === 'string' && g.image.startsWith('https://'))),
   );
 }
-const monthDayPattern = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 export function decodeCalendarEvents(raw: string | null): CalendarEvent[] {
   if (!raw) return [];
   const values: unknown = JSON.parse(raw);
@@ -33,7 +33,7 @@ export function decodeCalendarEvents(raw: string | null): CalendarEvent[] {
       typeof e.title === 'string' &&
       e.title.trim().length > 0 &&
       typeof e.date === 'string' &&
-      monthDayPattern.test(e.date) &&
+      isValidMonthDay(e.date) &&
       (calendarEventKinds as readonly string[]).includes(e.kind),
   );
 }

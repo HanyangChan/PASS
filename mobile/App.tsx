@@ -62,7 +62,7 @@ import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
-import { daysUntil, sortByUpcoming, upcomingWithin } from './src/services/calendarDates';
+import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
 import type { ChatSession, ChatMessage, CalendarEvent, CalendarEventKind } from './src/domain';
 import { calendarEventKinds } from './src/domain';
 import {
@@ -125,6 +125,9 @@ export function AppContent({
     setRecent,
     events,
     setEvents,
+    eventsReady,
+    calendarLoadError,
+    retryCalendarLoad,
     ready,
     notice,
     setNotice,
@@ -176,11 +179,14 @@ export function AppContent({
   const [eventKind, setEventKind] = useState<CalendarEventKind>('birthday');
   const [eventFormError, setEventFormError] = useState('');
   const submitEvent = () => {
+    if (!eventsReady) return;
     const month = Number(eventMonth), day = Number(eventDay);
     if (!eventTitle.trim()) return setEventFormError('이름을 입력해주세요.');
     if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(day) || day < 1 || day > 31)
       return setEventFormError('날짜를 월/일로 올바르게 입력해주세요.');
-    addEvent(eventTitle, `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, eventKind);
+    const date = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (!isValidMonthDay(date)) return setEventFormError('존재하는 날짜를 입력해주세요.');
+    addEvent(eventTitle, date, eventKind);
     setEventTitle(''); setEventMonth(''); setEventDay(''); setEventKind('birthday'); setEventFormError('');
   };
   const screen = activeScreen ?? baseScreen;
@@ -855,9 +861,15 @@ export function AppContent({
                   <Text style={s.title}>캘린더</Text>
                 </View>
                 <Text style={[s.subtitle, s.eventIntro]}>
-                  생일·기념일을 기록해두면 1주일 전부터 홈 화면에서 알려드려요.
+                  생일·기념일을 기록해두면 1주일 전부터 홈 화면에서 알려드려요. 2월 29일은 윤년에 알려드려요.
                 </Text>
                 <View style={s.homeSection}>
+                  {!eventsReady && (calendarLoadError ? (
+                    <View style={s.eventForm}>
+                      <Text accessibilityRole="alert" style={s.small}>{calendarLoadError}</Text>
+                      <Button label="일정 다시 불러오기" onPress={retryCalendarLoad} />
+                    </View>
+                  ) : <Text style={s.empty}>기기 일정을 불러오는 중이에요.</Text>)}
                   <SectionHeader title="이벤트 추가" />
                   <View style={s.eventForm}>
                     <TextInput
@@ -893,7 +905,7 @@ export function AppContent({
                       </View>
                     </View>
                     {!!eventFormError && <Text accessibilityRole="alert" style={[s.small, s.eventError]}>{eventFormError}</Text>}
-                    <Pressable accessibilityRole="button" onPress={submitEvent} style={s.button}>
+                    <Pressable accessibilityRole="button" disabled={!eventsReady} onPress={submitEvent} style={[s.button, !eventsReady && { opacity: 0.5 }]}>
                       <Text style={s.buttonText}>추가하기</Text>
                     </Pressable>
                   </View>
@@ -921,7 +933,7 @@ export function AppContent({
                       </View>
                     ))
                   ) : (
-                    <Text style={s.empty}>등록된 이벤트가 없어요.</Text>
+                    <Text style={s.empty}>{eventsReady ? '등록된 이벤트가 없어요.' : '일정을 불러온 후 표시합니다.'}</Text>
                   )}
                 </View>
               </ScrollView>
@@ -1056,6 +1068,8 @@ function usePassState() {
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
+  const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [syncFailed, setSyncFailed] = useState(false);
   const [saveAttempt, setSaveAttempt] = useState(0);
@@ -1167,10 +1181,12 @@ function usePassState() {
     // so they load and save independently of login state.
     let mounted = true;
     calendarRepository.load().then(list => {
-      if (mounted) { setEvents(list); setEventsReady(true); }
+      if (mounted) { setEvents(list); setEventsReady(true); setCalendarLoadError(''); }
+    }).catch(() => {
+      if (mounted) setCalendarLoadError('기기 일정을 불러오지 못했어요. 다시 시도해주세요.');
     });
     return () => { mounted = false; };
-  }, []);
+  }, [calendarLoadAttempt]);
   useEffect(() => {
     if (!eventsReady) return;
     calendarRepository.save(events).catch(() => {
@@ -1189,6 +1205,9 @@ function usePassState() {
     setRecent,
     events,
     setEvents,
+    eventsReady,
+    calendarLoadError,
+    retryCalendarLoad: () => setCalendarLoadAttempt(value => value + 1),
     ready,
     notice,
     setNotice,
