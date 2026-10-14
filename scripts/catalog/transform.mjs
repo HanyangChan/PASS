@@ -3,6 +3,8 @@ import {CATEGORY_NAMES} from '../../lib/catalog.mjs';
 export const RUPEE_TO_KRW=16;
 // Korean gift price-level correction (design 2026-10-14). Deliberately not shown in the app.
 export const PRICE_LEVEL=2;
+// Single snack packs (₹10–₹149) are not gifts and would win the engine's cheapest-first tie-break.
+export const MIN_INR=150;
 export const SUBCATEGORIES=['Coffee, Tea & Beverages','Snack Foods','All Grocery & Gourmet Foods','Diet & Nutrition','Make-up','Beauty & Grooming','Luxury Beauty','Personal Care Appliances','Kitchen & Dining','Home Décor','Watches','Fashion & Silver Jewellery','Handbags & Clutches','Wallets','Sunglasses','Headphones','Speakers','Toys & Games','Fitness Accessories','Yoga'];
 export function parseCsv(text){
  const rows=[];let row=[],field='',quoted=false;
@@ -23,10 +25,13 @@ export function candidates(rows,perGroup=200){
  for(const r of rows){
   if(!SUBCATEGORIES.includes(r.sub_category))continue;
   const asin=asinOf(r.link),inr=amount(r.discount_price)??amount(r.actual_price),rating=amount(r.ratings),count=amount(r.no_of_ratings);
-  if(!asin||!inr||!rating||rating<3.5||!count||count<20||!String(r.image).startsWith('https://'))continue;
+  if(!asin||!inr||inr<MIN_INR||!rating||rating<3.5||!count||count<20||!String(r.image).startsWith('https://'))continue;
   if((best.get(asin)?.count??-1)<count)best.set(asin,{asin,name:r.name.trim(),sub_category:r.sub_category,image:r.image,link:`https://www.amazon.in/dp/${asin}`,inr,rating,count});
  }
- return [...Map.groupBy(best.values(),c=>c.sub_category).values()].flatMap(group=>group.sort((a,b)=>b.count-a.count||a.asin.localeCompare(b.asin)).slice(0,perGroup));
+ // Amazon colour/size variants share one review pool: same brand word, rating and review count.
+ const variants=new Map();
+ for(const c of [...best.values()].sort((a,b)=>a.asin.localeCompare(b.asin))){const key=`${c.name.split(/\s+/)[0].toLowerCase()}|${c.rating}|${c.count}`;if(!variants.has(key))variants.set(key,c);}
+ return [...Map.groupBy(variants.values(),c=>c.sub_category).values()].flatMap(group=>group.sort((a,b)=>b.count-a.count||a.asin.localeCompare(b.asin)).slice(0,perGroup));
 }
 const hash=text=>[...text].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7);
 export function toRow(c,{name_ko,category}){

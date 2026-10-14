@@ -13,11 +13,15 @@ test('CSV handles BOM, quoted commas, escaped quotes and CRLF',()=>{
 test('ASIN and price conversion',()=>{assert.equal(asinOf('https://www.amazon.in/a/dp/B0BRKXTSBT/ref=sr_1_4'),'B0BRKXTSBT');assert.equal(asinOf('https://x'),null);assert.equal(priceKrw(285),9100);assert.equal(priceKrw(1),100);});
 test('candidates filter, dedupe by ASIN and cap each subcategory',()=>{
  const rows=[cand('B000000001','Snack Foods',30),cand('B000000001','Snack Foods',90),cand('B000000002','Snack Foods',80),cand('B000000003','Snack Foods',70),
-  cand('B000000004','Snack Foods',10),cand('B000000005','Snack Foods',99,{ratings:'3.0'}),cand('B000000006','Air Conditioners',999),cand('B000000007','Snack Foods',60,{discount_price:'',actual_price:''})];
+  cand('B000000004','Snack Foods',10),cand('B000000005','Snack Foods',99,{ratings:'3.0'}),cand('B000000006','Air Conditioners',999),cand('B000000007','Snack Foods',60,{discount_price:'',actual_price:''}),cand('B000000008','Snack Foods',95,{discount_price:'₹10'})];
  const out=candidates(rows,2);
  assert.deepEqual(out.map(c=>[c.asin,c.count]),[['B000000001',90],['B000000002',80]]);
  assert.equal(out[0].link,'https://www.amazon.in/dp/B000000001');assert.equal(out[0].inr,500);
- assert.equal(candidates(parseCsv(csv),200)[1].inr,100);
+});
+test('colour variants sharing one review pool collapse to a single product',()=>{
+ const v=(asin,name,extra={})=>cand(asin,'Headphones',4100,{name,...extra});
+ const out=candidates([v('B000000012','boAt BassHeads 100 (Black)'),v('B000000011','boAt BassHeads 100 (Mint)'),v('B000000013','boAt Rockerz 255',{no_of_ratings:'900'}),v('B000000014','JBL Tune 100')]);
+ assert.deepEqual(out.map(c=>c.asin),['B000000011','B000000014','B000000013']);
 });
 test('rows are deterministic with synthesized demo fields and allergen tags',()=>{
  const c={asin:'B000000009',name:'Sunfeast Gift Box cookies with milk',sub_category:'Snack Foods',image:'https://m.media-amazon.com/i.jpg',link:'https://www.amazon.in/dp/B000000009',inr:285,rating:4.2,count:500};
