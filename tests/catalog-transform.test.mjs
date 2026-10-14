@@ -31,7 +31,7 @@ test('awkward health products are dropped while common gift supplements stay',()
  assert.deepEqual(out.map(c=>c.asin).sort(),['B000000025','B000000026','B000000027']);
 });
 test('final-category check catches awkward health items outside Diet & Nutrition without hitting normal drinks',()=>{
- for(const [name,category] of [['Glenberg Slim Detox Tea | Green Tea with Garcinia','coffee_tea'],['Dabur Giloy Juice Immunity Booster','health'],['Kapiva Dia Free Juice for Holistic Diabetes Care','health'],["Krishna's Diabic Care Juice",'health'],['Saffola FITTIFY HI PROTEIN SLIM MEAL-SHAKE','health']])assert.ok(awkward(name,category),name);
+ for(const [name,category] of [['Glenberg Slim Detox Tea | Green Tea with Garcinia','coffee_tea'],['Dabur Giloy Juice Immunity Booster','health'],['Kapiva Dia Free Juice for Holistic Diabetes Care','health'],["Krishna's Diabic Care Juice",'health'],['PediaSure Health and Nutrition Drink Powder for Kids Growth','health'],['Horlicks Junior Stage 1 Nutrition drink','health'],['NUTRILITE Kids Drink - Chocolate Flavor','health'],['Baidyanath Asava Tonic','health'],["NATURE'S WAY Kid's Standardized Elderberry",'health'],['Saffola FITTIFY HI PROTEIN SLIM MEAL-SHAKE','health']])assert.ok(awkward(name,category),name);
  for(const [name,category] of [['Sleepy Owl Original Premium Instant Coffee','coffee_tea'],['Sepoy & Co. Indian Tonic Water','food'],['Swisse Fish Oil with 1500mg Omega 3','health'],['Walito Sauna Slim Belt','fitness'],['Organic India Tulsi Sleep Tea Bags','coffee_tea']])assert.ok(!awkward(name,category),name);
 });
 test('rows are deterministic with synthesized demo fields and allergen tags',()=>{

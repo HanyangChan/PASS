@@ -6,9 +6,9 @@ export const PRICE_LEVEL=2;
 // Single snack packs (₹10–₹149) are not gifts and would win the engine's cheapest-first tie-break.
 export const MIN_INR=150;
 // Diet & Nutrition also carries medicine-like products that read oddly as gifts (cleanses, weight-loss,
-// disease care, sexual wellness, Ayurvedic remedies, sleep aids). Everyday supplements (omega 3,
+// disease care, sexual wellness, Ayurvedic remedies, sleep aids, children's nutrition drinks). Everyday supplements (omega 3,
 // vitamins, protein, collagen) stay. Limited to that subcategory so food words like "syrup" stay safe.
-export const AWKWARD_HEALTH=/colon|cleanse|detox|laxative|constipation|piles|weight (?:loss|gain|management)|gainer|fat ?burn|slim|diab|sugar levels?|madhu|prosta|pcos|lactation|prenatal|liver|lungs|metaboli[sz]er|shilaji|safed musli|tribulus|male mate|men's wellness|testosterone|aspartic|arginine|melatonin|sleep|anemia|isabgol|psyllium|triphala|churna|asav|arisht|ghrita|vati|kadha|kudineer|giloy|ghanvati|wormwood|garcinia|syrup|tonic|pre-?workout|caffeine|stamina/i;
+export const AWKWARD_HEALTH=/colon|cleanse|detox|laxative|constipation|piles|weight (?:loss|gain|management)|gainer|fat ?burn|slim|diab|sugar levels?|madhu|prosta|pcos|lactation|prenatal|liver|lungs|metaboli[sz]er|shilaji|safed musli|tribulus|male mate|men's wellness|testosterone|aspartic|arginine|melatonin|sleep|anemia|isabgol|psyllium|triphala|churna|\basav|arisht|ghrita|\bvati\b|kadha|kudineer|giloy|ghanvati|wormwood|garcinia|syrup|tonic|pre-?workout|caffeine|stamina|\bkids?\b|kid's|junior|children|pediasure|toddler|infant/i;
 export const SUBCATEGORIES=['Coffee, Tea & Beverages','Snack Foods','All Grocery & Gourmet Foods','Diet & Nutrition','Make-up','Beauty & Grooming','Luxury Beauty','Personal Care Appliances','Kitchen & Dining','Home Décor','Watches','Fashion & Silver Jewellery','Handbags & Clutches','Wallets','Sunglasses','Headphones','Speakers','Toys & Games','Fitness Accessories','Yoga'];
 export function parseCsv(text){
  const rows=[];let row=[],field='',quoted=false;
@@ -22,7 +22,7 @@ export function parseCsv(text){
  return body.filter(r=>r.length===keys.length).map(r=>Object.fromEntries(keys.map((k,i)=>[k,r[i]])));
 }
 // Consumables in other categories: only clearly therapeutic/diet wording, so "tonic water" or "sleepy" coffee stay.
-const AWKWARD_FOOD=/cleanse|detox|weight (?:loss|management)|fat ?burn|slim(?:ming)?|diab|sugar levels?|pcos|shilaji|garcinia|prosta|testosterone|laxative|constipation/i;
+const AWKWARD_FOOD=/cleanse|detox|weight (?:loss|management)|fat ?burn|\bslim(?:ming)?\b|diab|sugar levels?|pcos|shilaji|garcinia|prosta|testosterone|laxative|constipation/i;
 export const awkward=(name,category)=>category==='health'&&AWKWARD_HEALTH.test(name)||['food','snack','coffee_tea','health'].includes(category)&&AWKWARD_FOOD.test(name);
 export const asinOf=link=>String(link??'').match(/\/dp\/([A-Z0-9]{10})/)?.[1]??null;
 export const amount=text=>{const t=String(text??'').replace(/[^0-9.]/g,'');return t?Number(t):null;};
