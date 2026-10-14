@@ -38,3 +38,8 @@ export type ConditionPatch = Partial<Omit<Conditions, 'budget'>> & {
 export type ChatSession = { state: Conditions; issues: string[] };
 export type ChatMessage = { role: 'user' | 'assistant'; text: string };
 export type GiftRecords = { saved: Gift[]; recent: Gift[] };
+
+export const calendarEventKinds = ['birthday', 'anniversary', 'etc'] as const;
+export type CalendarEventKind = (typeof calendarEventKinds)[number];
+// date is 'MM-DD' and recurs every year — birthdays and anniversaries don't carry a year.
+export type CalendarEvent = { id: string; title: string; date: string; kind: CalendarEventKind };
