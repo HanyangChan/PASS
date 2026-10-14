@@ -6,7 +6,7 @@ import {conversationTurn,startConversation,nextQuestion} from '../lib/conversati
 import {recommend} from '../lib/engine.mjs';
 const root=new URL('../',import.meta.url);
 const raw=readFileSync(new URL('korean-eval-v1.json',import.meta.url),'utf8');
-const data=JSON.parse(raw),products=JSON.parse(readFileSync(new URL('../lib/products.json',import.meta.url)));
+const data=JSON.parse(raw),products=JSON.parse(readFileSync(new URL('../tests/fixtures/food-demo.json',import.meta.url)));
 const get=(v,path)=>path.split('.').reduce((x,k)=>x?.[k],v);
 const equal=(a,b)=>JSON.stringify(Array.isArray(a)?[...a].sort():a)===JSON.stringify(Array.isArray(b)?[...b].sort():b);
 if(new Set(data.cases.map(c=>c.id)).size!==data.cases.length)throw Error('Duplicate case IDs');

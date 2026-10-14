@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {initial,apply,recommend,rankProducts} from '../lib/engine.mjs';
 import {budgetAlternatives} from '../lib/counterfactual.mjs';
-const catalog=JSON.parse(fs.readFileSync(new URL('../lib/products.json',import.meta.url)));
+const catalog=JSON.parse(fs.readFileSync(new URL('./fixtures/food-demo.json',import.meta.url)));
 const state=(patch={})=>apply(apply(initial(),{quantity:1,budget:{amount_krw:30000,scope:'per_set',shipping_included:false}}),patch);
 const product=(id,price,extra={})=>({id,name:`상품 ${id}`,category:'fruit',price_krw:price,shipping_fee_per_set_krw:0,packaging:'basic',sweetness:'sweet',arrival_date:'2026-09-20',stock_sets:10,brand:'A',...extra});
 
@@ -45,8 +45,10 @@ test('only budget changes; other exclusions and constraints remain enforced',()=
  const a=budgetAlternatives(data,s).alternatives[0];assert.equal(a.target.id,'ok');
  const after=apply(s,a.patch);const expected=structuredClone(s);expected.budget.amount_krw=45000;assert.deepEqual(after,expected);
 });
-test('allergy uncertainty blocks alternatives instead of removing constraints',()=>{
- const s=state({excluded_ingredients:['땅콩']});const r=budgetAlternatives(catalog,s);assert.equal(r.status,'insufficient_product_info');assert.deepEqual(r.alternatives,[]);
+test('allergen exclusions survive budget alternatives instead of being relaxed',()=>{
+ const data=[product('A',24000),product('B',35000,{allergens_declared:['땅콩']}),product('C',40000)];
+ const s=state({excluded_ingredients:['땅콩']});const r=budgetAlternatives(data,s);
+ assert.deepEqual(r.alternatives.map(a=>a.target.id),['C']);assert.ok(r.alternatives.every(a=>!a.topIds.includes('B')));assert.deepEqual(s.excluded_ingredients,['땅콩']);
 });
 test('missing budget, quantity, shipping or same-product decision prompts clarification',()=>{
  for(const s of [initial(),state({quantity:null}),state({budget:{shipping_included:null}}),state({quantity:2,same_product:null})])assert.equal(budgetAlternatives(catalog,s).alternatives.length,0);

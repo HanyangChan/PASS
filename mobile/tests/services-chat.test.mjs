@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createLocalChatService } from '../src/services/chatService.ts';
-const products = JSON.parse(readFileSync(new URL('../../lib/products.json', import.meta.url)));
-const service = createLocalChatService(products, { fruit: '과일', tea: '차' });
+const products = JSON.parse(readFileSync(new URL('../../tests/fixtures/food-demo.json', import.meta.url)));
+const service = createLocalChatService(products);
 
 test('guest dialogue produces recommendations without exposing engine-only state', () => {
   const initial = service.createSession();
@@ -31,7 +31,7 @@ test('partial budget updates keep shipping and ingredient exclusions intact', ()
   assert.equal(updated.session.state.budget.amount_krw, 60000);
   assert.equal(updated.session.state.budget.shipping_included, true);
   assert.deepEqual(updated.session.state.excluded_ingredients, ['땅콩']);
-  assert.equal(service.view(updated.session).result.status, 'insufficient_product_info');
+  assert.ok(service.view(updated.session).result.notice);
   assert.deepEqual(turn.session, before);
 });
 

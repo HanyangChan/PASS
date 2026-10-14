@@ -140,8 +140,8 @@
             "scope": "per_set",
             "shipping_included": false
           },
-          "excluded_categories": [
-            "nuts"
+          "excluded_ingredients": [
+            "견과류"
           ]
         },
         "expected_state": {
@@ -155,10 +155,10 @@
             "shipping_included": false
           },
           "preferences": [],
-          "excluded_categories": [
-            "nuts"
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "견과류"
           ],
-          "excluded_ingredients": [],
           "brand": null,
           "delivery_by": null,
           "packaging": null
@@ -173,11 +173,10 @@
         "recommendation_ready": true
       },
       {
-        "user": "한과도 제외해줘.",
+        "user": "과자도 제외해줘.",
         "expected_patch": {
           "excluded_categories": [
-            "nuts",
-            "hangwa"
+            "snack"
           ]
         },
         "expected_state": {
@@ -192,10 +191,11 @@
           },
           "preferences": [],
           "excluded_categories": [
-            "nuts",
-            "hangwa"
+            "snack"
           ],
-          "excluded_ingredients": [],
+          "excluded_ingredients": [
+            "견과류"
+          ],
           "brand": null,
           "delivery_by": null,
           "packaging": null
@@ -209,9 +209,7 @@
       {
         "user": "견과류는 다시 포함해도 돼.",
         "expected_patch": {
-          "excluded_categories": [
-            "hangwa"
-          ]
+          "excluded_ingredients": []
         },
         "expected_state": {
           "occasion": "설",
@@ -225,7 +223,7 @@
           },
           "preferences": [],
           "excluded_categories": [
-            "hangwa"
+            "snack"
           ],
           "excluded_ingredients": [],
           "brand": null,
@@ -381,7 +379,7 @@
         "expected_patch": {
           "quantity": 1,
           "preferences": [
-            "category:tea"
+            "category:coffee_tea"
           ],
           "budget": {
             "amount_krw": 60000,
@@ -402,7 +400,7 @@
             "shipping_included": false
           },
           "preferences": [
-            "category:tea"
+            "category:coffee_tea"
           ],
           "excluded_categories": [],
           "excluded_ingredients": [],
@@ -439,7 +437,7 @@
             "shipping_included": false
           },
           "preferences": [
-            "category:tea"
+            "category:coffee_tea"
           ],
           "excluded_categories": [],
           "excluded_ingredients": [],
