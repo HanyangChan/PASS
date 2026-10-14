@@ -42,6 +42,8 @@ import {
   ChevronRight,
   ArrowLeftRight,
   Star,
+  Calendar as CalendarIcon,
+  X,
 } from 'lucide-react-native';
 import SearchIcon from './assets/figma/search.svg';
 import FilterIcon from './assets/figma/filter.svg';
@@ -50,14 +52,16 @@ import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts } from './src/catalog';
-import { giftRepository, productRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
 import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
 import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
-import type { ChatSession, ChatMessage, EngineProduct } from './src/domain';
+import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
+import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
+import { calendarEventKinds } from './src/domain';
 import {
   Chip,
   GiftCard,
@@ -71,13 +75,24 @@ const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
-type Screen = 'home' | 'chat' | 'ranking' | 'mypage';
+type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
   { key: 'chat', label: 'AI 추천', Icon: Sparkles },
   { key: 'ranking', label: '선물 랭킹', Icon: Trophy },
+  { key: 'calendar', label: '캘린더', Icon: CalendarIcon },
   { key: 'mypage', label: '마이페이지', Icon: User },
 ] as const;
+const eventKindMeta: Record<CalendarEventKind, { label: string; emoji: string }> = {
+  birthday: { label: '생일', emoji: '🎂' },
+  anniversary: { label: '기념일', emoji: '💝' },
+  etc: { label: '기타', emoji: '📌' },
+};
+const formatMonthDay = (date: string) => {
+  const [month, day] = date.split('-');
+  return `${Number(month)}월 ${Number(day)}일`;
+};
+const ddayLabel = (days: number) => (days === 0 ? 'D-day' : `D-${days}`);
 function Button({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={s.button}>
@@ -105,6 +120,11 @@ export function AppContent({
     setSaved,
     recent,
     setRecent,
+    events,
+    setEvents,
+    eventsReady,
+    calendarLoadError,
+    retryCalendarLoad,
     ready,
     notice,
     setNotice,
@@ -155,6 +175,22 @@ export function AppContent({
   const [draftFilter, setDraftFilter] = useState('전체');
   const [draftSort, setDraftSort] = useState('인기순');
   const [draftPrice, setDraftPrice] = useState<number | null>(null);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventMonth, setEventMonth] = useState('');
+  const [eventDay, setEventDay] = useState('');
+  const [eventKind, setEventKind] = useState<CalendarEventKind>('birthday');
+  const [eventFormError, setEventFormError] = useState('');
+  const submitEvent = () => {
+    if (!eventsReady) return;
+    const month = Number(eventMonth), day = Number(eventDay);
+    if (!eventTitle.trim()) return setEventFormError('이름을 입력해주세요.');
+    if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(day) || day < 1 || day > 31)
+      return setEventFormError('날짜를 월/일로 올바르게 입력해주세요.');
+    const date = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (!isValidMonthDay(date)) return setEventFormError('존재하는 날짜를 입력해주세요.');
+    addEvent(eventTitle, date, eventKind);
+    setEventTitle(''); setEventMonth(''); setEventDay(''); setEventKind('birthday'); setEventFormError('');
+  };
   const screen = activeScreen ?? baseScreen;
   const detail = detailPage ? selectedDetail : null;
   const resultsOpen = resultPage;
@@ -184,7 +220,9 @@ export function AppContent({
           ? '/chat'
           : next === 'ranking'
             ? '/ranking'
-            : '/mypage',
+            : next === 'calendar'
+              ? '/calendar'
+              : '/mypage',
     );
     setSearch('');
     setShowSearch(false);
@@ -204,6 +242,11 @@ export function AppContent({
         ? old.filter((p) => p.id !== g.id)
         : [...old, g],
     );
+  const addEvent = (title: string, date: string, kind: CalendarEventKind) =>
+    setEvents((old) => [...old, { id: randomUUID(), title: title.trim(), date, kind }]);
+  const removeEvent = (id: string) =>
+    setEvents((old) => old.filter((e) => e.id !== id));
+  const upcomingEvents = upcomingWithin(events, 7);
   const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
   const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
     chatService.toGift(product, session.state);
@@ -535,6 +578,24 @@ export function AppContent({
                     <Text style={s.buttonText}>AI 선물 추천받기</Text>
                   </Pressable>
                 </View>
+                {upcomingEvents.length > 0 && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="다가오는 이벤트, 캘린더 열기"
+                    onPress={() => navigate('calendar')}
+                    style={s.eventBanner}
+                  >
+                    <Text style={s.eventBannerEmoji}>{eventKindMeta[upcomingEvents[0].kind].emoji}</Text>
+                    <View style={s.flex}>
+                      <Text style={s.eventBannerText}>
+                        {upcomingEvents.length === 1
+                          ? `${upcomingEvents[0].title} ${eventKindMeta[upcomingEvents[0].kind].label}이 ${ddayLabel(daysUntil(upcomingEvents[0].date))} 남았어요`
+                          : `다가오는 이벤트가 ${upcomingEvents.length}개 있어요`}
+                      </Text>
+                    </View>
+                    <ChevronRight size={18} color={c.primary} />
+                  </Pressable>
+                )}
                 <View style={s.homeSection}>
                   <SectionHeader title="선물 카테고리" />
                   <View style={s.categoryGrid}>
@@ -798,6 +859,88 @@ export function AppContent({
                   </View>
                 </View>
               </>
+            ) : screen === 'calendar' ? (
+              <ScrollView style={s.flex} contentContainerStyle={s.bottom} keyboardShouldPersistTaps="handled">
+                <View style={s.header}>
+                  <Text style={s.title}>캘린더</Text>
+                </View>
+                <Text style={[s.subtitle, s.eventIntro]}>
+                  생일·기념일을 기록해두면 1주일 전부터 홈 화면에서 알려드려요. 2월 29일은 윤년에 알려드려요.
+                </Text>
+                <View style={s.homeSection}>
+                  {!eventsReady && (calendarLoadError ? (
+                    <View style={s.eventForm}>
+                      <Text accessibilityRole="alert" style={s.small}>{calendarLoadError}</Text>
+                      <Button label="일정 다시 불러오기" onPress={retryCalendarLoad} />
+                    </View>
+                  ) : <Text style={s.empty}>기기 일정을 불러오는 중이에요.</Text>)}
+                  <SectionHeader title="이벤트 추가" />
+                  <View style={s.eventForm}>
+                    <TextInput
+                      accessibilityLabel="이벤트 이름"
+                      value={eventTitle}
+                      onChangeText={(v) => { setEventTitle(v); setEventFormError(''); }}
+                      placeholder="예: 엄마 생신"
+                      style={s.eventInput}
+                    />
+                    <View style={s.eventFormRow}>
+                      <TextInput
+                        accessibilityLabel="월"
+                        value={eventMonth}
+                        onChangeText={(v) => { setEventMonth(v.replace(/\D/g, '').slice(0, 2)); setEventFormError(''); }}
+                        placeholder="월"
+                        keyboardType="numeric"
+                        maxLength={2}
+                        style={[s.eventInput, s.eventDateInput]}
+                      />
+                      <TextInput
+                        accessibilityLabel="일"
+                        value={eventDay}
+                        onChangeText={(v) => { setEventDay(v.replace(/\D/g, '').slice(0, 2)); setEventFormError(''); }}
+                        placeholder="일"
+                        keyboardType="numeric"
+                        maxLength={2}
+                        style={[s.eventInput, s.eventDateInput]}
+                      />
+                      <View style={s.row}>
+                        {calendarEventKinds.map((kind) => (
+                          <Chip key={kind} label={eventKindMeta[kind].label} selected={eventKind === kind} onPress={() => setEventKind(kind)} />
+                        ))}
+                      </View>
+                    </View>
+                    {!!eventFormError && <Text accessibilityRole="alert" style={[s.small, s.eventError]}>{eventFormError}</Text>}
+                    <Pressable accessibilityRole="button" disabled={!eventsReady} onPress={submitEvent} style={[s.button, !eventsReady && { opacity: 0.5 }]}>
+                      <Text style={s.buttonText}>추가하기</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={s.homeSection}>
+                  <SectionHeader title={`이벤트 ${events.length}개`} />
+                  {events.length ? (
+                    sortByUpcoming(events).map((e) => (
+                      <View key={e.id} style={s.eventRow}>
+                        <Text style={s.eventBannerEmoji}>{eventKindMeta[e.kind].emoji}</Text>
+                        <View style={s.flex}>
+                          <Text style={s.eventName}>{e.title}</Text>
+                          <Text style={s.small}>
+                            {eventKindMeta[e.kind].label} · {formatMonthDay(e.date)} · {ddayLabel(daysUntil(e.date))}
+                          </Text>
+                        </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`${e.title} 삭제`}
+                          onPress={() => removeEvent(e.id)}
+                          style={s.eventDelete}
+                        >
+                          <X size={18} color={c.muted} />
+                        </Pressable>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={s.empty}>{eventsReady ? '등록된 이벤트가 없어요.' : '일정을 불러온 후 표시합니다.'}</Text>
+                  )}
+                </View>
+              </ScrollView>
             ) : (
               <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
                 <View style={s.header}>
@@ -942,6 +1085,8 @@ function usePassState() {
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
+  const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [syncFailed, setSyncFailed] = useState(false);
   const [saveAttempt, setSaveAttempt] = useState(0);
@@ -949,6 +1094,8 @@ function usePassState() {
     [detail, setDetail] = useState<Gift | null>(null),
     [saved, setSaved] = useState<Gift[]>([]),
     [recent, setRecent] = useState<Gift[]>([]),
+    [events, setEvents] = useState<CalendarEvent[]>([]),
+    [eventsReady, setEventsReady] = useState(false),
     [ready, setReady] = useState(false),
     [notice, setNotice] = useState(''),
     [heroFailed, setHeroFailed] = useState(false);
@@ -1046,6 +1193,23 @@ function usePassState() {
     });
     return () => { mounted = false; };
   }, [saved, recent, session, messages, ready, saveAttempt, user]);
+  useEffect(() => {
+    // Calendar events are device-local only (not part of the account sync above),
+    // so they load and save independently of login state.
+    let mounted = true;
+    calendarRepository.load().then(list => {
+      if (mounted) { setEvents(list); setEventsReady(true); setCalendarLoadError(''); }
+    }).catch(() => {
+      if (mounted) setCalendarLoadError('기기 일정을 불러오지 못했어요. 다시 시도해주세요.');
+    });
+    return () => { mounted = false; };
+  }, [calendarLoadAttempt]);
+  useEffect(() => {
+    if (!eventsReady) return;
+    calendarRepository.save(events).catch(() => {
+      setNotice('기기에 일정을 저장하지 못했어요.');
+    });
+  }, [events, eventsReady]);
 
   return {
     screen,
@@ -1056,6 +1220,11 @@ function usePassState() {
     setSaved,
     recent,
     setRecent,
+    events,
+    setEvents,
+    eventsReady,
+    calendarLoadError,
+    retryCalendarLoad: () => setCalendarLoadAttempt(value => value + 1),
     ready,
     notice,
     setNotice,
@@ -1258,6 +1427,47 @@ const s = StyleSheet.create({
     paddingBottom: 20,
     marginTop: 8,
   },
+  eventBanner: {
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: c.tint,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  eventIntro: { paddingHorizontal: 20, paddingBottom: 4 },
+  eventBannerEmoji: { fontSize: 20 },
+  eventBannerText: { fontFamily: f.medium, fontSize: 14, color: c.text },
+  eventForm: { marginHorizontal: 20, gap: 10 },
+  eventFormRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  eventInput: {
+    backgroundColor: c.white,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    color: c.text,
+    fontFamily: f.regular,
+    fontSize: 15,
+  },
+  eventDateInput: { width: 64, textAlign: 'center' },
+  eventError: { color: c.primary },
+  eventRow: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  eventName: { fontFamily: f.bold, fontSize: 15, color: c.text, marginBottom: 2 },
+  eventDelete: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   categoryGrid: {
     paddingHorizontal: 20,
     flexDirection: 'row',
