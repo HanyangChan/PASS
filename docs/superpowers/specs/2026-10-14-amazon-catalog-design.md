@@ -23,12 +23,14 @@
 
 ## 1. 데이터 가공 — `scripts/catalog/build.mjs`
 
-`node scripts/catalog/build.mjs --raw <압축 해제 폴더> --out data/products-amazon.json`
+`node --env-file=<.env 경로> scripts/catalog/build.mjs --raw <압축 해제 폴더> --out data/products-amazon.json`
+
+키는 로컬 `.env`의 `GEMINI_API_KEY`(현재 `PASS-macrs/.env`)를 Node `--env-file`로 읽는다. 모델은 `GEMINI_MODEL`, 기본 `gemini-3.5-flash-lite`(무료 15 RPM·1,000 RPD). 약 3,100개 ÷ 50 = 약 62요청.
 
 1. `Amazon-Products.csv`를 제외한 카테고리 CSV를 읽고 링크의 `/dp/<ASIN>`으로 중복 제거 (원본 49.8만 행 → 고유 ASIN 45.9만).
 2. 하위 카테고리 20개만 후보: Coffee, Tea & Beverages · Snack Foods · All Grocery & Gourmet Foods · Diet & Nutrition · Make-up · Beauty & Grooming · Luxury Beauty · Personal Care Appliances · Kitchen & Dining · Home Décor · Watches · Fashion & Silver Jewellery · Handbags & Clutches · Wallets · Sunglasses · Headphones · Speakers · Toys & Games · Fitness Accessories · Yoga.
 3. 평점 ≥ 3.5, 리뷰 수 ≥ 20, 가격 있음. 하위 카테고리별 리뷰 수 상위 200개 (약 3,100개).
-4. Gemini 배치(요청당 50개, 15 RPM 이하로 순차): 상품마다 `name_ko`(자연스러운 한국어 상품명)와 `category`(아래 enum 또는 `exclude`)를 받는다. 원본 하위 카테고리 라벨이 부정확하므로(예: Watches 안의 운동화) 재분류하고, 선물로 부적합하면 `exclude`. 결과는 `data/.gemini-cache.json`에 ASIN별로 저장해 재실행 시 재호출하지 않는다. 키는 환경 변수 `GEMINI_API_KEY`(커밋 금지).
+4. Gemini 배치(요청당 50개, 15 RPM 이하로 순차): 상품마다 `name_ko`(자연스러운 한국어 상품명)와 `category`(아래 enum 또는 `exclude`)를 받는다. 원본 하위 카테고리 라벨이 부정확하므로(예: Watches 안의 운동화) 재분류하고, 선물로 부적합하면 `exclude`. 결과는 `data/.gemini-cache.json`에 ASIN별로 저장해 재실행 시 재호출하지 않는다. 키 값은 출력·로그·커밋하지 않는다.
 5. 변환:
    - `price_krw = round(inr × RUPEE_TO_KRW(16) × PRICE_LEVEL(2), -2)` — `discount_price` 우선, 없으면 `actual_price`. 상수 주석에 보정 사실을 기록.
    - `brand` = 원문 상품명 첫 단어(영문). 불확실하면 그대로 두고 필터에서만 사용.
@@ -108,7 +110,7 @@
 
 ## 10. 실행 순서 (사람 작업 포함)
 
-1. (dain77-d) `GEMINI_API_KEY`를 환경 변수로 설정하고 `build.mjs` 실행 → `products-amazon.json` 확인.
+1. (dain77-d) `PASS-macrs/.env`의 키로 `build.mjs` 실행 → `products-amazon.json` 확인.
 2. PR 리뷰·머지.
 3. (HanyangChan) SQL Editor에서 마이그레이션 실행 → `load.mjs --dry-run` → `load.mjs`.
 4. (HanyangChan) `npm run deploy:api`, Vercel 재배포.
