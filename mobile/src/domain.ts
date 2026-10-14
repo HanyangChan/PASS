@@ -1,4 +1,5 @@
-export type GiftIcon = 'fruit' | 'hangwa' | 'nuts' | 'tea' | 'coffee' | 'oil' | 'gift';
+export const giftIcons = ['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil', 'gift'] as const;
+export type GiftIcon = (typeof giftIcons)[number];
 export type Gift = {
   id: string;
   name: string;

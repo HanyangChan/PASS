@@ -15,6 +15,15 @@ test('existing v1 records restore with their original keys and full gift fields'
   assert.deepEqual(restored.failed, []);
 });
 
+test('all catalog icon types survive restore, not just fruit and gift', async () => {
+  const gifts = ['hangwa', 'nuts', 'tea', 'coffee', 'oil'].map(icon => ({ ...gift(icon), icon }));
+  const values = new Map([[savedKey, JSON.stringify(gifts)], [recentKey, JSON.stringify([])]]);
+  const repo = createGiftRepository({ getItem: async key => values.get(key) ?? null, multiSet: async () => {} });
+  const restored = await repo.load();
+  assert.deepEqual(restored.saved, gifts);
+  assert.deepEqual(restored.failed, []);
+});
+
 test('one corrupt collection does not block restoring the other', async () => {
   const repo = createGiftRepository({ getItem: async key => key === savedKey ? '{broken' : JSON.stringify([gift('recent')]), multiSet: async () => {} });
   const restored = await repo.load();

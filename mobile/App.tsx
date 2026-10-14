@@ -212,7 +212,7 @@ export function AppContent({
     if (source === 'typed') setInput('');
     void sendChat(text, source).then(ok => {
       if (ok) setComparisonId(null);
-      else if (source === 'typed') setInput(text);
+      else if (ok === false && source === 'typed') setInput(text);
     });
   };
   const chat = (label?: string) => {
@@ -965,7 +965,9 @@ function usePassState() {
           : operation === 'conditions' ? await serverChat.updateConditions(session, patch!, clearIssues, controller.signal)
           : await serverChat.view(session, controller.signal)
         : operation === 'turn' ? chatService.send(session, text) : chatService.updateConditions(session, patch ?? {}, clearIssues);
-      if (chatFlight.current.revision !== revision) return false;
+      // A newer revision (new chat / another send) superseded this one; drop the result without
+      // treating it as a failure, so the caller doesn't restore this request's stale draft text.
+      if (chatFlight.current.revision !== revision) return null;
       if (operation !== 'view') {
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
@@ -973,7 +975,8 @@ function usePassState() {
       if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode });
       return true;
     } catch (error) {
-      if (chatFlight.current.revision === revision) setChatError((error as Error).message || '추천 요청에 실패했어요. 다시 보내주세요.');
+      if (chatFlight.current.revision !== revision) return null;
+      setChatError((error as Error).message || '추천 요청에 실패했어요. 다시 보내주세요.');
       return false;
     } finally {
       if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }

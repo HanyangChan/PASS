@@ -25,8 +25,6 @@ export function AttachmentPicker({ onSelect }: { onSelect: (name: string) => voi
   const pickFromAlbum = async () => {
     setBusy(true);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) return fail('사진 라이브러리 권한이 필요해요. 기기 설정에서 허용해주세요.');
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
       if (!result.canceled && result.assets[0]) {
         onSelect(result.assets[0].fileName ?? result.assets[0].uri.split('/').pop() ?? '이미지.jpg');
