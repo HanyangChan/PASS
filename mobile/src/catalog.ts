@@ -26,8 +26,22 @@ const recipientCategories: Record<string, string[] | null> = {
   친구: ['beauty', 'makeup', 'jewelry', 'audio', 'snack'],
   직장동료: ['coffee_tea', 'snack', 'decor', 'accessory', 'kitchen'],
 };
+// Review counts differ by orders of magnitude across categories (earphones dwarf tea),
+// so each tab alternates categories, each ordered by its own review count.
+function interleave(sorted: EngineProduct[], cats: string[] | null, limit = 100) {
+  const groups: EngineProduct[][] = [];
+  const slot = new Map<string, number>();
+  for (const p of sorted) {
+    if (cats && !cats.includes(p.category)) continue;
+    if (!slot.has(p.category)) { slot.set(p.category, groups.length); groups.push([]); }
+    groups[slot.get(p.category)!].push(p);
+  }
+  const out: EngineProduct[] = [];
+  for (let i = 0; out.length < limit && groups.some(g => i < g.length); i++)
+    for (const g of groups) if (i < g.length && out.length < limit) out.push(g[i]);
+  return out;
+}
 export function rankGifts(products: EngineProduct[]): Record<string, Gift[]> {
   const sorted = [...products].sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
-  return Object.fromEntries(Object.entries(recipientCategories).map(([label, cats]) =>
-    [label, sorted.filter(p => !cats || cats.includes(p.category)).slice(0, 100).map(giftFromProduct)]));
+  return Object.fromEntries(Object.entries(recipientCategories).map(([label, cats]) => [label, interleave(sorted, cats).map(giftFromProduct)]));
 }

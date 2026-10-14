@@ -28,3 +28,8 @@ test('catalog gifts carry image, link, rating count and demo fields; rankings fo
   assert.deepEqual(ranks['부모님'].map(g => g.id), ['B']);
   assert.deepEqual(ranks['친구'].map(g => g.id), ['C', 'A']);
 });
+test('rankings alternate categories so one huge category cannot fill a tab', () => {
+  const p = (id, category, rating_count) => ({ id, category, rating_count, name: id, description: '', price_krw: 1, shipping_fee_per_set_krw: 0, stock_sets: 1, arrival_date: '2026-10-16', packaging: 'basic', sweetness: 'unknown', brand: null, allergens_declared: [], allergen_information_complete: false });
+  const ranks = rankGifts([p('E1', 'audio', 900), p('E2', 'audio', 800), p('E3', 'audio', 700), p('T1', 'coffee_tea', 5), p('S1', 'snack', 3)]);
+  assert.deepEqual(ranks['전체'].map(g => g.id), ['E1', 'T1', 'S1', 'E2', 'E3']);
+});
