@@ -16,7 +16,7 @@ const fields = [
   ['brand', '브랜드', '브랜드 이름'], ['delivery_by', '수령 마감일', '2026-10-20'],
   ['packaging', '포장', '격식 있는 포장 / 기본 포장'],
 ] as const;
-const conditionLabels: Record<string, string> = { less_sweet: '덜 달게', unsweetened: '단맛 없이', 'category:tea': '차', nuts: '견과류', hangwa: '한과', fruit: '과일', coffee: '커피', tea: '차', formal: '격식 있는 포장', basic: '기본 포장' };
+const conditionLabels: Record<string, string> = { less_sweet: '덜 달게', unsweetened: '단맛 없이', 'category:tea': '차', 'category:fruit': '과일', 'category:hangwa': '한과', 'category:nuts': '견과류', 'category:coffee': '커피', 'category:oil': '기름', oil: '기름', nuts: '견과류', hangwa: '한과', fruit: '과일', coffee: '커피', tea: '차', formal: '격식 있는 포장', basic: '기본 포장' };
 const voiceErrors: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
   'no-speech': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
   'speech-timeout': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
