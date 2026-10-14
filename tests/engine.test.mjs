@@ -46,3 +46,18 @@ test('taste words become category preferences, or exclusions with a removal verb
  assert.deepEqual(extract('시계는 빼줘',initial()).patch.excluded_categories,['watch']);
  assert.equal(extract('시계는 빼줘',initial()).patch.preferences,undefined);
 });
+
+
+test('one exclusion clause does not remove a category requested in another clause',()=>{
+ for(const text of ['친구에게 향수를 추천해줘. 견과류는 빼줘','향수를 추천해줘, 시계는 제외해줘','향수 좋아하고 견과류는 빼줘']){
+  const patch=extract(text,initial()).patch;
+  assert.ok(patch.preferences.includes('category:beauty'),text);
+  assert.ok(!(patch.excluded_categories??[]).includes('beauty'),text);
+ }
+ assert.deepEqual(extract('향수는 빼고 이어폰 추천해줘',initial()).patch.preferences,['category:audio']);
+ assert.deepEqual(extract('향수는 빼고 이어폰 추천해줘',initial()).patch.excluded_categories,['beauty']);
+ const previous=apply(initial(),{excluded_categories:['beauty'],excluded_ingredients:['견과류']});
+ const patch=extract('향수는 포함해도 돼. 견과류는 빼줘',previous).patch;
+ assert.deepEqual(patch.excluded_categories,[]);
+ assert.deepEqual(patch.excluded_ingredients,['견과류']);
+});

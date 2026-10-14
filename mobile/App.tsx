@@ -51,7 +51,7 @@ import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { useAuth } from './src/auth/AuthProvider';
-import { Gift, categories, rankGifts } from './src/catalog';
+import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
 import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
@@ -162,6 +162,7 @@ export function AppContent({
     allRecent,
     setAllRecent,
     chatService,
+    catalogProducts,
     rankingByRecipient,
     popularGifts,
     catalogError,
@@ -273,14 +274,7 @@ export function AppContent({
       <GiftCard
         key={g.id}
         gift={g}
-        rank={
-          ranked
-            ? screen === 'ranking' && !resultsOpen && sort === '인기순'
-              ? rankingByRecipient[recipient].findIndex((p) => p.id === g.id) +
-                1
-              : i + 1
-            : undefined
-        }
+        rank={ranked ? i + 1 : undefined}
         saved={liked(g)}
         onSave={() => save(g)}
         onOpen={() => open(g)}
@@ -297,14 +291,8 @@ export function AppContent({
       ))}
     </ScrollView>
   );
-  let ranked = rankingByRecipient[recipient].filter(
-    (g) =>
-      (filter === '전체' || g.category === filter) && [g.name, g.nameEn ?? '', g.brand ?? ''].some(v => v.toLowerCase().includes(search.toLowerCase())) && (priceLimit === null || g.price <= priceLimit),
-  );
-  if (sort !== '인기순')
-    ranked = [...ranked].sort((a, b) =>
-      sort === '낮은 가격순' ? a.price - b.price : b.price - a.price,
-    );
+  const ranked = useMemo(() => selectGifts(catalogProducts, { recipient, search, filter, priceLimit, sort }),
+    [catalogProducts, recipient, search, filter, priceLimit, sort]);
   const sweetnessLabel: Record<string, string> = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
   const demoValue = (field: string, text: string) => (detail?.demoFields?.includes(field) ? `${text} · 데모 값` : text);
   const info =
@@ -1240,6 +1228,7 @@ function usePassState() {
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,
     rankingByRecipient,
+    catalogProducts: catalog.products,
     popularGifts: rankingByRecipient['전체'].slice(0, 10),
     catalogError: catalog.error,
     retryCatalog: () => setCatalogAttempt(value => value + 1),

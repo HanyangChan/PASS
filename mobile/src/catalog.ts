@@ -40,3 +40,21 @@ export function rankGifts(products: EngineProduct[]): Record<string, Gift[]> {
   const sorted = [...products].sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
   return Object.fromEntries(Object.entries(recipientCategories).map(([label, cats]) => [label, interleave(sorted, cats).map(giftFromProduct)]));
 }
+
+
+// Search and filters apply to the full catalog before the display limit.
+export function selectGifts(products: EngineProduct[], { recipient = '전체', search = '', filter = '전체', priceLimit = null, sort = '인기순' }: { recipient?: string; search?: string; filter?: string; priceLimit?: number | null; sort?: string } = {}): Gift[] {
+  const cats = recipientCategories[recipient] ?? null;
+  const query = search.trim().toLowerCase();
+  const matching = products.filter(p =>
+    (!cats || cats.includes(p.category)) &&
+    (filter === '전체' || (categoryNames[p.category] ?? p.category) === filter) &&
+    (priceLimit === null || p.price_krw <= priceLimit) &&
+    [p.name, p.name_en ?? '', p.brand ?? ''].some(value => value.toLowerCase().includes(query)),
+  );
+  if (sort !== '인기순') return matching.sort((a, b) =>
+    (sort === '낮은 가격순' ? a.price_krw - b.price_krw : b.price_krw - a.price_krw) || a.id.localeCompare(b.id),
+  ).slice(0, 100).map(giftFromProduct);
+  matching.sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
+  return interleave(matching, null).map(giftFromProduct);
+}

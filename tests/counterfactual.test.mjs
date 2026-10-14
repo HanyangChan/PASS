@@ -83,3 +83,11 @@ test('a more-reviewed product just above the cap becomes first and the reason sa
  const b=budgetAlternatives([product('A',24000,{rating_count:500}),product('B',33000,{rating_count:10})],state()).alternatives[0];
  assert.equal(b.effect,'top_three_changed');assert.match(b.rankingReason,/현재 추천의 리뷰가 더 많아요/);
 });
+
+
+test('unknown sweetness is described as missing information, never undefined',()=>{
+ const data=[product('A',24000,{sweetness:'unknown'}),product('B',35000,{sweetness:'unsweetened'})];
+ const a=budgetAlternatives(data,state()).alternatives[0];
+ assert.ok(a.facts.includes('단맛: 정보 없음 → 단맛 없음'));
+ assert.ok(a.facts.every(f=>!f.includes('undefined')));
+});
