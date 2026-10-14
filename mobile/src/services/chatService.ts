@@ -32,10 +32,18 @@ export function createLocalChatService(products: Product[], categoryNames: Recor
         id: product.id, name: product.name.replace('가상 ', ''),
         category: categoryNames[product.category] ?? product.category,
         price: product.total, description: product.description,
-        icon: product.category === 'fruit' ? 'fruit' : 'gift', source: 'engine',
+        icon: (['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil'] as const).includes(product.category as never)
+          ? (product.category as Gift['icon'])
+          : 'gift',
+        source: 'engine',
         shippingIncluded: conditions.budget.shipping_included === true,
         packaging: product.packaging === 'formal' ? '격식 있는 포장' : '기본 포장',
         arrival: product.arrival_date,
+        ingredients: product.ingredients,
+        sweetness: product.sweetness,
+        brand: product.brand,
+        allergensDeclared: product.allergens_declared,
+        allergenInfoComplete: product.allergen_information_complete,
       };
     },
   };

@@ -1,4 +1,4 @@
-import type { Gift } from './domain';
+import { giftIcons, type Gift } from './domain.ts';
 export const savedKey = 'pass.saved-gifts.v1';
 export const recentKey = 'pass.recent-gifts.v1';
 export function decodeGifts(raw: string | null): Gift[] {
@@ -14,7 +14,7 @@ export function decodeGifts(raw: string | null): Gift[] {
       typeof g.category === 'string' &&
       Number.isFinite(g.price) &&
       typeof g.description === 'string' &&
-      ['fruit', 'gift'].includes(g.icon) &&
+      (giftIcons as readonly string[]).includes(g.icon) &&
       (g.image === undefined ||
         (typeof g.image === 'string' && g.image.startsWith('https://'))),
   );

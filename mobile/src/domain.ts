@@ -1,10 +1,12 @@
+export const giftIcons = ['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil', 'gift'] as const;
+export type GiftIcon = (typeof giftIcons)[number];
 export type Gift = {
   id: string;
   name: string;
   category: string;
   price: number;
   description: string;
-  icon: 'fruit' | 'gift';
+  icon: GiftIcon;
   shippingIncluded?: boolean;
   image?: string;
   rating?: number;
@@ -12,6 +14,11 @@ export type Gift = {
   source?: 'prototype' | 'engine';
   packaging?: string;
   arrival?: string;
+  ingredients?: string[];
+  sweetness?: string;
+  brand?: string;
+  allergensDeclared?: string[];
+  allergenInfoComplete?: boolean;
 };
 
 export type Conditions = {
