@@ -17,7 +17,9 @@ flowchart LR
   API -->|토큰 확인| Auth
   API -->|텍스트와 최근 문맥| Gemini["Gemini: 조건 추출"]
   Gemini -->|검증할 구조화 조건| API
-  API --> Engine["공유 추천·예산 비교 엔진 + 식품 데모 카탈로그"]
+  API --> Engine["공유 추천·예산 비교 엔진"]
+  API -->|공개 키, 10분 캐시| Catalog["Supabase products: Kaggle Amazon 상품"]
+  App -->|공개 키, 24시간 캐시| Catalog
   App --> Guest["게스트: 기기 엔진 + AsyncStorage"]
 ```
 
@@ -27,7 +29,7 @@ flowchart LR
 2. 앱은 Supabase Auth로 로그인합니다. 네이티브 세션은 SecureStore, 웹 세션은 SDK 브라우저 저장소에 저장합니다.
 3. 로그인 계정의 대화·조건·찜·최근 기록은 앱이 사용자 토큰과 RLS로 DB에 직접 저장합니다. 추천 API가 개인 기록을 대리 저장하지 않습니다.
 4. 앱은 확인한 텍스트와 최근 대화 최대 6개를 추천 API에 전달합니다. 서버는 Supabase에서 토큰을 검증하고, IP 120회/분·계정 30회/분 제한과 입력 검증을 적용합니다. 제한은 Cloudflare 위치별 집계이며 전역 비용 상한이 아닙니다.
-5. Gemini는 조건만 추출합니다. 상품 선택·금액·예산 비교는 공유 엔진과 합성 식품 카탈로그로 결정합니다. 상품 테이블은 생성되어 있지만 현재 추천의 상품 원본은 `lib/products.json`입니다.
+5. Gemini는 조건만 추출합니다. 상품 선택·금액·예산 비교는 공유 엔진이 결정합니다. 상품 원본은 Supabase `products`(Kaggle Amazon Products Dataset, CC BY-NC 4.0)이며 Worker는 10분, 앱은 24시간 캐시합니다. 알레르기는 상품명 키워드 추정이라 앱이 성분표 확인 안내를 함께 표시합니다.
 6. 게스트는 기기 추천과 AsyncStorage를 사용합니다. 게스트 기록은 로그인 계정에 자동 업로드하지 않습니다. 네이티브 음성은 기기 전용 인식이며, 웹 음성은 브라우저 인식 서비스로 전송될 수 있습니다.
 
 ## 배포 설정

@@ -26,7 +26,7 @@ npm start
 
 Make의 화면 구조와 제공된 상품 사진 URL/Lucide 아이콘을 사용하고, 두 번째 Figma `cajZ71MOH37gT4ltwQlvbb / 36:1701`에서 확보한 Noto Sans KR·색상·세그먼트·칩·랭킹 카드 스타일로 통일했습니다. Make 원본의 Noto Serif KR는 적용하지 않았습니다. UI 토큰과 카드/칩은 `src/theme.ts`, `src/components.tsx`에서 재사용합니다.
 
-`src/make-data.json`은 첨부 소스의 데이터 리터럴에서 추출한 스냅샷입니다. 상품·가격·평점·인기 수치·배송 정책은 모두 프로토타입용이며 실제 판매나 검증된 상거래 정보가 아닙니다. 랭킹의 다양한 상품군과 기존 대화의 30개 식품 카탈로그는 구분됩니다. 원본 상품 사진은 제공된 Unsplash URL에서 로드하므로 인터넷이 필요합니다. 원본의 일부 사진 URL은 로드되지 않아 사진 로드 실패 안내를 표시합니다. SVG 7개와 한국어 폰트는 로컬에 포함됩니다. 저작권 출처는 `ATTRIBUTIONS.md`에 보존했습니다.
+홈 인기 선물·랭킹·검색·상세·AI 추천은 모두 Supabase `products`의 같은 상품을 씁니다(`src/services/productRepository.ts`, AsyncStorage `pass.catalog.v1`에 24시간 캐시, 네트워크 실패 시 마지막 캐시). 상품은 Kaggle Amazon Products Dataset(Lokesh Parab, CC BY-NC 4.0)이고 사진은 Amazon CDN에서 로드합니다. 배송비·도착일·재고·포장은 데모 값으로 상세에 표시되고, 알레르기는 상품명 기준 추정입니다. 랭킹 탭은 받는 분별 카테고리 묶음을 리뷰 수 순으로 보여 줍니다. SVG 7개와 한국어 폰트는 로컬에 포함됩니다. 저작권 출처는 `ATTRIBUTIONS.md`에 보존했습니다.
 
 게스트의 찜과 최근 기록은 AsyncStorage에 저장합니다. 로그인 계정의 대화와 기록은 Supabase에 저장하며, 추천은 인증된 Cloudflare API를 호출합니다. Gemini API 키는 서버 secret에만 보관합니다.
 
