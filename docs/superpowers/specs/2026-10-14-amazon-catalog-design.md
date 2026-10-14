@@ -13,7 +13,7 @@
 | 데이터 원본 | Kaggle `lokeshparab/amazon-products-dataset` (Amazon India, 2023) | CC BY-NC 4.0: 비상업·출처 표기 조건으로 공유·재배포 허용. 11번가 크롤링 데이터는 라이선스 근거 없음 |
 | 상품 DB | 팀 Supabase(`zenmtrokvnwsekidcniy`)의 기존 `products` 테이블 | 테이블·공개 읽기 RLS가 이미 있고 비어 있음. 로그인·기록과 같은 프로젝트 |
 | 실행 담당 | 가공: dain77-d(로컬) · 마이그레이션·적재: HanyangChan | 팀 DB 관리자 권한은 HanyangChan |
-| 데이터 파일 | 저장소에 커밋하지 않음. 가공 결과 JSON을 직접 전달 | 저장소는 스크립트만. 테스트 픽스처 30행만 커밋(출처 표기) |
+| 데이터 파일 | 저장소에 커밋하지 않음. 가공 결과 JSON을 직접 전달 | 저장소는 스크립트만. 테스트는 합성 픽스처 사용 |
 | 이미지 | Amazon CDN URL(`m.media-amazon.com`) 그대로 | 데이터셋에 파일 없음. 깨지면 기존 "사진 로드 실패" 처리 |
 | 엔진 상품 공급 | Worker·앱이 시작 시 활성 상품 전체를 읽어 캐시, 기존 엔진에 배열로 전달 | 엔진·예산 비교 로직 유지. 3,000개(약 1MB)는 메모리로 충분. SQL 랭킹은 수만 개 규모에서 재검토 |
 | 게스트 | 앱이 공개 키로 Supabase에서 직접 읽어 기기 엔진 사용 | 게스트·로그인 같은 상품 원본. Worker 인증 정책 변경 없음 |
@@ -77,7 +77,8 @@
 - `lib/engine.mjs` `rankProducts`: `excluded_ingredients`가 있으면 거부하는 대신 `allergens_declared`와 겹치는 상품을 제외하고, 결과에 `notice: '상품명 기준으로 추정했어요. 구매 전 성분표를 꼭 확인해 주세요.'`를 붙인다. 규칙 추출의 성분 목록과 카테고리 단어 표는 새 어휘로 교체(예: 커피·차→`coffee_tea`, 과자·간식→`snack`, 화장품→`beauty`, 주얼리→`jewelry`).
 - `lib/llm.mjs`: 프롬프트를 "Korean gift preferences (food and general goods)"로, `preferences`/`excluded_categories` enum을 16개 카테고리로, `excluded_ingredients`를 2장 어휘 enum으로. 알레르기 보존 규칙은 유지.
 - `lib/language.mjs`: `unsupportedGoods`는 카탈로그에 없는 상품군(의류·신발·대형가전·게임기)만, 안내 문구는 "지금은 식품·뷰티·생활·액세서리 선물만 추천할 수 있어요."로.
-- `lib/products.json`: 가공 결과에서 카테고리별로 고른 30행으로 교체(출처 표기 포함). 테스트 픽스처이자 Supabase 미설정 개발 환경의 대체 카탈로그.
+- `lib/products.json`은 `tests/fixtures/food-demo.json`으로 옮겨 엔진 로직 테스트 픽스처로만 쓴다. 런타임 대체 카탈로그는 두지 않는다(`.env.example`에 팀 공개 설정이 이미 있음).
+- Amazon에는 견과류 카테고리가 없으므로 "견과류는 빼줘"는 알레르기 태그 `견과류` 제외(`excluded_ingredients`)로 처리한다.
 
 ## 6. Worker
 
@@ -87,7 +88,7 @@
 
 ## 7. 앱
 
-- `mobile/src/services/productRepository.ts`: `fetchCatalog`(공개 키) → `toEngineProduct`. AsyncStorage `pass.catalog.v1`에 24시간 캐시, 실패 시 캐시, 캐시도 없으면 오류 상태. Supabase 미설정이면 `lib/products.json`.
+- `mobile/src/services/productRepository.ts`: `fetchCatalog`(공개 키) → `toEngineProduct`. AsyncStorage `pass.catalog.v1`에 24시간 캐시, 실패 시 캐시, 캐시도 없으면 오류 상태.
 - 게스트 `chatService`, 홈 인기상품(리뷰 수 상위 10), 랭킹, 검색(`name`·`name_en`·`brand`), 상세가 모두 이 목록을 쓴다. `make-data.json`·`catalog.ts`의 Make 변환 제거, `categoryNames`는 16개 카테고리 한글명으로.
 - `Gift`(PR #7 확장 타입) 매핑: `image = image_url`, `brand`, `allergensDeclared`, `rating`; 사진이 있으면 사진, 없으면 기존 카테고리 아이콘(없는 카테고리는 `gift`).
 - 랭킹 탭: 전체 / 부모님(health, food, coffee_tea, kitchen, decor) / 친구(beauty, makeup, jewelry, audio, snack) / 직장동료(coffee_tea, snack, decor, accessory, kitchen). 리뷰 수 순.
@@ -100,7 +101,7 @@
 - `tests/catalog-load.test.mjs`: dry-run, 100행 미만 비활성화 차단, upsert 배치 요청 형태.
 - `tests/engine.test.mjs` 갱신: 알레르기 제외 + `notice`, 새 카테고리 선호 점수.
 - `api/tests/worker.test.mjs`: 캐시 적중, 만료 후 실패 시 기존 캐시, 캐시 없음 503.
-- `mobile/tests/services-catalog.test.mjs`: 페이지 연결, AsyncStorage 캐시, 미설정 대체.
+- `mobile/tests/services-catalog.test.mjs`: 페이지 연결, AsyncStorage 캐시, 네트워크 실패 시 캐시.
 - `supabase/tests/rls.test.mjs`: 새 컬럼 포함 마이그레이션 적용, 익명 쓰기 차단, 비활성 상품 비노출.
 - 기존 `npm test` 전체 통과.
 
