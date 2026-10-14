@@ -1,10 +1,10 @@
-// node --env-file=<.env> scripts/catalog/build.mjs --raw <unzipped Kaggle folder> [--out data/products-amazon.json]
+// node --env-file=<.env> scripts/catalog/build.mjs --raw <unzipped Kaggle folder> [--out supabase/seed/products-amazon.json]
 import {readFileSync,writeFileSync,readdirSync,existsSync,mkdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {parseArgs} from 'node:util';
 import {parseCsv,candidates,toRow,awkward,SUBCATEGORIES} from './transform.mjs';
 import {translateAll} from './translate.mjs';
-const {values:args}=parseArgs({options:{raw:{type:'string'},out:{type:'string',default:'data/products-amazon.json'},cache:{type:'string',default:'data/.gemini-cache.json'}}});
+const {values:args}=parseArgs({options:{raw:{type:'string'},out:{type:'string',default:'supabase/seed/products-amazon.json'},cache:{type:'string',default:'data/.gemini-cache.json'}}});
 if(!args.raw)throw Error('--raw <압축 해제 폴더>가 필요합니다.');
 const apiKey=process.env.GEMINI_API_KEY;
 if(!apiKey)throw Error('GEMINI_API_KEY가 없습니다. node --env-file=<.env 경로> 로 실행하세요.');

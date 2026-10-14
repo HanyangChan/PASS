@@ -1,4 +1,4 @@
-// node --env-file=.env scripts/catalog/load.mjs --in data/products-amazon.json [--dry-run]
+// node --env-file=.env scripts/catalog/load.mjs [--in supabase/seed/products-amazon.json] [--dry-run]
 // .env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (team project admin only; never commit or deploy it).
 import {readFileSync} from 'node:fs';
 import {parseArgs} from 'node:util';
@@ -32,7 +32,7 @@ export async function load(rows,{url,key,fetcher=fetch,dryRun=false,log=console.
  return {upserted:rows.length,deactivated:deactivate.length};
 }
 if(import.meta.url===pathToFileURL(process.argv[1]??'').href){
- const {values:args}=parseArgs({options:{in:{type:'string',default:'data/products-amazon.json'},'dry-run':{type:'boolean',default:false}}});
+ const {values:args}=parseArgs({options:{in:{type:'string',default:'supabase/seed/products-amazon.json'},'dry-run':{type:'boolean',default:false}}});
  const {SUPABASE_URL:url,SUPABASE_SERVICE_ROLE_KEY:key}=process.env;
  if(!url||!key)throw Error('SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY를 .env에 설정하세요.');
  console.log(await load(JSON.parse(readFileSync(args.in,'utf8')),{url,key,dryRun:args['dry-run']}));

@@ -25,3 +25,9 @@ test('small inputs never deactivate the existing catalog; legacy JWT keys also s
  assert.equal(r.deactivated,0);assert.ok(!f.calls.some(c=>c.method==='PATCH'));assert.match(logs.join('\n'),/비활성화하지 않습니다/);
  assert.equal(f.calls[0].headers.Authorization,'Bearer eyJ.legacy.jwt');
 });
+test('committed seed data passes loader validation and carries no awkward health items',async()=>{
+ const {readFileSync}=await import('node:fs');const {awkward}=await import('../scripts/catalog/transform.mjs');
+ const rows=JSON.parse(readFileSync(new URL('../supabase/seed/products-amazon.json',import.meta.url)));
+ assert.ok(validateRows(rows).length>=1000);
+ assert.deepEqual(rows.filter(r=>awkward(r.name_en,r.category)).map(r=>r.id),[]);
+});

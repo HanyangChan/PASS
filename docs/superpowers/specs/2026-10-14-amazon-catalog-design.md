@@ -13,7 +13,7 @@
 | 데이터 원본 | Kaggle `lokeshparab/amazon-products-dataset` (Amazon India, 2023) | CC BY-NC 4.0: 비상업·출처 표기 조건으로 공유·재배포 허용. 11번가 크롤링 데이터는 라이선스 근거 없음 |
 | 상품 DB | 팀 Supabase(`zenmtrokvnwsekidcniy`)의 기존 `products` 테이블 | 테이블·공개 읽기 RLS가 이미 있고 비어 있음. 로그인·기록과 같은 프로젝트 |
 | 실행 담당 | 가공: dain77-d(로컬) · 마이그레이션·적재: HanyangChan | 팀 DB 관리자 권한은 HanyangChan |
-| 데이터 파일 | 저장소에 커밋하지 않음. 가공 결과 JSON을 직접 전달 | 저장소는 스크립트만. 테스트는 합성 픽스처 사용 |
+| 데이터 파일 | 가공 결과를 `supabase/seed/products-amazon.json`으로 커밋(+`ATTRIBUTION.md`). 원본 CSV·Gemini 캐시는 커밋하지 않음 | CC BY-NC 4.0이 출처·라이선스·변경 표기 조건으로 비상업 재배포를 허용. 인계 단순화 |
 | 이미지 | Amazon CDN URL(`m.media-amazon.com`) 그대로 | 데이터셋에 파일 없음. 깨지면 기존 "사진 로드 실패" 처리 |
 | 엔진 상품 공급 | Worker·앱이 시작 시 활성 상품 전체를 읽어 캐시, 기존 엔진에 배열로 전달 | 엔진·예산 비교 로직 유지. 3,000개(약 1MB)는 메모리로 충분. SQL 랭킹은 수만 개 규모에서 재검토 |
 | 게스트 | 앱이 공개 키로 Supabase에서 직접 읽어 기기 엔진 사용 | 게스트·로그인 같은 상품 원본. Worker 인증 정책 변경 없음 |
