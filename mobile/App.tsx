@@ -50,6 +50,9 @@ import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
+import { PersonalizationPanel } from './src/PersonalizationPanel';
+import { usePersonalization } from './src/usePersonalization';
+import { personalizeSession, protectRememberedAllergies, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
@@ -136,6 +139,8 @@ export function AppContent({
     chatPending,
     chatError,
     sendChat,
+    personalization,
+    appliedMemory,
     changeChatConditions,
     resetChat,
     heroFailed,
@@ -757,6 +762,7 @@ export function AppContent({
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
+                  <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
@@ -1072,6 +1078,8 @@ function usePassState() {
   }, [catalogAttempt]);
   const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
+  const personalization = usePersonalization(owner ?? null);
+  const [appliedMemory, setAppliedMemory] = useState<string[]>([]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
@@ -1110,23 +1118,41 @@ function usePassState() {
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
   const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
-    if (!ready || chatFlight.current.controller) return false;
+    if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
+    if (!ready || personalization.busy || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
-      const turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(session, text, messages, source, controller.signal)
-          : operation === 'conditions' ? await serverChat.updateConditions(session, patch!, clearIssues, controller.signal)
+      const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text)
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients)
+          : { session, reasons: appliedMemory };
+      const requestSession = recalled.session;
+      const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
+      let turn = serverChat
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal)
           : await serverChat.view(session, controller.signal)
-        : operation === 'turn' ? chatService.send(session, text) : chatService.updateConditions(session, patch ?? {}, clearIssues);
+        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
+      assertSameRecipient(requestSession, turn.session);
+      const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
+      if (JSON.stringify(protectedSession) !== JSON.stringify(turn.session)) {
+        const safe = serverChat
+          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal)
+          : chatService.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
+        assertSameRecipient(requestSession, safe.session);
+        if (JSON.stringify(protectRememberedAllergies(safe.session, personalization.data)) !== JSON.stringify(safe.session)) throw new Error('저장한 제외 조건을 적용하지 못했어요. 다시 시도해주세요.');
+        turn = { ...safe, message: `저장한 알레르기 제외 조건을 유지했어요.\n${safe.message}` };
+      }
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
+      if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(session)) setSession(turn.session);
       if (operation !== 'view') {
         setSession(turn.session);
-        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
+        setAppliedMemory(recalled.reasons);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: [...recalled.reasons, turn.message].join('\n') }]);
       }
       if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode });
       return true;
@@ -1142,11 +1168,11 @@ function usePassState() {
     if (ready && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, serverChat]);
+  }, [ready, serverChat, personalization.ready]);
   const resetChat = () => {
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
-    setSession(chatService.createSession()); setMessages([]);
+    setSession(chatService.createSession()); setMessages([]); setAppliedMemory([]);
   };
   useEffect(() => {
     let mounted = true;
@@ -1228,6 +1254,8 @@ function usePassState() {
     recommendation,
     chatPending,
     chatError,
+    personalization,
+    appliedMemory,
     sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
     resetChat,
