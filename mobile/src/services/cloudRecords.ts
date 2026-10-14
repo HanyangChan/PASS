@@ -1,3 +1,5 @@
+import { normalizeConditions } from '../../../lib/condition-compat.mjs';
+import { validateState } from '../../../lib/llm.mjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decodeGifts } from '../storage.ts';
 import type { ChatMessage, ChatSession, Gift, GiftRecords } from '../domain';
@@ -62,6 +64,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       }
       const conversation = chats.data?.[0];
       let session = copy(emptySession), messages: ChatMessage[] = [];
+      let migrationNotice = '';
       if (conversation) {
         const { _pass, ...state } = conversation.conditions;
         if (!validSession(state) || !_pass || _pass.version !== 1 || !Array.isArray(_pass.message_ids) ||
@@ -80,14 +83,17 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
           if (!row || !['user', 'assistant'].includes(row.role) || typeof row.content !== 'string') throw new Error('대화 기록 일부를 불러오지 못했어요.');
           messages.push({ role: row.role, text: row.content });
         }
-        session = { state, issues: _pass.issues };
+        const normalized = normalizeConditions(state);
+        validateState(normalized.state);
+        session = { state: normalized.state, issues: _pass.issues };
+        if (normalized.notices.length) migrationNotice = `${normalized.notices.join(' ')} 조건 편집창에서 범위를 확인해주세요.`;
         conversationId = conversation.id;
         messageIds = ids;
         messageTimes = ids.map(id => found.get(id)!.created_at);
       }
       previous = copy(records);
       previousMessages = copy(messages);
-      return { ...records, session, messages };
+      return { ...records, session, messages, migrationNotice };
     },
     saveGifts(value: GiftRecords) {
       const snapshot = copy(value);

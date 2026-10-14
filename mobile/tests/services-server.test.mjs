@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { createServerChatService, resolveChatUrl } from '../src/services/serverChatService.ts';
 import { createApi } from '../../api/worker.mjs';
 import { singleInitial } from '../../lib/single-gift.mjs';
+import { readFileSync } from 'node:fs';
 const session = () => ({ state: singleInitial(), issues: [] });
 const auth = () => ({ getSession: async () => ({ data: { session: { access_token: 'test.jwt', user: { id: 'owner' } } }, error: null }) });
 const config = { SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: '', IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) } };
-const transport = createApi({ fetcher: async () => Response.json({ id: 'owner', role: 'authenticated' }) });
+const products = JSON.parse(readFileSync(new URL('../../tests/fixtures/food-demo.json', import.meta.url)));
+const transport = createApi({ catalog: async () => products, fetcher: async () => Response.json({ id: 'owner', role: 'authenticated' }) });
 test('client sends token and bounded history to the Worker and receives the server ranking', async () => {
   let posted;
   const service = createServerChatService('https://api.example/api/chat', auth(), 'owner', async (url, options) => {

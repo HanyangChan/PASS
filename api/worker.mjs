@@ -1,4 +1,5 @@
-import products from '../lib/products.json' with { type: 'json' };
+import { normalizeConditions } from '../lib/condition-compat.mjs';
+import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
 import { validateRequest, validateState, llmTurn, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
 import { apply, recommend } from '../lib/engine.mjs';
@@ -29,24 +30,35 @@ async function readJson(request) {
 function inputOf(raw) {
   try {
     if (!raw || !['turn', 'conditions', 'view'].includes(raw.operation)) throw Error();
-    const session = raw.session;
+    const session = { ...raw.session, state: normalizeConditions(raw.session?.state).state };
     validateState(session.state);
     if (!Array.isArray(session.issues) || session.issues.length > 12 || session.issues.some(q => typeof q !== 'string' || q.length > 400)) throw Error();
     if (raw.operation === 'turn') return { ...validateRequest({ ...session, text: raw.text, history: raw.history, source: raw.source }), operation: 'turn' };
     if (raw.operation === 'conditions') {
       if (!raw.patch || typeof raw.patch !== 'object' || Array.isArray(raw.patch) || Object.keys(raw.patch).some(key => !Object.hasOwn(session.state, key))) throw Error();
       if (raw.patch.budget !== undefined && (!raw.patch.budget || Array.isArray(raw.patch.budget) || typeof raw.patch.budget !== 'object' || Object.keys(raw.patch.budget).some(key => !['amount_krw', 'shipping_included'].includes(key)))) throw Error();
-      validateState(apply(session.state, raw.patch));
+      const patch = normalizeConditions(apply(session.state, raw.patch)).state;
+      validateState(patch);
+      raw = { ...raw, patch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
-    return { ...raw, state: session.state, issues: session.issues };
+    return { ...raw, session, state: session.state, issues: session.issues };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
-export function recommendationView(session) {
+// Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
+function defaultCatalog(fetcher) {
+  let rows = null;
+  return async env => {
+    rows ??= cachedCatalog(() => fetchCatalog({ url: env.SUPABASE_URL, key: env.SUPABASE_PUBLISHABLE_KEY, fetcher }));
+    const today = todayKst();
+    return (await rows()).map(row => toEngineProduct(row, today));
+  };
+}
+export function recommendationView(session, products) {
   const state = engineState(session.state);
   return { question: singleQuestion(session), result: recommend(products, state), comparison: budgetAlternatives(products, state) };
 }
-export function createApi({ fetcher = fetch, extract = llmTurn } = {}) {
+export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaultCatalog(fetcher) } = {}) {
   return {
     async fetch(request, env) {
       const origin = request.headers.get('origin');
@@ -56,7 +68,11 @@ export function createApi({ fetcher = fetch, extract = llmTurn } = {}) {
       if (origin && !allowed.includes(origin)) return json({ error: '허용되지 않은 요청입니다.', code: 'origin_denied' }, 403);
       if (origin) Object.assign(headers, { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' });
       const path = new URL(request.url).pathname;
-      if (path === '/health' && request.method === 'GET') return json({ ok: true, provider: env.GEMINI_API_KEY ? 'gemini' : 'rules', catalog: 'food-demo-v1' });
+      if (path === '/health' && request.method === 'GET') {
+        let count = null;
+        try { count = (await catalog(env)).length; } catch {}
+        return json({ ok: count !== null, provider: env.GEMINI_API_KEY ? 'gemini' : 'rules', catalog: CATALOG_ID, products: count ?? 0 });
+      }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
       if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.', code: 'method' }, 405);
@@ -78,6 +94,8 @@ export function createApi({ fetcher = fetch, extract = llmTurn } = {}) {
         if (!user.id || user.role !== 'authenticated') throw new ApiError(401, 'unauthorized', '다시 로그인해주세요.');
         if (!(await env.USER_LIMITER.limit({ key: user.id })).success) throw new ApiError(429, 'rate_limit', '요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
         const input = inputOf(await readJson(request));
+        let products;
+        try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
         let turn, mode = 'rules';
         if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
         else if (input.operation === 'conditions') turn = finishSingle(input.state, apply(input.state, input.patch), input.clearIssues === false ? input.issues : [], products);
@@ -89,7 +107,7 @@ export function createApi({ fetcher = fetch, extract = llmTurn } = {}) {
             catch (error) { const failure = geminiFailure(error); return json({ error: failure.error, code: failure.code }, 503); }
           } else turn = singleTurn({ state: input.state, issues: input.issues }, input.text, products);
         }
-        return json({ ...turn, view: recommendationView(turn.session), mode, catalog: 'food-demo-v1' });
+        return json({ ...turn, view: recommendationView(turn.session, products), mode, catalog: CATALOG_ID });
       } catch (error) {
         if (error instanceof ApiError) { if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
         // Keep tokens, input and upstream response bodies out of logs and errors.

@@ -8,6 +8,7 @@ const alice = '00000000-0000-4000-8000-000000000001';
 const bob = '00000000-0000-4000-8000-000000000002';
 const conversation = '00000000-0000-4000-8000-000000000003';
 const migration = readFileSync(new URL('../migrations/202610100001_initial_pass.sql', import.meta.url), 'utf8');
+const catalogMigration = readFileSync(new URL('../migrations/202610140001_amazon_catalog.sql', import.meta.url), 'utf8');
 async function setup(t) {
   const db = new PGlite(); t.after(() => db.close());
   await db.exec(`create role anon; create role authenticated; create schema auth;
@@ -15,7 +16,7 @@ async function setup(t) {
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth, public to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
     insert into auth.users values ('${alice}'), ('${bob}');`);
-  await db.exec(migration);
+  await db.exec(migration); await db.exec(catalogMigration);
   await db.exec(`insert into public.conversations(id,user_id,title) values ('${conversation}','${alice}','private');
     insert into public.messages(conversation_id,user_id,role,content) values ('${conversation}','${alice}','user','private message');
     insert into public.gift_records(user_id,kind,gift_key,snapshot) values ('${alice}','saved','demo','{}');
@@ -62,4 +63,18 @@ test('owner writes and deletes work; deleting conversations cascades only their 
   await asUser(db,bob);
   assert.equal((await db.query('select * from public.conversations')).rows.length,1);
   assert.equal((await db.query('select * from public.gift_records')).rows.length,1);
+});
+test('catalog columns are public for active products only and stay read-only for app roles', async t => {
+  const db = await setup(t);
+  await db.exec(`update public.products set image_url='https://m.media-amazon.com/x.jpg', allergens='{우유}', demo_fields='{stock}', rating=4.5 where id='visible'`);
+  for (const role of ['anon', 'authenticated']) {
+    await db.exec(`reset role; set role ${role};`);
+    const rows = (await db.query('select id, image_url, allergens, demo_fields from public.products')).rows;
+    assert.deepEqual(rows.map(r => r.id), ['visible']);
+    assert.deepEqual(rows[0].allergens, ['우유']);
+    await assert.rejects(db.query("update public.products set price_krw=1 where id='visible'"));
+  }
+  await db.exec('reset role;');
+  await assert.rejects(db.exec("update public.products set packaging='fancy' where id='visible'"));
+  await assert.rejects(db.exec("update public.products set image_url='http://insecure' where id='visible'"));
 });

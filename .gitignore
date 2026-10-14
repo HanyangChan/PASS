@@ -53,3 +53,6 @@ next-env.d.ts
 /api/.wrangler/
 /api/node_modules/
 /api/dist/
+
+# Catalog build inputs/outputs (CC BY-NC data is handed over, not committed)
+/data/

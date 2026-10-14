@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {singleInitial,singleTurn,singleQuestion,engineState,fastRuleTurn} from '../lib/single-gift.mjs';
 import {validateRequest,llmTurn} from '../lib/llm.mjs';
-const products=JSON.parse(readFileSync(new URL('../lib/products.json',import.meta.url)));
+const products=JSON.parse(readFileSync(new URL('./fixtures/food-demo.json',import.meta.url)));
 const body=()=>({state:singleInitial(),issues:[],history:[],text:'어머니께 드릴 덜 단 선물, 배송비 포함 5만원까지'});
 test('public session and questions have no quantity, same-product or budget scope',()=>{const state=singleInitial();assert.ok(!('quantity' in state));assert.ok(!('same_product' in state));assert.ok(!('scope' in state.budget));const r=singleTurn({state,issues:[]},'부모님 5만 원 상품값',products);assert.equal(r.question.key,null);assert.ok(!/세트|같은 상품/.test(r.message));});
 test('old quantity wording never multiplies a single-gift budget or reappears in state',()=>{const r=singleTurn({state:singleInitial(),issues:[]},'손녀 네 세트 서로 다른 상품 상품값 총 10만 원',products);assert.equal(engineState(r.session.state).quantity,1);assert.equal(r.question.key,null);assert.ok(!r.changes.some(c=>c.field==='quantity'||c.field==='same_product'));});
@@ -20,3 +20,4 @@ test('Gemini shipping clarification uses fast replies and clears only the resolv
  const r=fastRuleTurn(input,products);assert.equal(r.session.state.budget.shipping_included,false);assert.deepEqual(r.session.issues,[]);
  assert.equal(fastRuleTurn({...input,issues:['알레르기 성분을 알려주세요.']},products),null);
 });
+test('Gemini schema uses catalog categories and allergen names',async()=>{let schema;await llmTurn(body(),products,{apiKey:'k',fetcher:async(url,req)=>{schema=JSON.parse(req.body).generationConfig.responseJsonSchema;return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({state:singleInitial(),question:null})}]}}]});}});const s=schema.properties.state.properties;assert.ok(s.excluded_categories.items.enum.includes('coffee_tea'));assert.ok(!s.excluded_categories.items.enum.includes('hangwa'));assert.ok(s.excluded_ingredients.items.enum.includes('견과류'));assert.ok(s.preferences.items.enum.includes('category:jewelry'));});

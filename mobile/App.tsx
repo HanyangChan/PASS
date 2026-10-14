@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -53,20 +54,16 @@ import { PersonalizationPanel } from './src/PersonalizationPanel';
 import { usePersonalization } from './src/usePersonalization';
 import { personalizeSession, protectRememberedAllergies, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
-import {
-  Gift,
-  popularGifts,
-  rankingByRecipient,
-  categories,
-} from './src/catalog';
-import { chatService, giftRepository, calendarRepository } from './src/services/localServices';
+import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
+import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
+import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
 import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
 import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
-import type { ChatSession, ChatMessage, CalendarEvent, CalendarEventKind } from './src/domain';
+import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
 import { calendarEventKinds } from './src/domain';
 import {
   Chip,
@@ -133,6 +130,8 @@ export function AppContent({
     retryCalendarLoad,
     ready,
     notice,
+    conditionMigrationNotice,
+    dismissMigrationNotice,
     setNotice,
     syncFailed,
     retrySave,
@@ -169,6 +168,12 @@ export function AppContent({
     setAllSaved,
     allRecent,
     setAllRecent,
+    chatService,
+    catalogProducts,
+    rankingByRecipient,
+    popularGifts,
+    catalogError,
+    retryCatalog,
   } = state;
   const router = useRouter();
   const { user } = useAuth();
@@ -276,14 +281,7 @@ export function AppContent({
       <GiftCard
         key={g.id}
         gift={g}
-        rank={
-          ranked
-            ? screen === 'ranking' && !resultsOpen && sort === '인기순'
-              ? rankingByRecipient[recipient].findIndex((p) => p.id === g.id) +
-                1
-              : i + 1
-            : undefined
-        }
+        rank={ranked ? i + 1 : undefined}
         saved={liked(g)}
         onSave={() => save(g)}
         onOpen={() => open(g)}
@@ -300,36 +298,21 @@ export function AppContent({
       ))}
     </ScrollView>
   );
-  let ranked = rankingByRecipient[recipient].filter(
-    (g) =>
-      (filter === '전체' || g.category === filter) && g.name.includes(search) && (priceLimit === null || g.price <= priceLimit),
-  );
-  if (sort !== '인기순')
-    ranked = [...ranked].sort((a, b) =>
-      sort === '낮은 가격순' ? a.price - b.price : b.price - a.price,
-    );
+  const ranked = useMemo(() => selectGifts(catalogProducts, { recipient, search, filter, priceLimit, sort }),
+    [catalogProducts, recipient, search, filter, priceLimit, sort]);
   const sweetnessLabel: Record<string, string> = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
+  const demoValue = (field: string, text: string) => (detail?.demoFields?.includes(field) ? `${text} · 데모 값` : text);
   const info =
     detail?.source === 'engine'
       ? [
-          ['구성', detail.ingredients?.join(', ') || '미지정'],
-          ...(detail.sweetness ? [['단맛', sweetnessLabel[detail.sweetness] ?? detail.sweetness]] : []),
-          ['포장', detail.packaging || '미지정'],
           ...(detail.brand ? [['브랜드', detail.brand]] : []),
-          [
-            '알레르기·원재료',
-            detail.allergenInfoComplete
-              ? detail.allergensDeclared?.length
-                ? `${detail.allergensDeclared.join(', ')} 포함`
-                : '표시된 알레르기 성분 없음'
-              : '정보 확인 필요 · 구매 전 판매처 확인',
-          ],
-          ['배송', `모의 도착일 ${detail.arrival}`],
-          [
-            '배송비',
-            detail.shippingIncluded ? '표시 금액에 포함' : '상품값에서 별도',
-          ],
-          ['구매', '실험용 가상 상품 · 실제 판매 없음'],
+          ...(detail.nameEn ? [['원제품명', detail.nameEn]] : []),
+          ...(detail.sweetness && detail.sweetness !== 'unknown' ? [['단맛', sweetnessLabel[detail.sweetness] ?? detail.sweetness]] : []),
+          ['알레르기', detail.allergensDeclared?.length ? `${detail.allergensDeclared.join(', ')} 포함 (상품명 기준 추정)` : '상품명에 표시된 알레르기 성분 없음 · 구매 전 성분표 확인'],
+          ['포장', demoValue('packaging', detail.packaging || '기본 포장')],
+          ['배송', demoValue('arrival_days', `도착 예정 ${detail.arrival}`)],
+          ['배송비', demoValue('shipping_fee_krw', detail.shippingIncluded ? '표시 금액에 포함' : '상품값에서 별도')],
+          ['구매', 'PASS에서는 구매할 수 없어요'],
         ]
       : [
           ['배송', '무료배송 · 2–3일 내 출고 (데모)'],
@@ -346,6 +329,11 @@ export function AppContent({
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style="dark" />
+      {catalogError ? (
+        <Pressable accessibilityRole="button" onPress={retryCatalog} style={s.catalogBanner}>
+          <Text style={s.catalogBannerText}>상품 정보를 불러오지 못했어요 · 다시 시도</Text>
+        </Pressable>
+      ) : null}
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -355,6 +343,7 @@ export function AppContent({
             {notice}
           </Text>
         )}
+        {!!conditionMigrationNotice && <View><Text style={s.note}>{conditionMigrationNotice}</Text><Pressable accessibilityRole="button" onPress={dismissMigrationNotice}><Text style={s.note}>확인</Text></Pressable></View>}
         {syncFailed && <Pressable accessibilityRole="button" onPress={retrySave}><Text style={s.note}>기록 저장 다시 시도</Text></Pressable>}
         {detail ? (
           <>
@@ -431,7 +420,7 @@ export function AppContent({
                         }
                       />
                     ))}
-                    <Text style={s.small}>{detail.rating} · 데모 평점</Text>
+                    <Text style={s.small}>{detail.rating}{detail.source === 'engine' ? (detail.ratingCount ? ` · 리뷰 ${detail.ratingCount.toLocaleString('ko-KR')}개` : '') : ' · 데모 평점'}</Text>
                   </View>
                 )}
                 <Text style={s.title}>{detail.name}</Text>
@@ -454,9 +443,15 @@ export function AppContent({
                     </Text>
                   </View>
                 )}
+                {detail.link && (
+                  <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(detail.link!)}>
+                    <Text style={s.sourceLink}>Amazon에서 보기</Text>
+                  </Pressable>
+                )}
                 <Text style={s.small}>
-                  상품·가격·평점은 프로토타입용 정보예요. 실제 구매는 제공하지
-                  않아요.
+                  {detail.source === 'engine'
+                    ? '상품 정보: Kaggle Amazon Products Dataset (Lokesh Parab), CC BY-NC 4.0. 가격·배송은 데모 값이에요.'
+                    : '상품·가격·평점은 프로토타입용 정보예요. 실제 구매는 제공하지 않아요.'}
                 </Text>
               </View>
             </ScrollView>
@@ -621,7 +616,7 @@ export function AppContent({
                   />
                   {tiles(popularGifts)}
                   <Text style={s.demoNote}>
-                    프로토타입의 데모 상품·가격·평점이에요.
+                    상품 정보: Kaggle Amazon Products Dataset (CC BY-NC 4.0) · 가격·배송은 데모 값이에요.
                   </Text>
                 </View>
                 <View style={s.homeSection}>
@@ -668,7 +663,7 @@ export function AppContent({
                   keyboardShouldPersistTaps="handled"
                 >
                   <Text style={s.note}>
-                    받는 분 기준 랭킹이에요. 지금은 데모 데이터예요.
+                    받는 분에게 어울리는 카테고리별 인기 상품이에요. 리뷰 수 기준이에요.
                   </Text>
                   {showSearch && (
                     <TextInput
@@ -762,10 +757,10 @@ export function AppContent({
                   keyboardShouldPersistTaps="handled"
                 >
                   <Text style={s.demoNote}>
-                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · 식품 선물 데모' : recommendation ? '서버 규칙 기반 해석 · 식품 선물 데모' : '기기 규칙 기반 해석 · 식품 선물 데모'}
+                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · Amazon 상품' : recommendation ? '서버 규칙 기반 해석 · Amazon 상품' : '기기 규칙 기반 해석 · Amazon 상품'}
                   </Text>
                   <Text style={s.assistant}>
-                    식품 선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
+                    선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
                   <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
@@ -992,8 +987,8 @@ export function AppContent({
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
-                    랭킹에는 프로토타입의 예시 상품이, 대화에는 기존 식품
-                    카탈로그가 사용돼요. 실제 결제·배송 기능은 준비
+                    랭킹과 대화 추천은 같은 상품 목록(Kaggle Amazon Products
+                    Dataset, CC BY-NC 4.0)을 사용해요. 실제 결제·배송 기능은 준비
                     중입니다. {loggedIn ? '로그인은 연결되어 있으며, 마지막 대화와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
@@ -1070,6 +1065,19 @@ export function usePassContext() {
 function usePassState() {
   const { user } = useAuth();
   const owner = user?.id;
+  const [catalog, setCatalog] = useState<{ products: EngineProduct[]; error: string }>({ products: [], error: productRepository ? '' : '상품 서버 설정이 필요해요.' });
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  useEffect(() => {
+    if (!productRepository) return;
+    let live = true;
+    productRepository.load().then(
+      products => { if (live) setCatalog({ products, error: '' }); },
+      (error: Error) => { if (live) setCatalog(old => ({ ...old, error: error.message })); },
+    );
+    return () => { live = false; };
+  }, [catalogAttempt]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
+  const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const personalization = usePersonalization(owner ?? null);
   const [appliedMemory, setAppliedMemory] = useState<string[]>([]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
@@ -1079,6 +1087,7 @@ function usePassState() {
   const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
   const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [conditionMigrationNotice, setConditionMigrationNotice] = useState('');
   const [syncFailed, setSyncFailed] = useState(false);
   const [saveAttempt, setSaveAttempt] = useState(0);
   const [screen, setScreen] = useState<Screen>('home'),
@@ -1175,6 +1184,7 @@ function usePassState() {
     restore.then(records => {
       if (!mounted) return;
       setSaved(records.saved); setRecent(records.recent);
+      if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
@@ -1236,6 +1246,8 @@ function usePassState() {
     retryCalendarLoad: () => setCalendarLoadAttempt(value => value + 1),
     ready,
     notice,
+    conditionMigrationNotice,
+    dismissMigrationNotice: () => setConditionMigrationNotice(''),
     setNotice,
     syncFailed,
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
@@ -1249,6 +1261,12 @@ function usePassState() {
     resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
+    chatService,
+    rankingByRecipient,
+    catalogProducts: catalog.products,
+    popularGifts: rankingByRecipient['전체'].slice(0, 10),
+    catalogError: catalog.error,
+    retryCatalog: () => setCatalogAttempt(value => value + 1),
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1372,6 +1390,9 @@ const s = StyleSheet.create({
   buttonText: { fontFamily: f.bold, fontSize: 14, color: c.white },
   disabled: { backgroundColor: c.segment },
   horizontal: { paddingHorizontal: 20, gap: 12 },
+  sourceLink: { color: c.primary, fontFamily: f.medium, fontSize: 14, paddingVertical: 8 },
+  catalogBanner: { backgroundColor: '#FEF2F2', paddingVertical: 8, paddingHorizontal: 16 },
+  catalogBannerText: { color: '#B91C1C', fontFamily: f.medium, fontSize: 13, textAlign: 'center' },
   demoNote: {
     fontFamily: f.regular,
     fontSize: 12,

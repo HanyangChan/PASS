@@ -1,14 +1,15 @@
 import { singleInitial, singleQuestion, singleTurn, engineState, finishSingle } from '../../../lib/single-gift.mjs';
 import { recommend, apply } from '../../../lib/engine.mjs';
 import { budgetAlternatives } from '../../../lib/counterfactual.mjs';
-import type { ChatSession, Conditions, ConditionPatch, Gift } from '../domain';
+import type { ChatSession, Conditions, ConditionPatch, Gift, EngineProduct } from '../domain';
+import { giftFromProduct } from '../catalog.ts';
 
-type Product = (typeof import('../../../lib/products.json'))[number];
+type Product = EngineProduct;
 type RankedProduct = Product & { total: number };
 
 // The local implementation is the guest/offline recommendation path.
 // Only this service knows the engine's internal single-gift state conversion.
-export function createLocalChatService(products: Product[], categoryNames: Record<string, string>) {
+export function createLocalChatService(products: Product[]) {
   return {
     createSession(): ChatSession { return { state: singleInitial(), issues: [] }; },
     send(session: ChatSession, text: string) {
@@ -28,23 +29,7 @@ export function createLocalChatService(products: Product[], categoryNames: Recor
       };
     },
     toGift(product: RankedProduct, conditions: Conditions): Gift {
-      return {
-        id: product.id, name: product.name.replace('가상 ', ''),
-        category: categoryNames[product.category] ?? product.category,
-        price: product.total, description: product.description,
-        icon: (['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil'] as const).includes(product.category as never)
-          ? (product.category as Gift['icon'])
-          : 'gift',
-        source: 'engine',
-        shippingIncluded: conditions.budget.shipping_included === true,
-        packaging: product.packaging === 'formal' ? '격식 있는 포장' : '기본 포장',
-        arrival: product.arrival_date,
-        ingredients: product.ingredients,
-        sweetness: product.sweetness,
-        brand: product.brand,
-        allergensDeclared: product.allergens_declared,
-        allergenInfoComplete: product.allergen_information_complete,
-      };
+      return { ...giftFromProduct(product), price: product.total, shippingIncluded: conditions.budget.shipping_included === true };
     },
   };
 }

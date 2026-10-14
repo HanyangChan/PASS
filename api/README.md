@@ -1,6 +1,6 @@
 # PASS 추천 API
 
-공통 식품 데모 카탈로그/엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 현재 카탈로그는 `lib/products.json`이며 실제 상품 DB 조회는 후속입니다.
+공통 엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 상품은 Supabase `products`의 활성 상품을 공개 키로 읽어 Worker 인스턴스마다 10분 캐시합니다. 갱신에 실패하면 이전 캐시를 쓰고, 캐시도 없으면 503 `catalog_unavailable`을 반환합니다.
 
 ## 로컬 시험
 
@@ -9,7 +9,7 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 - 모바일 `.env.local`: `EXPO_PUBLIC_CHAT_API_URL=http://127.0.0.1:8788`. 환경 변수 변경 뒤 웹 export/앱 재시작이 필요합니다.
 - 서버 `.dev.vars`: 필요한 경우 `GEMINI_API_KEY=...`, `GEMINI_MODEL=...`. 이 파일은 Git에서 제외됩니다. 모델은 프로젝트에서 사용 가능한 Gemini 모델 ID로 지정합니다. 저장 후 API를 재시작합니다.
 - 키가 비어 있으면 서버 규칙 기반 추천으로 동작하고 앱에 그 방식을 표시합니다. 키가 존재할 때 Gemini가 실패하면 503을 반환하며 로컬 해석으로 바꿔 처리하지 않습니다.
-- `GET /health`, `POST /api/chat` 및 웹 CORS 사전 요청 `OPTIONS /api/chat`를 제공합니다. POST는 Supabase access token의 Bearer 인증이 필요합니다.
+- `GET /health`(`catalog: amazon-kaggle-v1`, `products`: 활성 상품 수), `POST /api/chat` 및 웹 CORS 사전 요청 `OPTIONS /api/chat`를 제공합니다. POST는 Supabase access token의 Bearer 인증이 필요합니다.
 - 실기기에서 127.0.0.1은 해당 기기입니다. 실기기 시험에는 HTTPS 서버 주소를 사용합니다. HTTP 예외는 로컬 웹 시험의 localhost/127.0.0.1만 허용합니다.
 
 ## 배포

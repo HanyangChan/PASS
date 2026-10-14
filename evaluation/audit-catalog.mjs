@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {validDate} from '../lib/language.mjs';
 
-const raw=readFileSync(new URL('../lib/products.json',import.meta.url));
+const raw=readFileSync(new URL('../tests/fixtures/food-demo.json',import.meta.url));
 const products=JSON.parse(raw);
 const archived=JSON.parse(readFileSync(new URL('../docs/research/products.json',import.meta.url)));
 const errors=[];const ids=new Set();

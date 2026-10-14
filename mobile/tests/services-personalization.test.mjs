@@ -32,7 +32,7 @@ test('remembered allergies survive a patch and incomplete products still block r
   const patched = { state: { ...singleInitial(), recipients: ['어머니'] }, issues: [] };
   const protectedSession = protectRememberedAllergies(patched, memory());
   assert.deepEqual(protectedSession.state.excluded_ingredients, ['땅콩']);
-  assert.equal(recommend([], engineState(protectedSession.state)).status, 'insufficient_product_info');
+  assert.equal(recommend([], engineState(protectedSession.state)).status, 'no_match');
   assert.deepEqual(patched.state.excluded_ingredients, []);
   assert.deepEqual(protectRememberedAllergies(patched, emptyPersonalization()).state.excluded_ingredients, []);
 });
@@ -47,8 +47,8 @@ test('only positive purchase feedback influences ranking; current requests overr
     { id: '1', recipient: '친구', gift: { id: 'fruit', name: '과일', category: '과일' }, feedback: 'liked', source: 'user_reported', recordedAt: 'now' },
     { id: '2', recipient: '어머니', gift: { id: 'nuts', name: '견과', category: '견과류' }, feedback: 'liked', source: 'user_reported', recordedAt: 'now' },
   ] };
-  assert.deepEqual(personalizeSession(session(), data, '친구 선물').session.state.preferences, ['category:fruit']);
-  assert.deepEqual(personalizeSession(session(), data, '친구 차로 추천').session.state.preferences, ['category:tea']);
+  assert.deepEqual(personalizeSession(session(), data, '친구 선물').session.state.preferences, ['category:food']);
+  assert.deepEqual(personalizeSession(session(), data, '친구 차로 추천').session.state.preferences, ['category:coffee_tea']);
   assert.deepEqual(personalizeSession(session(), { ...data, purchases: data.purchases.map(p => ({ ...p, feedback: 'disliked' })) }, '친구 선물').session.state.preferences, []);
 });
 test('accounts and guest have separate storage and failed loads cannot overwrite data', async () => {
@@ -75,7 +75,7 @@ test('writes are snapshots and a failed save does not poison subsequent writes',
 
 test('a single utterance extracts recipient, allergy and affirmative preference without inferring from negation', () => {
   const positive = extract('엄마는 땅콩 알레르기가 있어. 과일을 좋아해. 5만원', singleInitial()).patch;
-  assert.deepEqual(positive.preferences, ['category:fruit']);
+  assert.deepEqual(positive.preferences, ['category:food']);
   assert.deepEqual(positive.excluded_ingredients, ['땅콩']);
   assert.equal(extract('친구는 과일을 좋아하지 않아', singleInitial()).patch.preferences, undefined);
 });
@@ -133,10 +133,10 @@ test('invalid stored preferences and duplicate aliases fail closed', async () =>
 test('personalized purchase scoring and hard budget/exclusions use the same ranking path', () => {
   const data = { memories: [], purchases: [{ id: 'x', recipient: '친구', gift: { id: 'fruit', name: '과일', category: '과일' }, feedback: 'liked', source: 'user_reported', recordedAt: '2026-10-14' }] };
   const candidate = (id, category, price) => ({ id, name: id, category, price_krw: price, shipping_fee_per_set_krw: 0, stock_sets: 1, sweetness: 'unsweetened' });
-  const catalog = [candidate('tea', 'tea', 10000), candidate('fruit', 'fruit', 20000), candidate('expensive', 'fruit', 60000)];
+  const catalog = [candidate('tea', 'coffee_tea', 10000), candidate('fruit', 'food', 20000), candidate('expensive', 'food', 60000)];
   const prepared = personalizeSession({ state: { ...singleInitial(), budget: { amount_krw: 30000, shipping_included: true } }, issues: [] }, data, '친구 선물').session;
   assert.deepEqual(recommend(catalog, engineState(prepared.state)).items.map(p => p.id), ['fruit', 'tea']);
-  prepared.state.excluded_categories = ['fruit'];
+  prepared.state.excluded_categories = ['food'];
   assert.deepEqual(recommend(catalog, engineState(prepared.state)).items.map(p => p.id), ['tea']);
   data.purchases[0].feedback = 'disliked';
   const neutral = personalizeSession(session(), data, '친구 선물').session;
@@ -162,6 +162,25 @@ test('condition editor target override recalls the new recipient even without fr
 });
 test('prototype food tags are mapped without guessing ambiguous non-food categories', () => {
   const purchase = { id: '1', recipient: '친구', gift: { id: '1', name: '티 세트', category: '전통차' }, source: 'user_reported', feedback: 'liked', recordedAt: '2026-10-14' };
-  assert.deepEqual(personalizeSession(session(), { memories: [], purchases: [purchase] }, '친구 선물').session.state.preferences, ['category:tea']);
+  assert.deepEqual(personalizeSession(session(), { memories: [], purchases: [purchase] }, '친구 선물').session.state.preferences, ['category:coffee_tea']);
   assert.deepEqual(personalizeSession(session(), { memories: [], purchases: [{ ...purchase, gift: { ...purchase.gift, category: '카페 선물' } }] }, '친구 선물').session.state.preferences, []);
+});
+
+test('legacy recipient memories restore to Amazon categories without losing nut exclusions', () => {
+  const data = decodePersonalization(JSON.stringify({ memories: [{ recipient: '엄마', preferences: ['category:tea'], excluded_categories: ['nuts'], excluded_ingredients: ['우유'], updatedAt: 'old' }], purchases: [] }));
+  const recalled = personalizeSession(session(), data, '엄마 선물').session;
+  assert.deepEqual(recalled.state.preferences, ['category:coffee_tea']);
+  assert.deepEqual(recalled.state.excluded_categories, []);
+  assert.deepEqual(new Set(recalled.state.excluded_ingredients), new Set(['우유', '견과류']));
+  const protectedSession = protectRememberedAllergies({ ...recalled, state: { ...recalled.state, excluded_ingredients: [] } }, data);
+  assert.deepEqual(new Set(protectedSession.state.excluded_ingredients), new Set(['우유', '견과류']));
+});
+
+test('positive Amazon purchase categories affect recall and explicit requests still win', () => {
+  for (const category of ['audio', '음향기기', '뷰티', 'coffee_tea']) {
+    const data = { memories: [], purchases: [{ id: 'p', recipient: '친구', gift: { id: 'amazon', name: '상품', category }, feedback: 'liked', source: 'user_reported', recordedAt: 'now' }] };
+    const expected = { audio: 'audio', 음향기기: 'audio', 뷰티: 'beauty', coffee_tea: 'coffee_tea' }[category];
+    assert.deepEqual(personalizeSession(session(), data, '친구 선물').session.state.preferences, [`category:${expected}`]);
+    assert.deepEqual(personalizeSession(session(), data, '친구에게 시계를 추천').session.state.preferences, ['category:watch']);
+  }
 });

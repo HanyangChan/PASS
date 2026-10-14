@@ -1,3 +1,5 @@
+import { normalizeConditions } from '../../../lib/condition-compat.mjs';
+import { CATEGORY_NAMES, CATEGORIES } from '../../../lib/catalog.mjs';
 import { validateState } from '../../../lib/llm.mjs';
 import { decodeGifts } from '../storage.ts';
 import { extract, initial } from '../../../lib/engine.mjs';
@@ -32,6 +34,7 @@ export const canonicalRecipient = (name: string) => recipientAliases[name.trim()
 const canonicalRecipients = (names: string[]) => unique(names.map(canonicalRecipient));
 
 export function rememberConditions(data: Personalization, state: Conditions, now: string, issues: string[] = []): Personalization {
+  state = normalizeConditions(state).state;
   if (state.recipients.length !== 1) throw new Error('한 명의 수령인을 정한 뒤 기억해주세요.');
   if (issues.length) throw new Error('확인 중인 질문에 답한 뒤 조건을 기억해주세요.');
   const recipient = canonicalRecipient(state.recipients[0]);
@@ -46,29 +49,30 @@ export function rememberConditions(data: Personalization, state: Conditions, now
   if (rest.length >= 100) throw new Error('기억은 100명까지 저장할 수 있어요. 기존 기억을 직접 삭제한 뒤 저장해주세요.');
   return { ...data, memories: [memory, ...rest] };
 }
-const categoryKeys: Record<string, string> = { 과일: 'fruit', 한과: 'hangwa', 견과류: 'nuts', 차: 'tea', 커피: 'coffee', 오일: 'oil', 기름: 'oil', 전통차: 'tea', '신선 과일': 'fruit' };
+const categoryKeys: Record<string, string> = { ...Object.fromEntries(Object.entries(CATEGORY_NAMES).map(([key, label]) => [label, key])), 과일: 'food', 한과: 'snack', 견과류: 'food', 차: 'coffee_tea', 커피: 'coffee_tea', 오일: 'food', 기름: 'food', 전통차: 'coffee_tea', '신선 과일': 'food', fruit: 'food', hangwa: 'snack', nuts: 'food', tea: 'coffee_tea', coffee: 'coffee_tea', oil: 'food' };
 // Current explicit preferences outrank inferred purchase preferences. Never infer allergies from purchases.
 export function personalizeSession(session: ChatSession, data: Personalization, text = '', recipientsOverride?: string[]) {
   const mentioned = recipientsInText(text);
   const recipients = canonicalRecipients(recipientsOverride ?? (mentioned.length ? mentioned : session.state.recipients));
   const recall = JSON.stringify(recipients) !== JSON.stringify(canonicalRecipients(session.state.recipients));
   const prepared = switchRecipient(session, recipients);
-  const state = prepared.state;
+  const state = normalizeConditions(prepared.state).state;
   const reasons: string[] = [];
   if (recipients.length !== 1) return { session: { state, issues: prepared.issues }, reasons };
   const recipient = state.recipients[0];
   const memory = data.memories.find(m => canonicalRecipient(m.recipient) === recipient);
   if (memory && recall) {
-    state.excluded_ingredients = unique([...state.excluded_ingredients, ...memory.excluded_ingredients]);
-    state.excluded_categories = unique([...state.excluded_categories, ...memory.excluded_categories]);
-    if (!state.preferences.length) state.preferences = [...memory.preferences];
+    const remembered = normalizeConditions({ ...initialMemoryState(), ...memoryConditions(memory) }).state;
+    state.excluded_ingredients = unique([...state.excluded_ingredients, ...remembered.excluded_ingredients]);
+    state.excluded_categories = unique([...state.excluded_categories, ...remembered.excluded_categories]);
+    if (!state.preferences.length) state.preferences = [...remembered.preferences];
     reasons.push(`${recipient}의 저장된 선호·제외 조건을 반영했어요.`);
   }
   const explicit = (extract(text, initial()).patch as Partial<Conditions>).preferences;
   if (explicit?.length) state.preferences = explicit;
   if (recall && !state.preferences.length) {
     const liked = data.purchases.filter(p => canonicalRecipient(p.recipient) === recipient && p.feedback === 'liked');
-    const preferences = unique(liked.map(p => categoryKeys[p.gift.category] ?? (['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil'].includes(p.gift.category) ? p.gift.category : '')).filter(Boolean));
+    const preferences = unique(liked.map(p => categoryKeys[p.gift.category] ?? ((CATEGORIES as readonly string[]).includes(p.gift.category) ? p.gift.category : '')).filter(Boolean));
     if (preferences.length) {
       state.preferences = preferences.map(category => `category:${category}`);
       reasons.push(`${recipient}에게 구매 후 만족했다고 등록한 상품의 종류를 참고했어요.`);
@@ -85,6 +89,10 @@ export function decodePersonalization(raw: string | null): Personalization {
   if (!data || !Array.isArray(data.memories) || !Array.isArray(data.purchases) || data.memories.length > 100 || data.purchases.length > 100 ||
     data.memories.some(m => !m || typeof m.recipient !== 'string' || !m.recipient.trim() || !strings(m.preferences) || !strings(m.excluded_categories) || !strings(m.excluded_ingredients) || typeof m.updatedAt !== 'string') ||
     data.purchases.some(p => !p || typeof p.id !== 'string' || typeof p.recipient !== 'string' || !p.recipient.trim() || p.source !== 'user_reported' || !['unknown', 'liked', 'disliked'].includes(p.feedback) || typeof p.recordedAt !== 'string' || !p.gift || typeof p.gift.id !== 'string' || typeof p.gift.name !== 'string' || typeof p.gift.category !== 'string')) throw new Error('개인화 기록을 읽을 수 없어요.');
+  data.memories = data.memories.map(memory => {
+    const normalized = normalizeConditions({ ...initialMemoryState(), ...memoryConditions(memory) }).state;
+    return { ...memory, preferences: normalized.preferences, excluded_categories: normalized.excluded_categories, excluded_ingredients: normalized.excluded_ingredients };
+  });
   for (const memory of data.memories) validateState({ ...initialMemoryState(), recipients: [canonicalRecipient(memory.recipient)], ...memoryConditions(memory) });
   if (new Set(data.memories.map(m => canonicalRecipient(m.recipient))).size !== data.memories.length || new Set(data.purchases.map(p => p.id)).size !== data.purchases.length) throw new Error('개인화 기록의 식별자가 중복돼요.');
   if (decodeGifts(JSON.stringify(data.purchases.map(p => p.gift))).length !== data.purchases.length) throw new Error('구매 상품 정보가 올바르지 않아요.');
@@ -111,11 +119,12 @@ export function createPersonalizationRepository(storage: { getItem(key: string):
 // Even an LLM patch or condition editor cannot silently remove a remembered allergy.
 export function protectRememberedAllergies(session: ChatSession, data: Personalization): ChatSession {
   const recipients = canonicalRecipients(session.state.recipients);
-  const normalized = { ...session, state: { ...session.state, recipients } };
+  const normalized = { ...session, state: { ...normalizeConditions(session.state).state, recipients } };
   if (recipients.length !== 1) return normalized;
   const memory = data.memories.find(m => canonicalRecipient(m.recipient) === recipients[0]);
   if (!memory) return normalized;
-  const result = { ...normalized, state: { ...normalized.state, excluded_ingredients: unique([...session.state.excluded_ingredients, ...memory.excluded_ingredients]) } };
+  const remembered = normalizeConditions({ ...initialMemoryState(), ...memoryConditions(memory) }).state;
+  const result = { ...normalized, state: { ...normalized.state, excluded_ingredients: unique([...normalized.state.excluded_ingredients, ...remembered.excluded_ingredients]) } };
   validateState(result.state);
   return result;
 }
