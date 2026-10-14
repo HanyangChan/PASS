@@ -51,7 +51,7 @@ import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { PersonalizationPanel } from './src/PersonalizationPanel';
 import { usePersonalization } from './src/usePersonalization';
-import { personalizeSession, protectRememberedAllergies, switchRecipient } from './src/services/personalization';
+import { personalizeSession, protectRememberedAllergies, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import {
   Gift,
@@ -767,7 +767,7 @@ export function AppContent({
                   <Text style={s.assistant}>
                     식품 선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
-                  <PersonalizationPanel store={personalization} conditions={session.state} recent={recent} applied={appliedMemory} chatPending={chatPending} />
+                  <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
@@ -1109,26 +1109,31 @@ function usePassState() {
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
   const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
-    if (!ready || !personalization.ready || personalization.busy || chatFlight.current.controller) return false;
+    if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
+    if (!ready || personalization.busy || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
       const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text)
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(switchRecipient(session, patch.recipients), personalization.data)
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients)
           : { session, reasons: appliedMemory };
       const requestSession = recalled.session;
+      const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
       let turn = serverChat
         ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, patch!, clearIssues, controller.signal)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal)
           : await serverChat.view(session, controller.signal)
-        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, patch ?? {}, clearIssues);
+        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
+      assertSameRecipient(requestSession, turn.session);
       const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
       if (JSON.stringify(protectedSession) !== JSON.stringify(turn.session)) {
         const safe = serverChat
-          ? await serverChat.updateConditions(turn.session, { excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal)
-          : chatService.updateConditions(turn.session, { excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
+          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal)
+          : chatService.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
+        assertSameRecipient(requestSession, safe.session);
+        if (JSON.stringify(protectRememberedAllergies(safe.session, personalization.data)) !== JSON.stringify(safe.session)) throw new Error('저장한 제외 조건을 적용하지 못했어요. 다시 시도해주세요.');
         turn = { ...safe, message: `저장한 알레르기 제외 조건을 유지했어요.\n${safe.message}` };
       }
       // A newer revision (new chat / another send) superseded this one; drop the result without
