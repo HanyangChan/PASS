@@ -19,6 +19,8 @@ export function parseCsv(text){
 }
 export const asinOf=link=>String(link??'').match(/\/dp\/([A-Z0-9]{10})/)?.[1]??null;
 export const amount=text=>{const t=String(text??'').replace(/[^0-9.]/g,'');return t?Number(t):null;};
+// Scraped URLs with an /images/W/<render-id>/ segment now answer 400; the plain path still serves.
+export const imageUrl=url=>String(url).replace(/\/images\/W\/[^/]+\//,'/');
 export const priceKrw=inr=>Math.max(100,Math.round(inr*RUPEE_TO_KRW*PRICE_LEVEL/100)*100);
 export function candidates(rows,perGroup=200){
  const best=new Map();
@@ -26,7 +28,7 @@ export function candidates(rows,perGroup=200){
   if(!SUBCATEGORIES.includes(r.sub_category))continue;
   const asin=asinOf(r.link),inr=amount(r.discount_price)??amount(r.actual_price),rating=amount(r.ratings),count=amount(r.no_of_ratings);
   if(!asin||!inr||inr<MIN_INR||!rating||rating<3.5||!count||count<20||!String(r.image).startsWith('https://'))continue;
-  if((best.get(asin)?.count??-1)<count)best.set(asin,{asin,name:r.name.trim(),sub_category:r.sub_category,image:r.image,link:`https://www.amazon.in/dp/${asin}`,inr,rating,count});
+  if((best.get(asin)?.count??-1)<count)best.set(asin,{asin,name:r.name.trim(),sub_category:r.sub_category,image:imageUrl(r.image),link:`https://www.amazon.in/dp/${asin}`,inr,rating,count});
  }
  // Amazon colour/size variants share one review pool: same brand word, rating and review count.
  const variants=new Map();

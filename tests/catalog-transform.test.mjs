@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCsv,asinOf,priceKrw,candidates,toRow} from '../scripts/catalog/transform.mjs';
+import {parseCsv,asinOf,priceKrw,imageUrl,candidates,toRow} from '../scripts/catalog/transform.mjs';
 const csv='﻿name,main_category,sub_category,image,link,ratings,no_of_ratings,discount_price,actual_price\r\n'+
  '"Tata Tea Gold, 500g",grocery,"Coffee, Tea & Beverages",https://m.media-amazon.com/a.jpg,https://www.amazon.in/Tata/dp/B000000001/ref=sr_1,4.3,"1,200",₹285,₹300\r\n'+
  '"He said ""hi"" cookies",grocery,Snack Foods,https://m.media-amazon.com/b.jpg,https://www.amazon.in/x/dp/B000000002/ref=sr,3.9,50,,₹100\r\n';
@@ -10,7 +10,7 @@ test('CSV handles BOM, quoted commas, escaped quotes and CRLF',()=>{
  assert.equal(rows[0].name,'Tata Tea Gold, 500g');assert.equal(rows[0].sub_category,'Coffee, Tea & Beverages');
  assert.equal(rows[1].name,'He said "hi" cookies');assert.equal(rows[1].discount_price,'');
 });
-test('ASIN and price conversion',()=>{assert.equal(asinOf('https://www.amazon.in/a/dp/B0BRKXTSBT/ref=sr_1_4'),'B0BRKXTSBT');assert.equal(asinOf('https://x'),null);assert.equal(priceKrw(285),9100);assert.equal(priceKrw(1),100);});
+test('ASIN, image and price conversion',()=>{assert.equal(imageUrl('https://m.media-amazon.com/images/W/IMAGERENDERING_521856-T1/images/I/41K2lliZCdL._AC_UL320_.jpg'),'https://m.media-amazon.com/images/I/41K2lliZCdL._AC_UL320_.jpg');assert.equal(imageUrl('https://m.media-amazon.com/images/I/a.jpg'),'https://m.media-amazon.com/images/I/a.jpg');assert.equal(asinOf('https://www.amazon.in/a/dp/B0BRKXTSBT/ref=sr_1_4'),'B0BRKXTSBT');assert.equal(asinOf('https://x'),null);assert.equal(priceKrw(285),9100);assert.equal(priceKrw(1),100);});
 test('candidates filter, dedupe by ASIN and cap each subcategory',()=>{
  const rows=[cand('B000000001','Snack Foods',30),cand('B000000001','Snack Foods',90),cand('B000000002','Snack Foods',80),cand('B000000003','Snack Foods',70),
   cand('B000000004','Snack Foods',10),cand('B000000005','Snack Foods',99,{ratings:'3.0'}),cand('B000000006','Air Conditioners',999),cand('B000000007','Snack Foods',60,{discount_price:'',actual_price:''}),cand('B000000008','Snack Foods',95,{discount_price:'₹10'})];
