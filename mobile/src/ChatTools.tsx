@@ -7,16 +7,16 @@ import { colors as c, fonts as f } from './theme';
 import { Chip } from './components';
 import { createVoiceSession } from './voiceSession.mjs';
 
+import { conditionLabel as toLabel, conditionValue as toValue, normalizeEditedConditions } from './services/conditionLabels';
 import type { Conditions } from './domain';
 const arrayFields = ['recipients', 'preferences', 'excluded_categories', 'excluded_ingredients'] as const;
 const fields = [
   ['recipients', '받는 분', '부모님, 친구'], ['occasion', '선물하는 날', '추석, 생일'],
   ['amount', '예산 (원)', '50000'], ['preferences', '선호 조건', '덜 달게, 차'],
-  ['excluded_categories', '제외 상품군', '견과류, 한과'], ['excluded_ingredients', '피할 성분', '땅콩, 우유'],
+  ['excluded_categories', '제외 상품군', '과자·간식, 뷰티'], ['excluded_ingredients', '피할 성분', '땅콩, 우유'],
   ['brand', '브랜드', '브랜드 이름'], ['delivery_by', '수령 마감일', '2026-10-20'],
   ['packaging', '포장', '격식 있는 포장 / 기본 포장'],
 ] as const;
-const conditionLabels: Record<string, string> = { less_sweet: '덜 달게', unsweetened: '단맛 없이', 'category:tea': '차', nuts: '견과류', hangwa: '한과', fruit: '과일', coffee: '커피', tea: '차', formal: '격식 있는 포장', basic: '기본 포장' };
 const voiceErrors: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
   'no-speech': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
   'speech-timeout': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
@@ -38,11 +38,6 @@ const modelDownloadNotes = {
   download_scheduled: '다운로드가 예약됐어요. Wi-Fi 연결 등 조건이 맞으면 진행돼요. 완료 후 다시 말하기를 눌러주세요.',
 } as const;
 const hasKorean = (locales: string[]) => locales.some(locale => locale.toLowerCase().startsWith('ko'));
-const toLabel = (value: string) => conditionLabels[value] ?? value;
-const toValue = (value: string, field: string) => {
-  if (field === 'preferences' && value === '차') return 'category:tea';
-  return Object.entries(conditionLabels).find(([key, label]) => label === value && (field === 'preferences' ? key.includes(':') || ['less_sweet', 'unsweetened'].includes(key) : !key.includes(':')))?.[0] ?? value;
-};
 export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }: {
   mode?: 'conditions' | 'voice'; conditions: Conditions; onApply: (patch: Partial<Conditions>) => void; onVoice: (text: string) => void;
 }) {
@@ -138,7 +133,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   const openConditions = () => {
     setDraft(Object.fromEntries(fields.map(([key]) => {
       const value = key === 'amount' ? conditions.budget.amount_krw : conditions[key];
-      return [key, Array.isArray(value) ? value.map(toLabel).join(', ') : value === null ? '' : toLabel(String(value))];
+      return [key, Array.isArray(value) ? value.map(toLabel).join(', ') : value === null ? '' : key === 'packaging' ? toLabel(String(value)) : String(value)];
     })));
     setShipping(conditions.budget.shipping_included); setError(''); setPanel('conditions');
   };
@@ -156,14 +151,23 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     }
     const patch: Partial<Conditions> = { budget: { amount_krw: amount, shipping_included: shipping } };
     for (const key of arrayFields) patch[key] = draft[key].split(',').map(v => toValue(v.trim(), key)).filter(Boolean);
-    for (const key of ['occasion', 'brand', 'delivery_by', 'packaging'] as const) patch[key] = toValue(draft[key].trim(), key) || null;
+    for (const key of ['occasion', 'brand', 'delivery_by', 'packaging'] as const) patch[key] = (key === 'packaging' ? toValue(draft[key].trim(), key) : draft[key].trim()) || null;
     if (patch.delivery_by && (!/^\d{4}-\d{2}-\d{2}$/.test(patch.delivery_by) || Number.isNaN(Date.parse(patch.delivery_by)))) {
       setError('수령 마감일은 YYYY-MM-DD 형식으로 입력해주세요.'); return;
     }
     if (patch.packaging && !['formal', 'basic'].includes(patch.packaging)) {
       setError('포장은 격식 있는 포장 또는 기본 포장으로 입력해주세요.'); return;
     }
-    onApply(patch); close();
+    try {
+      const normalized = normalizeEditedConditions({ ...conditions, ...patch, budget: { ...conditions.budget, ...patch.budget } });
+      // Let the user review broader legacy category mappings before applying them.
+      if (normalized.notices.length) {
+        setDraft(old => ({ ...old, preferences: normalized.state.preferences.map(toLabel).join(', '), excluded_categories: normalized.state.excluded_categories.map(toLabel).join(', '), excluded_ingredients: normalized.state.excluded_ingredients.join(', ') }));
+        setError(`${normalized.notices.join(' ')} 내용을 확인하고 다시 적용해주세요.`);
+        return;
+      }
+      onApply(normalized.state); close();
+    } catch { setError('선호 조건과 제외 상품군은 표시된 상품군 이름으로 입력해주세요. 피할 성분도 확인해주세요.'); }
   };
   return <>
     {mode === 'conditions' ? <View style={s.conditionCard}>

@@ -127,6 +127,8 @@ export function AppContent({
     retryCalendarLoad,
     ready,
     notice,
+    conditionMigrationNotice,
+    dismissMigrationNotice,
     setNotice,
     syncFailed,
     retrySave,
@@ -336,6 +338,7 @@ export function AppContent({
             {notice}
           </Text>
         )}
+        {!!conditionMigrationNotice && <View><Text style={s.note}>{conditionMigrationNotice}</Text><Pressable accessibilityRole="button" onPress={dismissMigrationNotice}><Text style={s.note}>확인</Text></Pressable></View>}
         {syncFailed && <Pressable accessibilityRole="button" onPress={retrySave}><Text style={s.note}>기록 저장 다시 시도</Text></Pressable>}
         {detail ? (
           <>
@@ -1076,6 +1079,7 @@ function usePassState() {
   const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
   const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [conditionMigrationNotice, setConditionMigrationNotice] = useState('');
   const [syncFailed, setSyncFailed] = useState(false);
   const [saveAttempt, setSaveAttempt] = useState(0);
   const [screen, setScreen] = useState<Screen>('home'),
@@ -1154,6 +1158,7 @@ function usePassState() {
     restore.then(records => {
       if (!mounted) return;
       setSaved(records.saved); setRecent(records.recent);
+      if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
@@ -1215,6 +1220,8 @@ function usePassState() {
     retryCalendarLoad: () => setCalendarLoadAttempt(value => value + 1),
     ready,
     notice,
+    conditionMigrationNotice,
+    dismissMigrationNotice: () => setConditionMigrationNotice(''),
     setNotice,
     syncFailed,
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },

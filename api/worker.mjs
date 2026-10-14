@@ -1,3 +1,4 @@
+import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
 import { validateRequest, validateState, llmTurn, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
@@ -29,17 +30,19 @@ async function readJson(request) {
 function inputOf(raw) {
   try {
     if (!raw || !['turn', 'conditions', 'view'].includes(raw.operation)) throw Error();
-    const session = raw.session;
+    const session = { ...raw.session, state: normalizeConditions(raw.session?.state).state };
     validateState(session.state);
     if (!Array.isArray(session.issues) || session.issues.length > 12 || session.issues.some(q => typeof q !== 'string' || q.length > 400)) throw Error();
     if (raw.operation === 'turn') return { ...validateRequest({ ...session, text: raw.text, history: raw.history, source: raw.source }), operation: 'turn' };
     if (raw.operation === 'conditions') {
       if (!raw.patch || typeof raw.patch !== 'object' || Array.isArray(raw.patch) || Object.keys(raw.patch).some(key => !Object.hasOwn(session.state, key))) throw Error();
       if (raw.patch.budget !== undefined && (!raw.patch.budget || Array.isArray(raw.patch.budget) || typeof raw.patch.budget !== 'object' || Object.keys(raw.patch.budget).some(key => !['amount_krw', 'shipping_included'].includes(key)))) throw Error();
-      validateState(apply(session.state, raw.patch));
+      const patch = normalizeConditions(apply(session.state, raw.patch)).state;
+      validateState(patch);
+      raw = { ...raw, patch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
-    return { ...raw, state: session.state, issues: session.issues };
+    return { ...raw, session, state: session.state, issues: session.issues };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.

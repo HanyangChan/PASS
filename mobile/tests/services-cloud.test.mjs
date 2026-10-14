@@ -142,3 +142,30 @@ test('lost update/delete acknowledgements do not prevent restoring the previous 
     assert.deepEqual(restored.saved.map(g => [g.id, g.price]), [['a', 30000]]);
   }
 });
+
+test('legacy account chat restores canonically, continues through the API, and saves without duplicating history', async () => {
+  const { createApi } = await import('../../api/worker.mjs');
+  const { createServerChatService } = await import('../src/services/serverChatService.ts');
+  const f=fixture(), writer=f.repo();await writer.load(empty());
+  const legacy={state:{...empty().state,recipients:['부모님'],preferences:['category:tea'],excluded_categories:['nuts'],excluded_ingredients:['우유'],budget:{amount_krw:50000,shipping_included:true}},issues:[]};
+  const history=[message('차를 좋아하고 견과류는 제외해주세요.')];
+  await writer.saveChat(legacy,history);
+  const original=structuredClone(f.rows.conversations);
+  const repo=f.repo(),restored=await repo.load(empty());
+  assert.deepEqual(restored.session.state.preferences,['category:coffee_tea']);
+  assert.deepEqual(restored.session.state.excluded_categories,[]);
+  assert.deepEqual(restored.session.state.excluded_ingredients,['우유','견과류']);
+  assert.deepEqual(restored.messages,history);assert.ok(restored.migrationNotice);
+  assert.deepEqual(f.rows.conversations,original); // Loading itself never rewrites account data.
+  const api=createApi({catalog:async()=>[],fetcher:async()=>Response.json({id:'owner',role:'authenticated'})});
+  const env={SUPABASE_URL:'https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test',APP_ORIGINS:'',IP_LIMITER:{limit:async()=>({success:true})},USER_LIMITER:{limit:async()=>({success:true})}};
+  const service=createServerChatService('https://worker.example/api/chat',f.client.auth,'owner',async(url,init)=>api.fetch(new Request(url,init),env));
+  const turn=await service.send(restored.session,'예산 6만원',restored.messages);
+  assert.equal(turn.session.state.budget.amount_krw,60000);
+  assert.deepEqual(turn.session.state.excluded_ingredients,['우유','견과류']);
+  const messages=[...history,message('예산 6만원'),{role:'assistant',text:turn.message}];
+  await repo.saveChat(turn.session,messages);
+  assert.equal(f.rows.conversations.length,1);
+  assert.deepEqual((await f.repo().load(empty())).messages,messages);
+  assert.deepEqual((await f.repo().load(empty())).migrationNotice,'');
+});

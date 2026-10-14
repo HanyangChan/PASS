@@ -88,3 +88,22 @@ test('default catalog reads Supabase once per TTL with the publishable key', asy
   assert.equal(turn.catalog, 'amazon-kaggle-v1');
   assert.equal(turn.view.result.items[0].id, 'amz-B000000001');
 });
+
+test('legacy session categories are normalized before view, turn, and condition validation', async () => {
+ const api=createApi({catalog,fetcher:verified});
+ const legacy={state:{...singleInitial(),recipients:['부모님'],preferences:['category:tea'],excluded_categories:['nuts'],excluded_ingredients:['우유'],budget:{amount_krw:50000,shipping_included:true}},issues:[]};
+ for(const operation of ['view','turn','conditions']){
+  const input=body({operation,session:legacy,...(operation==='conditions'?{patch:{excluded_categories:['nuts','coffee']}}:{})});
+  const response=await api.fetch(request(input),env());
+  assert.equal(response.status,200,operation);
+  const result=await response.json();
+  assert.deepEqual(result.session.state.preferences,['category:coffee_tea']);
+  assert.ok(result.session.state.excluded_ingredients.includes('견과류'));
+  assert.ok(result.session.state.excluded_ingredients.includes('우유'));
+  assert.ok(!result.session.state.excluded_categories.includes('nuts'));
+  if(operation==='conditions')assert.deepEqual(result.session.state.excluded_categories,['coffee_tea']);
+ }
+ assert.deepEqual(legacy.state.excluded_categories,['nuts']);
+ const unknown=body({operation:'view',session:{state:{...singleInitial(),excluded_categories:['unknown']},issues:[]}});
+ assert.equal((await api.fetch(request(unknown),env())).status,400);
+});
