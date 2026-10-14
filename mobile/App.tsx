@@ -606,7 +606,7 @@ export function AppContent({
                   keyboardShouldPersistTaps="handled"
                 >
                   <Text style={s.note}>
-                    받는 분 기준 랭킹이에요. 지금은 데모 데이터예요.
+                    받는 분에게 어울리는 카테고리별 인기 상품이에요. 리뷰 수 기준이에요.
                   </Text>
                   {showSearch && (
                     <TextInput
@@ -700,10 +700,10 @@ export function AppContent({
                   keyboardShouldPersistTaps="handled"
                 >
                   <Text style={s.demoNote}>
-                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · 식품 선물 데모' : recommendation ? '서버 규칙 기반 해석 · 식품 선물 데모' : '기기 규칙 기반 해석 · 식품 선물 데모'}
+                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · Amazon 상품' : recommendation ? '서버 규칙 기반 해석 · Amazon 상품' : '기기 규칙 기반 해석 · Amazon 상품'}
                   </Text>
                   <Text style={s.assistant}>
-                    식품 선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
+                    선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
@@ -847,8 +847,8 @@ export function AppContent({
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
-                    랭킹에는 프로토타입의 예시 상품이, 대화에는 기존 식품
-                    카탈로그가 사용돼요. 실제 결제·배송 기능은 준비
+                    랭킹과 대화 추천은 같은 상품 목록(Kaggle Amazon Products
+                    Dataset, CC BY-NC 4.0)을 사용해요. 실제 결제·배송 기능은 준비
                     중입니다. {loggedIn ? '로그인은 연결되어 있으며, 마지막 대화와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
