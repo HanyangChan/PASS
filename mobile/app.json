@@ -40,7 +40,8 @@
           "cameraPermission": "선물 참고 사진을 촬영하기 위해 카메라를 사용합니다."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-dev-client"
     ],
     "scheme": "pass"
   }

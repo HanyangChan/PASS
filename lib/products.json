@@ -1,7 +1,7 @@
 [
   {
     "id": "G001",
-    "name": "가상 사과 명절 세트 1",
+    "name": "가상 사과 선물 세트 1",
     "category": "fruit",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -20,7 +20,7 @@
   },
   {
     "id": "G002",
-    "name": "가상 배 명절 세트 2",
+    "name": "가상 배 선물 세트 2",
     "category": "fruit",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -39,7 +39,7 @@
   },
   {
     "id": "G003",
-    "name": "가상 혼합 과일 명절 세트 3",
+    "name": "가상 혼합 과일 선물 세트 3",
     "category": "fruit",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -58,7 +58,7 @@
   },
   {
     "id": "G004",
-    "name": "가상 사과 명절 세트 4",
+    "name": "가상 사과 선물 세트 4",
     "category": "fruit",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -77,7 +77,7 @@
   },
   {
     "id": "G005",
-    "name": "가상 배 명절 세트 5",
+    "name": "가상 배 선물 세트 5",
     "category": "fruit",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,
@@ -96,7 +96,7 @@
   },
   {
     "id": "G006",
-    "name": "가상 유과 명절 세트 1",
+    "name": "가상 유과 선물 세트 1",
     "category": "hangwa",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -115,7 +115,7 @@
   },
   {
     "id": "G007",
-    "name": "가상 약과 명절 세트 2",
+    "name": "가상 약과 선물 세트 2",
     "category": "hangwa",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -134,7 +134,7 @@
   },
   {
     "id": "G008",
-    "name": "가상 혼합 한과 명절 세트 3",
+    "name": "가상 혼합 한과 선물 세트 3",
     "category": "hangwa",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -153,7 +153,7 @@
   },
   {
     "id": "G009",
-    "name": "가상 유과 명절 세트 4",
+    "name": "가상 유과 선물 세트 4",
     "category": "hangwa",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -172,7 +172,7 @@
   },
   {
     "id": "G010",
-    "name": "가상 약과 명절 세트 5",
+    "name": "가상 약과 선물 세트 5",
     "category": "hangwa",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,
@@ -191,7 +191,7 @@
   },
   {
     "id": "G011",
-    "name": "가상 아몬드 명절 세트 1",
+    "name": "가상 아몬드 선물 세트 1",
     "category": "nuts",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -212,7 +212,7 @@
   },
   {
     "id": "G012",
-    "name": "가상 호두 명절 세트 2",
+    "name": "가상 호두 선물 세트 2",
     "category": "nuts",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -233,7 +233,7 @@
   },
   {
     "id": "G013",
-    "name": "가상 혼합 견과 명절 세트 3",
+    "name": "가상 혼합 견과 선물 세트 3",
     "category": "nuts",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -254,7 +254,7 @@
   },
   {
     "id": "G014",
-    "name": "가상 아몬드 명절 세트 4",
+    "name": "가상 아몬드 선물 세트 4",
     "category": "nuts",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -275,7 +275,7 @@
   },
   {
     "id": "G015",
-    "name": "가상 호두 명절 세트 5",
+    "name": "가상 호두 선물 세트 5",
     "category": "nuts",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,
@@ -296,7 +296,7 @@
   },
   {
     "id": "G016",
-    "name": "가상 녹차 명절 세트 1",
+    "name": "가상 녹차 선물 세트 1",
     "category": "tea",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -315,7 +315,7 @@
   },
   {
     "id": "G017",
-    "name": "가상 보리차 명절 세트 2",
+    "name": "가상 보리차 선물 세트 2",
     "category": "tea",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -334,7 +334,7 @@
   },
   {
     "id": "G018",
-    "name": "가상 혼합 차 명절 세트 3",
+    "name": "가상 혼합 차 선물 세트 3",
     "category": "tea",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -353,7 +353,7 @@
   },
   {
     "id": "G019",
-    "name": "가상 녹차 명절 세트 4",
+    "name": "가상 녹차 선물 세트 4",
     "category": "tea",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -372,7 +372,7 @@
   },
   {
     "id": "G020",
-    "name": "가상 보리차 명절 세트 5",
+    "name": "가상 보리차 선물 세트 5",
     "category": "tea",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,
@@ -391,7 +391,7 @@
   },
   {
     "id": "G021",
-    "name": "가상 드립백 명절 세트 1",
+    "name": "가상 드립백 선물 세트 1",
     "category": "coffee",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -410,7 +410,7 @@
   },
   {
     "id": "G022",
-    "name": "가상 원두 명절 세트 2",
+    "name": "가상 원두 선물 세트 2",
     "category": "coffee",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -429,7 +429,7 @@
   },
   {
     "id": "G023",
-    "name": "가상 디카페인 드립백 명절 세트 3",
+    "name": "가상 디카페인 드립백 선물 세트 3",
     "category": "coffee",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -448,7 +448,7 @@
   },
   {
     "id": "G024",
-    "name": "가상 드립백 명절 세트 4",
+    "name": "가상 드립백 선물 세트 4",
     "category": "coffee",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -467,7 +467,7 @@
   },
   {
     "id": "G025",
-    "name": "가상 원두 명절 세트 5",
+    "name": "가상 원두 선물 세트 5",
     "category": "coffee",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,
@@ -486,7 +486,7 @@
   },
   {
     "id": "G026",
-    "name": "가상 참기름 명절 세트 1",
+    "name": "가상 참기름 선물 세트 1",
     "category": "oil",
     "price_krw": 24000,
     "shipping_fee_per_set_krw": 3000,
@@ -505,7 +505,7 @@
   },
   {
     "id": "G027",
-    "name": "가상 들기름 명절 세트 2",
+    "name": "가상 들기름 선물 세트 2",
     "category": "oil",
     "price_krw": 39000,
     "shipping_fee_per_set_krw": 3000,
@@ -524,7 +524,7 @@
   },
   {
     "id": "G028",
-    "name": "가상 혼합 기름 명절 세트 3",
+    "name": "가상 혼합 기름 선물 세트 3",
     "category": "oil",
     "price_krw": 55000,
     "shipping_fee_per_set_krw": 0,
@@ -543,7 +543,7 @@
   },
   {
     "id": "G029",
-    "name": "가상 참기름 명절 세트 4",
+    "name": "가상 참기름 선물 세트 4",
     "category": "oil",
     "price_krw": 72000,
     "shipping_fee_per_set_krw": 0,
@@ -562,7 +562,7 @@
   },
   {
     "id": "G030",
-    "name": "가상 들기름 명절 세트 5",
+    "name": "가상 들기름 선물 세트 5",
     "category": "oil",
     "price_krw": 105000,
     "shipping_fee_per_set_krw": 0,

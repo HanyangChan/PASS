@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {checkGeminiResponse,geminiFailure,llmTurn} from '../lib/llm.mjs';
 import {singleInitial} from '../lib/single-gift.mjs';
 test('upstream failures are classified without retaining credentials or request data',async()=>{
- for(const [status,message,expected] of [[403,'Your API key SECRET was reported as leaked','key_blocked'],[400,'API key expired SECRET','key_expired'],[429,'quota SECRET','quota_exceeded'],[404,'unknown model SECRET','model_not_found'],[503,'SECRET','provider_unavailable']]){
+ for(const [status,message,expected] of [[400,'User location is not supported for the API use SECRET','location_unsupported'],[403,'Your API key SECRET was reported as leaked','key_blocked'],[400,'API key expired SECRET','key_expired'],[429,'quota SECRET','quota_exceeded'],[404,'unknown model SECRET','model_not_found'],[503,'SECRET','provider_unavailable']]){
   try{await checkGeminiResponse(Response.json({error:{message}},{status}));assert.fail('must reject');}catch(error){const result=geminiFailure(error);assert.equal(result.code,expected);assert.equal(result.upstreamStatus,status);assert.ok(!JSON.stringify(result).includes('SECRET'));assert.ok(!error.message.includes('SECRET'));}
  }
  assert.equal(geminiFailure(new DOMException('secret','TimeoutError')).code,'timeout');

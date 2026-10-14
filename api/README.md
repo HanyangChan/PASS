@@ -1,6 +1,6 @@
 # PASS 추천 API
 
-공통 식품 데모 카탈로그/엔진과 기존 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 앱과 기존 웹 API가 같은 엔진 규칙을 사용합니다. 현재 카탈로그는 `lib/products.json`이며 실제 상품 DB 조회는 후속입니다.
+공통 식품 데모 카탈로그/엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 현재 카탈로그는 `lib/products.json`이며 실제 상품 DB 조회는 후속입니다.
 
 ## 로컬 시험
 
@@ -16,7 +16,7 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 `npm ci && npm run build`로 업로드 없이 번들을 검사합니다. 실제 배포 전에 `wrangler.jsonc`의 공개 Supabase URL/Publishable key를 설정하고, `APP_ORIGINS`에 실제 웹 앱 origin을 쉼표로 구분하여 넣습니다. 전체 URL 경로나 와일드카드를 넣지 않습니다. Gemini 키는 `npx wrangler secret put GEMINI_API_KEY`로 등록하고 설정한 모델 ID를 확인합니다. 클라우드 배포에는 Cloudflare 계정 인증이 필요합니다.
 
-`npm run deploy` 이후 모바일 빌드의 `EXPO_PUBLIC_CHAT_API_URL`을 해당 Worker HTTPS 기본 주소로 바꿉니다. 인증/기록 작업(PR #5)이 먼저 적용되어야 앱의 계정 연결을 사용할 수 있습니다. 기존 웹 `app/api/chat/route.ts`의 동일 origin 정책은 유지합니다.
+`npm run deploy` 이후 모바일 빌드의 `EXPO_PUBLIC_CHAT_API_URL`을 해당 Worker HTTPS 기본 주소로 바꿉니다. 인증/기록 작업(PR #5)이 먼저 적용되어야 앱의 계정 연결을 사용할 수 있습니다. 기존 연구 웹 API는 제거했습니다.
 
 ## 인증·제한·실패
 
@@ -27,4 +27,14 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 - 앱은 동일 계정에서 한 추천 요청만 전송합니다. 새 대화/계정 전환 시 취소하고 이전 응답을 폐기합니다. 서버 오류·네트워크 오류·25초 초과 시 기존 대화와 입력을 유지하고 재전송할 수 있습니다.
 - 조건 편집/예산 비교의 적용도 API로 요청합니다. 게스트 또는 API 주소 미설정 상태는 기존 기기 엔진을 사용하며 화면에 기기/서버 방식을 구분합니다.
 
-검증: Worker 보안/입력/추천 테스트 7개와 모바일 서버 전송/계정 전환/취소 테스트 5개. 실제 Supabase 테스트 계정으로 서버 추천·빠른 응답·조건 편집, 서버 중단 시 상태 보존 및 복구 후 재전송을 확인했습니다. 추가로 실제 Gemini 키를 서버에서 로드하여 “덜 달고 차 종류, 배송비 포함 6만원” 조건 추출과 차 선물 추천을 웹에서 확인했습니다. 키는 Git에서 제외된 서버 파일에만 있으며 공개 Cloudflare 배포는 후속입니다.
+검증: Worker 보안/입력/추천 테스트 7개와 모바일 서버 전송/계정 전환/취소 테스트 5개. 실제 Supabase 테스트 계정으로 서버 추천·빠른 응답·조건 편집, 서버 중단 시 상태 보존 및 복구 후 재전송을 확인했습니다. 추가로 실제 Gemini 키를 서버에서 로드하여 “덜 달고 차 종류, 배송비 포함 6만원” 조건 추출과 차 선물 추천을 웹에서 확인했습니다. 키는 Git에서 제외된 서버 파일에만 있으며 공개 Cloudflare 배포와 Vercel 운영 웹 연결을 완료했습니다.
+
+## 현재 운영 배포
+
+- 웹: https://temporary-prompt-sable-s15js3l.vercel.app
+- 추천 API: https://pass-recommendation-api.a73342776.workers.dev
+- Vercel production 공개 환경 변수: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CHAT_API_URL`. 서버 Gemini 키는 Cloudflare secret에만 등록합니다.
+- Worker는 `placement.region = gcp:us-east4`로 배치합니다. 기본 배치에서 Gemini가 `location_unsupported`를 반환했고, 미국 동부 인근 배치 후 공개 웹의 실제 AI 추천 응답을 확인했습니다. 배치 힌트는 데이터 저장 지역 보장을 의미하지 않습니다.
+- `.vercelignore`는 API 서버 파일, DB 파일, 로컬 환경 변수와 생성 파일을 웹 업로드에서 제외합니다.
+- 2026-10-11 검증: 공개 웹의 더미 계정 로그인, 기존 찜·최근 기록 복원, 새 대화의 차 선물/배송비 포함 6만원 조건 해석 및 추천. API 비로그인 401, 허용 origin OPTIONS 204, 다른 origin 403.
+- 현재 웹 배포는 CLI 운영 배포입니다. GitHub 자동 배포 연결은 별도로 확인해야 합니다.
