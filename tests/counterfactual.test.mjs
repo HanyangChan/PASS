@@ -76,3 +76,10 @@ test('raising 150k to 200k cannot admit a 320k item',()=>{
  assert.ok(!recommend(data,apply(s,{budget:{amount_krw:200000}})).items.some(p=>p.id==='B'));
  const a=budgetAlternatives(data,s).alternatives[0];assert.equal(a.amount,320000);assert.equal(a.delta,170000);
 });
+test('a more-reviewed product just above the cap becomes first and the reason says why',()=>{
+ const data=[product('A',24000,{rating_count:10}),product('B',33000,{rating_count:500})];
+ const a=budgetAlternatives(data,state()).alternatives[0];
+ assert.equal(a.effect,'top_changed');assert.equal(a.target.id,'B');assert.match(a.rankingReason,/리뷰가 많은/);
+ const b=budgetAlternatives([product('A',24000,{rating_count:500}),product('B',33000,{rating_count:10})],state()).alternatives[0];
+ assert.equal(b.effect,'top_three_changed');assert.match(b.rankingReason,/현재 추천의 리뷰가 더 많아요/);
+});

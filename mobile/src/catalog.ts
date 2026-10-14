@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES } from '../../lib/catalog.mjs';
+import { CATEGORY_NAMES, RECIPIENT_CATEGORIES } from '../../lib/catalog.mjs';
 import type { EngineProduct, Gift } from './domain.ts';
 export type { Gift } from './domain.ts';
 export const categoryNames: Record<string, string> = CATEGORY_NAMES;
@@ -20,12 +20,7 @@ export function giftFromProduct(p: EngineProduct): Gift {
     allergensDeclared: p.allergens_declared, allergenInfoComplete: p.allergen_information_complete,
   };
 }
-const recipientCategories: Record<string, string[] | null> = {
-  전체: null,
-  부모님: ['health', 'food', 'coffee_tea', 'kitchen', 'decor'],
-  친구: ['beauty', 'makeup', 'jewelry', 'audio', 'snack'],
-  직장동료: ['coffee_tea', 'snack', 'decor', 'accessory', 'kitchen'],
-};
+const recipientCategories: Record<string, string[] | null> = { 전체: null, ...RECIPIENT_CATEGORIES };
 // Review counts differ by orders of magnitude across categories (earphones dwarf tea),
 // so each tab alternates categories, each ordered by its own review count.
 function interleave(sorted: EngineProduct[], cats: string[] | null, limit = 100) {

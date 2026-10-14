@@ -75,6 +75,7 @@
 ## 5. 엔진·대화 변경
 
 - `lib/engine.mjs` `rankProducts`: `excluded_ingredients`가 있으면 거부하는 대신 `allergens_declared`와 겹치는 상품을 제외하고, 결과에 `notice: '상품명 기준으로 추정했어요. 구매 전 성분표를 꼭 확인해 주세요.'`를 붙인다. 규칙 추출의 성분 목록과 카테고리 단어 표는 새 어휘로 교체(예: 커피·차→`coffee_tea`, 과자·간식→`snack`, 화장품→`beauty`, 주얼리→`jewelry`).
+- 추천 순서(2026-10-14 추가): 선호 점수 → 같은 카테고리 1위 대비 리뷰 비율 → 리뷰 수 → 가격 낮은 순. 이전의 "점수 → 가격 낮은 순"은 실제 카탈로그에서 싼 상품만 추천했다. 받는 분(부모님·친구·직장동료 묶음, `lib/catalog.mjs` `RECIPIENT_CATEGORIES`)에 맞는 카테고리는 +1점, 직접 말한 카테고리 취향은 +3점. 규칙 해석은 향수·운동·이어폰·주얼리·시계·가방·장난감 등 취향 단어를 카테고리 선호로, "빼줘"가 붙으면 제외로 인식한다. 예산 비교 설명 문구도 같은 순서를 근거로 말한다.
 - `lib/llm.mjs`: 프롬프트를 "Korean gift preferences (food and general goods)"로, `preferences`/`excluded_categories` enum을 16개 카테고리로, `excluded_ingredients`를 2장 어휘 enum으로. 알레르기 보존 규칙은 유지.
 - `lib/language.mjs`: `unsupportedGoods`는 카탈로그에 없는 상품군(의류·신발·대형가전·게임기)만, 안내 문구는 "지금은 식품·뷰티·생활·액세서리 선물만 추천할 수 있어요."로.
 - `lib/products.json`은 `tests/fixtures/food-demo.json`으로 옮겨 엔진 로직 테스트 픽스처로만 쓴다. 런타임 대체 카탈로그는 두지 않는다(`.env.example`에 팀 공개 설정이 이미 있음).
