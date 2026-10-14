@@ -426,13 +426,15 @@ git commit -m "feat(catalog): Gemini batch translation and recategorization with
 import {readFileSync,writeFileSync,readdirSync,existsSync,mkdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {parseArgs} from 'node:util';
-import {parseCsv,candidates,toRow} from './transform.mjs';
+import {parseCsv,candidates,toRow,SUBCATEGORIES} from './transform.mjs';
 import {translateAll} from './translate.mjs';
 const {values:args}=parseArgs({options:{raw:{type:'string'},out:{type:'string',default:'data/products-amazon.json'},cache:{type:'string',default:'data/.gemini-cache.json'}}});
 if(!args.raw)throw Error('--raw <압축 해제 폴더>가 필요합니다.');
 const apiKey=process.env.GEMINI_API_KEY;
 if(!apiKey)throw Error('GEMINI_API_KEY가 없습니다. node --env-file=<.env 경로> 로 실행하세요.');
-const rows=readdirSync(args.raw).filter(f=>f.endsWith('.csv')&&f!=='Amazon-Products.csv').flatMap(f=>parseCsv(readFileSync(join(args.raw,f),'utf8')));
+const rows=readdirSync(args.raw).filter(f=>f.endsWith('.csv')&&f!=='Amazon-Products.csv')
+ // Filter per file: all 550k rows at once exceed the default Node heap.
+ .flatMap(f=>parseCsv(readFileSync(join(args.raw,f),'utf8')).filter(r=>SUBCATEGORIES.includes(r.sub_category)));
 const cands=candidates(rows);
 mkdirSync(dirname(args.out),{recursive:true});mkdirSync(dirname(args.cache),{recursive:true});
 const cache=existsSync(args.cache)?JSON.parse(readFileSync(args.cache,'utf8')):{};
