@@ -756,9 +756,7 @@ export function AppContent({
                   }
                   keyboardShouldPersistTaps="handled"
                 >
-                  <Text style={s.demoNote}>
-                    {chatPending ? '추천을 확인하고 있어요…' : recommendation?.mode === 'llm' ? '서버 AI 조건 해석 · Amazon 상품' : recommendation ? '서버 규칙 기반 해석 · Amazon 상품' : '기기 규칙 기반 해석 · Amazon 상품'}
-                  </Text>
+                  {chatPending && <Text style={s.demoNote}>추천을 확인하고 있어요…</Text>}
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
