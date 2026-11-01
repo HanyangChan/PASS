@@ -1,0 +1,23 @@
+flowchart TB
+  ui["PASS 앱 / 웹"]
+  gate["인증 · 상태 버전 검증"]
+  router["Rule-based Router · 서버 제어"]
+  parser["규칙 파서 · 조건 상태"]
+  llm["필요 시 LLM 단일 호출"]
+  state["조건 후보 검증"]
+  engine["공통 PASS 추천 엔진"]
+  catalog[("상품 DB")]
+  result["결과 · 근거 검증"]
+  response["템플릿 우선 응답"]
+
+  ui --> gate --> router --> parser
+  parser -->|"명확한 조건"| state
+  parser -->|"해석이 어려운 요청"| llm
+  llm -->|"구조화된 후보"| state
+  state -->|"조건 충족"| engine
+  state -->|"추가 질문 필요"| response
+  engine --- catalog
+  engine --> result
+  result -->|"추천 또는 복구 안내"| response
+  router -->|"계산 불필요한 안내"| response
+  response -->|"화면 표시"| ui

@@ -2,7 +2,7 @@
 
 문서화 범위: **목표 설계**. 이 README 추가는 에이전트의 구현·배포 완료를 의미하지 않는다.
 
-[메인 README의 구조도](../../README.md#llm-agent-목표-구조) · [Mermaid 원본](architecture.mmd) · [기존 운영 아키텍처](../architecture.md) · [현재 API](../../api/README.md)
+[메인 README의 구조도](../../README.md#1안-llm-agent) · [Mermaid 원본](architecture.mmd) · [기존 운영 아키텍처](../architecture.md) · [현재 API](../../api/README.md)
 
 ## 목적
 
@@ -93,7 +93,9 @@ Reflection은 검증 결과로 다음 행동을 조정하는 과정이며, 모�
 | “2만 원 더 쓰면?” | `compare_budget` 선택 | 실제 10만 원 유지, 가상 12만 원 비교 |
 | “12만 원 적용” 버튼 | 서버의 확정된 적용 경로 | 상태 버전 확인 후 갱신·재계산 |
 
-## 후속 목표: Rule-based Hybrid와 비교
+## 비교 설계: 2안 Rule-based Hybrid
+
+[2안 설계 README](../rule-based-hybrid/README.md) · [메인 비교 표](../../README.md#두-안의-비교-기준)
 
 두 구조는 같은 인증·상품 DB·조건 검증·추천 엔진·예산 비교 기능을 공유한다. **차이는 LLM 호출 유무보다 실행 흐름을 누가 제어하는가에 있다.**
 

@@ -10,7 +10,7 @@ Expo / React Native 기반 iOS·Android 선물 추천 앱입니다. 웹에서도
 
 [현재 운영 구조와 배포 설정](docs/architecture.md) · [구조도](https://temporary-prompt-sable-s15js3l.vercel.app/architecture.svg)
 
-### LLM Agent 목표 구조
+### 1안: LLM Agent
 
 **아래는 구현 예정인 설계입니다.** 현재 API의 LLM은 조건 추출을 담당하며, 아래의 도구 선택·반복 실행·재계획 루프는 아직 구현하지 않았습니다.
 
@@ -44,7 +44,51 @@ flowchart TB
 
 [LLM Agent 설계 README](docs/llm-agent/README.md) · [구조도 Mermaid 원본](docs/llm-agent/architecture.mmd)
 
-후속 목표는 **같은 상품 DB·조건·추천 엔진을 공유하는 LLM Agent와 Rule-based Hybrid의 비교**입니다. 차이는 LLM 호출 유무가 아니라 실행 제어 주체이며, Hybrid는 백엔드가 흐름을 제어하고 필요할 때만 LLM을 제한적으로 호출합니다. 우선 LLM Agent 설계를 문서화하며, 두 모드와 비교 실험은 아직 구현하지 않았습니다.
+### 2안: Rule-based Hybrid
+
+**아래도 구현 예정인 비교 설계입니다.** 백엔드 Router가 요청 분류·함수 호출·종료를 결정합니다. 명확한 요청은 규칙 파서와 공통 PASS 엔진으로 처리하고, 해석이 어려운 요청에만 LLM을 제한적으로 호출합니다. LLM은 조건 후보를 반환하며 도구를 선택하거나 재계획 루프를 실행하지 않습니다.
+
+```mermaid
+flowchart TB
+  ui["PASS 앱 / 웹"]
+  gate["인증 · 상태 버전 검증"]
+  router["Rule-based Router · 서버 제어"]
+  parser["규칙 파서 · 조건 상태"]
+  llm["필요 시 LLM 단일 호출"]
+  state["조건 후보 검증"]
+  engine["공통 PASS 추천 엔진"]
+  catalog[("상품 DB")]
+  result["결과 · 근거 검증"]
+  response["템플릿 우선 응답"]
+
+  ui --> gate --> router --> parser
+  parser -->|"명확한 조건"| state
+  parser -->|"해석이 어려운 요청"| llm
+  llm -->|"구조화된 후보"| state
+  state -->|"조건 충족"| engine
+  state -->|"추가 질문 필요"| response
+  engine --- catalog
+  engine --> result
+  result -->|"추천 또는 복구 안내"| response
+  router -->|"계산 불필요한 안내"| response
+  response -->|"화면 표시"| ui
+```
+
+예산 비교·추천 근거는 1안과 같은 엔진 결과를 사용합니다. 템플릿을 우선 사용하고, 복잡한 설명에 LLM이 필요하면 서버가 정한 별도 단일 생성 단계로 호출한 뒤 근거를 검증합니다. 조건을 확정할 수 없으면 추정하지 않고 질문하며, 가상 비교와 변경 제안의 사용자 확인 정책도 1안과 같습니다.
+
+[Hybrid 설계 README](docs/rule-based-hybrid/README.md) · [구조도 Mermaid 원본](docs/rule-based-hybrid/architecture.mmd)
+
+### 두 안의 비교 기준
+
+| 구분 | 1안: LLM Agent | 2안: Rule-based Hybrid |
+| --- | --- | --- |
+| 다음 행동·도구 선택 | LLM | 백엔드 규칙 |
+| LLM 사용 | 해석·행동 선택·응답 생성 | 필요한 해석·설명에 제한적 호출 |
+| 재계획 | 제한된 에이전트 루프 | 서버가 정의한 질문·실패 복구 정책 |
+| 추천·정렬·금액·예산 비교 | 공통 PASS 엔진 | 동일 PASS 엔진 |
+| 응답 | 근거 기반 LLM 생성 | 템플릿 우선 |
+
+비교의 핵심은 **LLM 호출 유무가 아니라 실행 제어 주체**입니다. 두 안은 같은 상품 DB·조건 검증·추천 엔진·예산 비교 기능을 공유하는 것을 목표로 합니다. 두 모드와 비교 실험은 아직 구현하지 않았으며, 비용·속도·정확도·설명 이해도 차이는 구현 후 측정합니다.
 
 ## 수령인별 기억과 구매 이력
 
