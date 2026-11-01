@@ -1,0 +1,21 @@
+flowchart TB
+  ui["PASS 앱 / 웹"]
+  gate["인증 · 조건 상태 검증"]
+  agent["LLM Agent · 행동 선택"]
+  memory["Planning · Memory"]
+  tools["도구 인자 검증 · 호출 제한"]
+  engine["공통 PASS 추천 엔진"]
+  catalog[("상품 DB")]
+  observation["도구 결과 · 제약 검증"]
+  response["응답 검증 · 추천 / 질문 / 제안"]
+
+  ui -->|"사용자 요청"| gate
+  gate --> agent
+  agent <--> memory
+  agent -->|"도구 선택"| tools
+  tools --> engine
+  engine --- catalog
+  engine --> observation
+  observation -->|"관찰 · 필요 시 재계획"| agent
+  agent -->|"질문 또는 최종 응답"| response
+  response -->|"화면 표시"| ui
