@@ -1,14 +1,13 @@
 import { createAgentRunner } from '../runtime.mjs';
+import { createLlm } from './llm/index.mjs';
+import { createDialogue, toPort } from './dialogue/agent.mjs';
 
-/** Starter only: implement 대화 이해·기억·후보 탐색·설명 역할 분리 here. */
+// No key (or an unusable provider setting) means no LLM: free sentences get the unresolved question, as before.
+const envLlm = () => { try { return createLlm(); } catch { return null; } };
+
+/** Port for the common runTurn. Called only after parseRules could not resolve the message. */
 export async function interpretMessage({ text, state }) {
-  // text and state are data. Return confirmed condition changes only.
-  // Put provider calls, prompts and internal modules in this directory.
-  return {
-    patch: {},
-    questions: ['이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.'],
-    unresolved: true,
-  };
+  return toPort(createDialogue({ llm: envLlm() }))({ text, state });
 }
 
 export function createAgent({ interpret = interpretMessage } = {}) {

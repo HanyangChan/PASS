@@ -1,0 +1,56 @@
+// ③ preference mapping: hobby:* -> category:<c> candidates. Keyword table first; embeddings only for what the table misses.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { CATEGORIES } from '../../../src/vendor/catalog.mjs';
+import { createFakeLlm } from '../llm/index.mjs';
+import { createHobbyMapper, loadHobbyMap } from '../rag/agent.mjs';
+import { createRagIndex } from '../rag/index.mjs';
+
+const item = (word, memoryId = 'm1') => ({ memoryId, recipientId: 'r1', word });
+
+test('keyword table: 등산 -> category:fitness with the memory as source, no LLM needed', async () => {
+  const m = createHobbyMapper({ llm: null });
+  assert.deepEqual(await m.map([item('등산')]), [{ field: 'preferences', value: 'category:fitness', from: 'memory:m1' }]);
+});
+
+test('unknown hobby without embeddings maps to nothing (no guessing)', async () => {
+  assert.deepEqual(await createHobbyMapper({ llm: null }).map([item('우표수집')]), []);
+});
+
+test('table hits never trigger an embedding call', async () => {
+  const llm = createFakeLlm({ embed: () => { throw new Error('should not embed'); } });
+  assert.equal((await createHobbyMapper({ llm }).map([item('등산'), item('커피', 'm2')])).length, 2);
+  assert.equal(llm.calls.length, 0);
+});
+
+test('embeddings: words the table misses are matched by cosine against category docs, in ONE embed call', async () => {
+  const vec = text => (/낚시|운동|fitness/.test(text) ? [1, 0, 0] : /우표/.test(text) ? [0, 0, 1] : [0, 1, 0]);
+  const llm = createFakeLlm({ embed: texts => texts.map(vec) });
+  const m = createHobbyMapper({ llm, minCosine: 0.8 });
+  const out = await m.map([item('낚시'), item('우표수집', 'm2')]);
+  assert.deepEqual(out, [{ field: 'preferences', value: 'category:fitness', from: 'memory:m1' }]);
+  const embeds = llm.calls.filter(c => c.method === 'embed');
+  assert.equal(embeds.length >= 1 && embeds.length <= 2, true, 'one for the category index (cached), one for the hobbies');
+  await m.map([item('낚시')]);
+  assert.equal(llm.calls.filter(c => c.method === 'embed').length, embeds.length + 1, 'the category index is built once');
+});
+
+test('embedding failure or no embedding support falls back to the table without throwing', async () => {
+  for (const llm of [createFakeLlm({ embed: () => { throw new Error('boom'); } }), createFakeLlm({ embed: null })]) {
+    const m = createHobbyMapper({ llm });
+    assert.deepEqual(await m.map([item('우표수집'), item('등산', 'm2')]), [{ field: 'preferences', value: 'category:fitness', from: 'memory:m2' }]);
+  }
+});
+
+test('the map file is a draft, only maps to engine categories, and a bad map is refused at load', () => {
+  const map = loadHobbyMap();
+  assert.match(map.note, /초안/);
+  for (const cats of Object.values(map.table)) for (const c of cats) assert.ok(CATEGORIES.includes(c), c);
+  assert.throws(() => loadHobbyMap({ note: '초안', table: { 등산: ['not_a_category'] } }), { code: 'invalid_hobby_map' });
+});
+
+test('createRagIndex: cosine ranking with a threshold; dimension mismatch is ignored, not thrown', () => {
+  const idx = createRagIndex([{ id: 'fitness', vector: [1, 0] }, { id: 'beauty', vector: [0, 1] }]);
+  assert.deepEqual(idx.search([0.9, 0.1], { minCosine: 0.8 }).map(r => r.id), ['fitness']);
+  assert.deepEqual(idx.search([1, 0, 0], { minCosine: 0 }), []);
+});
