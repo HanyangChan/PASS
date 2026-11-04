@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2160" viewBox="0 0 2000 2160" font-family="Noto Sans CJK KR, sans-serif">
+<rect width="100%" height="100%" fill="#FFFFFF"/><defs>
+<marker id="arr" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#111111"/></marker>
+<marker id="arrB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1F5BD8"/></marker>
+<marker id="arrR" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#C62828"/></marker>
+<marker id="arrS" markerWidth="12" markerHeight="12" refX="2" refY="6" orient="auto"><path d="M12,0 L0,6 L12,12 z" fill="#C62828"/></marker>
+</defs>
+<text x="1000.0" y="68" text-anchor="middle" font-size="44" font-weight="800" fill="#111111">PASS · B 역할 파이프라인 — 구조도 v2</text>
+<text x="1000.0" y="108" text-anchor="middle" font-size="21" fill="#6B6B6B">받는 사람을 기억하는 선물 추천 · 모든 코드는 baseline/agents/b-pipeline/ 안 · 순위는 공통 PASS 엔진만 결정</text>
+<rect x="60" y="150" width="230" height="90" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="175.0" y="190" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">사용자</text>
+<text x="175.0" y="222" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">브라우저 · 모바일</text>
+<rect x="350" y="150" width="400" height="90" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="550.0" y="190" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">app/</text>
+<text x="550.0" y="222" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">기존 PASS Expo UI 복사본 (디자인 그대로)</text>
+<rect x="810" y="150" width="400" height="90" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1010.0" y="190" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">server/</text>
+<text x="1010.0" y="222" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">node:http · POST /chat · SSE</text>
+<rect x="1520" y="150" width="420" height="90" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3" stroke-dasharray="12 8"/>
+<text x="1730.0" y="190" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">eval/simulator.mjs</text>
+<text x="1730.0" y="222" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">페르소나 LLM · 오프라인 평가</text>
+<polyline points="290,195 350,195" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="750,195 810,195" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="60" y="300" width="1880" height="120" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3.5"/>
+<text x="1000.0" y="340" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">오케스트레이터  pipeline/orchestrator.mjs  (LLM 0회)</text>
+<text x="1000.0" y="372" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">runPipelineTurn(): message · patch(칩 편집) · view · what_if_budget · feedback · memory_edit</text>
+<text x="1000.0" y="399" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">의도별로 필요한 역할만 호출 · 1단계 카드 / 2단계 설명 분리 · 기존 interpretMessage 포트도 유지</text>
+<polyline points="1010,240 1010,300" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="1030.0" y="255" width="100" height="28" fill="#FFFFFF"/>
+<text x="1080" y="275" text-anchor="middle" font-size="18" fill="#111111">요청 1개</text>
+<polyline points="1730,240 1730,300" fill="none" stroke="#111111" stroke-width="2.6" stroke-dasharray="10 7" marker-end="url(#arr)"/>
+<rect x="1714.0" y="255" width="212" height="28" fill="#FFFFFF"/>
+<text x="1820" y="275" text-anchor="middle" font-size="18" fill="#111111">server 없이 직접</text>
+<rect x="40" y="470" width="1920" height="230" rx="18" fill="none" stroke="#1F5BD8" stroke-width="2.5" stroke-dasharray="14 9"/>
+<rect x="1050" y="454" width="567" height="32" fill="#FFFFFF"/>
+<text x="1070" y="478" font-size="20" font-weight="700" fill="#1F5BD8">1단계 이해 — 병렬 실행, 모두 '조건 후보'만 만든다</text>
+<rect x="70" y="500" width="600" height="175" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3"/>
+<text x="370.0" y="540" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">① 대화 이해</text>
+<text x="370.0" y="572" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">dialogue/agent.mjs</text>
+<text x="370.0" y="599" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">baseline 규칙 파서 먼저 → 남은 자유 문장만 LLM</text>
+<text x="370.0" y="626" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#1F5BD8">patch · critiques · questions · 기억 후보</text>
+<rect x="700" y="500" width="600" height="175" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1000.0" y="540" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">② 기억 읽기</text>
+<text x="1000.0" y="572" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">memory/read.mjs</text>
+<text x="1000.0" y="599" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">DB에서 이 수령인의 확정 기억·선물 이력 조회</text>
+<text x="1000.0" y="626" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#111111">LLM 0회 → 조건 후보 + 출처</text>
+<rect x="1330" y="500" width="600" height="175" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3"/>
+<text x="1630.0" y="540" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">③ 취향 매핑 (RAG)</text>
+<text x="1630.0" y="572" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">rag/agent.mjs</text>
+<text x="1630.0" y="599" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">'등산 좋아하심' → 카탈로그 어휘(category:…)</text>
+<text x="1630.0" y="626" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#1F5BD8">임베딩 검색만 · 후보 풀을 자르지 않음</text>
+<polyline points="370,420 370,500" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="1000,420 1000,500" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="1630,420 1630,500" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="520" y="745" width="960" height="100" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1000.0" y="785" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">조건 병합  pipeline/merge.mjs  (LLM 0회)</text>
+<text x="1000.0" y="817" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">우선순위: 이번 발화 &gt; 확정 기억 &gt; 선물 이력 · 알레르기·제외는 합집합 · 출처 태그 유지</text>
+<polyline points="370,675 370,712 640,712 640,745" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="1000,675 1000,745" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="1630,675 1630,712 1360,712 1360,745" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="40" y="900" width="1920" height="210" rx="18" fill="none" stroke="#C62828" stroke-width="2.5" stroke-dasharray="14 9"/>
+<rect x="1080" y="884" width="754" height="32" fill="#FFFFFF"/>
+<text x="1100" y="908" font-size="20" font-weight="700" fill="#C62828">baseline 공통 코어 — 수정 금지 · runTurn() 호출로만 사용</text>
+<rect x="70" y="935" width="430" height="150" rx="14" fill="#FFFFFF" stroke="#C62828" stroke-width="3"/>
+<text x="285.0" y="975" text-anchor="middle" font-size="25" font-weight="700" fill="#C62828">조건 검증</text>
+<text x="285.0" y="1007" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">checkedPatch · 세션 버전</text>
+<text x="285.0" y="1034" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#C62828">잘못된 후보는 거부</text>
+<rect x="540" y="935" width="400" height="150" rx="14" fill="#FFFFFF" stroke="#C62828" stroke-width="3"/>
+<text x="740.0" y="975" text-anchor="middle" font-size="25" font-weight="700" fill="#C62828">질문 판단</text>
+<text x="740.0" y="1007" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">missing()</text>
+<text x="740.0" y="1034" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#C62828">필수 조건 없으면 질문 1개</text>
+<rect x="980" y="935" width="500" height="150" rx="14" fill="#FFFFFF" stroke="#C62828" stroke-width="3"/>
+<text x="1230.0" y="975" text-anchor="middle" font-size="25" font-weight="700" fill="#C62828">PASS 엔진</text>
+<text x="1230.0" y="1007" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">src/vendor/engine.mjs</text>
+<text x="1230.0" y="1034" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#C62828">필터·정렬·금액 — 순위의 유일한 결정자</text>
+<rect x="1520" y="935" width="410" height="150" rx="14" fill="#FFFFFF" stroke="#C62828" stroke-width="3"/>
+<text x="1725.0" y="975" text-anchor="middle" font-size="25" font-weight="700" fill="#C62828">하드 제약 재검증</text>
+<text x="1725.0" y="1007" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">resultFor() 게이트</text>
+<text x="1725.0" y="1034" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#C62828">예산·알레르기·재고 위반 시 실패</text>
+<polyline points="1000,845 1000,872 285,872 285,935" fill="none" stroke="#C62828" stroke-width="2.6" marker-end="url(#arrR)"/>
+<rect x="504.0" y="852" width="292" height="28" fill="#FFFFFF"/>
+<text x="650" y="872" text-anchor="middle" font-size="18" fill="#C62828">merge 결과 patch 1개</text>
+<polyline points="500,1010 540,1010" fill="none" stroke="#C62828" stroke-width="2.6" marker-end="url(#arrR)"/>
+<polyline points="940,1010 980,1010" fill="none" stroke="#C62828" stroke-width="2.6" marker-end="url(#arrR)"/>
+<polyline points="1480,1010 1520,1010" fill="none" stroke="#C62828" stroke-width="2.6" marker-end="url(#arrR)"/>
+<rect x="60" y="1180" width="330" height="130" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="225.0" y="1220" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">SSE: question</text>
+<text x="225.0" y="1252" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">필수 조건 부족</text>
+<text x="225.0" y="1279" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">칩으로 1개만 묻기</text>
+<rect x="450" y="1180" width="980" height="175" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="940.0" y="1220" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">설명 계획기  planner/  (결정적 · LLM 0회)</text>
+<text x="940.0" y="1252" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">대조: 1·2위의 실제 차이(단맛·평점·비용)</text>
+<text x="940.0" y="1279" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">기억 반사실: 그 기억의 patch만 빼고 엔진 재실행</text>
+<text x="940.0" y="1306" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">예산 옵션: what_if_budget 재실행 → 아끼기 / 올리기 (1만 원당 만족 상승 기준)</text>
+<text x="940.0" y="1333" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#111111">→ Factsheet  (조건 A: 대조·반사실·옵션 필드 자체가 없음)</text>
+<rect x="1500" y="1180" width="440" height="175" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1720.0" y="1220" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">SSE 이벤트 ①  cards</text>
+<text x="1720.0" y="1252" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">카드 3개 + 이유 태그</text>
+<text x="1720.0" y="1279" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">기억 반영 한 줄: '지난 추석 기억 반영 [수정]'</text>
+<text x="1720.0" y="1306" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">질문 없이 먼저 보여줌</text>
+<polyline points="740,1085 740,1150 225,1150 225,1180" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="438.0" y="1130" width="84" height="28" fill="#FFFFFF"/>
+<text x="480" y="1150" text-anchor="middle" font-size="18" fill="#111111">부족하면</text>
+<polyline points="1725,1085 1725,1180" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="1754.0" y="1120" width="52" height="28" fill="#FFFFFF"/>
+<text x="1780" y="1140" text-anchor="middle" font-size="18" fill="#111111">통과</text>
+<polyline points="1150,1085 1150,1180" fill="none" stroke="#C62828" stroke-width="2.6" stroke-dasharray="10 7" marker-end="url(#arrR)" marker-start="url(#arrS)"/>
+<rect x="1168.0" y="1115" width="244" height="28" fill="#FFFFFF"/>
+<text x="1290" y="1135" text-anchor="middle" font-size="18" fill="#C62828">엔진 재실행 · 세션 불변</text>
+<rect x="450" y="1420" width="1490" height="230" rx="18" fill="none" stroke="#111111" stroke-width="2.5" stroke-dasharray="14 9"/>
+<rect x="1060" y="1404" width="652" height="32" fill="#FFFFFF"/>
+<text x="1080" y="1428" font-size="20" font-weight="700" fill="#111111">explainCards() — 카드 다음에 오는 2단계 (비동기)</text>
+<rect x="60" y="1475" width="330" height="130" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3" stroke-dasharray="12 8"/>
+<text x="225.0" y="1515" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">실험 조건 A/B</text>
+<text x="225.0" y="1547" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">④에만 전달</text>
+<text x="225.0" y="1574" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">점수·계획기 입력 아님</text>
+<rect x="480" y="1460" width="470" height="165" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3"/>
+<text x="715.0" y="1500" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">④ 설명 생성</text>
+<text x="715.0" y="1532" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">explainer/agent.mjs</text>
+<text x="715.0" y="1559" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">Factsheet만 보고 태그·칩 문구 생성</text>
+<text x="715.0" y="1586" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#1F5BD8">상위 3개 묶어 LLM 1회</text>
+<rect x="1000" y="1460" width="470" height="165" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1235.0" y="1500" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">⑤ 검증</text>
+<text x="1235.0" y="1532" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">verifier/agent.mjs</text>
+<text x="1235.0" y="1559" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">숫자·상품명·기억 출처·조건 A 누출·금지어</text>
+<text x="1235.0" y="1586" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#111111">LLM 0회 · 실패 시 ④ 1회 → 템플릿</text>
+<rect x="1520" y="1460" width="400" height="165" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1720.0" y="1500" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">SSE 이벤트 ②  explanations</text>
+<text x="1720.0" y="1532" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">행동 칩: '+9천 원 → 평점 4.8'</text>
+<text x="1720.0" y="1559" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">'단 음식 X 기억이 없었다면 1위는 …'</text>
+<text x="1720.0" y="1586" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">누르면 patch / what_if 요청</text>
+<polyline points="390,1540 480,1540" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="940,1355 940,1395 715,1395 715,1460" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="748.0" y="1375" width="164" height="28" fill="#FFFFFF"/>
+<text x="830" y="1395" text-anchor="middle" font-size="18" fill="#111111">Factsheet</text>
+<polyline points="950,1542 1000,1542" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<polyline points="1470,1542 1520,1542" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="60" y="1700" width="640" height="140" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3"/>
+<text x="380.0" y="1740" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">② 기억 쓰기</text>
+<text x="380.0" y="1772" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">memory/write.mjs</text>
+<text x="380.0" y="1799" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">세션 종료·구매·피드백 → 후보 → '기억할까요?' 확인 후 저장</text>
+<text x="380.0" y="1826" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#1F5BD8">알레르기는 명시만 · 나이·관계 추론 금지 · 충돌 시 질문</text>
+<polyline points="60,400 30,400 30,1770 60,1770" fill="none" stroke="#111111" stroke-width="2.6" stroke-dasharray="10 7" marker-end="url(#arr)"/>
+<rect x="92.0" y="1668" width="196" height="28" fill="#FFFFFF"/>
+<text x="190" y="1688" text-anchor="middle" font-size="18" fill="#111111">응답 후 비동기 호출</text>
+<rect x="60" y="1895" width="480" height="150" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="300.0" y="1935" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">db/  (node:sqlite)</text>
+<text x="300.0" y="1967" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">recipients · memories · gift_history</text>
+<text x="300.0" y="1994" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">sessions · events (실험 로그)</text>
+<text x="300.0" y="2021" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">Supabase 어댑터는 선택</text>
+<rect x="590" y="1895" width="440" height="150" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3"/>
+<text x="810.0" y="1935" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">llm/  어댑터</text>
+<text x="810.0" y="1967" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">gemini · VibeHub(OpenAI 호환) · fake</text>
+<text x="810.0" y="1994" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">①②쓰기 ③ ④ ⑥ 만 호출</text>
+<text x="810.0" y="2021" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="700" fill="#1F5BD8">⑤·공통 코어·계획기는 호출 안 함</text>
+<rect x="1080" y="1895" width="420" height="150" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1290.0" y="1935" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">rag/  인덱스</text>
+<text x="1290.0" y="1967" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">상품 임베딩 · 에피소드 임베딩</text>
+<text x="1290.0" y="1994" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">키 없으면 키워드 검색으로 대체</text>
+<rect x="1550" y="1895" width="390" height="150" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="3"/>
+<text x="1745.0" y="1935" text-anchor="middle" font-size="25" font-weight="700" fill="#111111">data/  카탈로그 스냅샷</text>
+<text x="1745.0" y="1967" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">팀 상품 3,376개 (CC BY-NC 4.0)</text>
+<text x="1745.0" y="1994" text-anchor="middle" font-size="18" font-family="Noto Sans CJK KR" font-weight="400" fill="#333333">해시 기록 · 공통 카탈로그와 동일</text>
+<polyline points="380,1840 380,1895" fill="none" stroke="#111111" stroke-width="2.6" marker-end="url(#arr)"/>
+<rect x="1550" y="1740" width="390" height="110" rx="14" fill="#FFFFFF" stroke="#1F5BD8" stroke-width="3" stroke-dasharray="12 8"/>
+<text x="1745.0" y="1780" text-anchor="middle" font-size="25" font-weight="700" fill="#1F5BD8">⑥ 카탈로그 색인 (오프라인)</text>
+<text x="1745.0" y="1812" text-anchor="middle" font-size="18" font-family="DejaVu Sans Mono, monospace" font-weight="400" fill="#333333">indexer/agent.mjs · 상품마다 LLM 1회</text>
+<polyline points="1550,1795 1290,1795 1290,1895" fill="none" stroke="#1F5BD8" stroke-width="2.6" stroke-dasharray="10 7" marker-end="url(#arrB)"/>
+<rect x="60" y="2090" width="26" height="26" rx="4" fill="none" stroke="#111111" stroke-width="3"/>
+<text x="100" y="2110" font-size="20" fill="#111111">규칙 기반 · 결정적 (LLM 0회)</text>
+<rect x="530" y="2090" width="26" height="26" rx="4" fill="none" stroke="#1F5BD8" stroke-width="3"/>
+<text x="570" y="2110" font-size="20" fill="#1F5BD8">LLM 호출 경로</text>
+<rect x="1000" y="2090" width="26" height="26" rx="4" fill="none" stroke="#C62828" stroke-width="3"/>
+<text x="1040" y="2110" font-size="20" fill="#C62828">baseline 공통 코어 (수정 금지)</text>
+<rect x="1470" y="2090" width="26" height="26" rx="4" fill="none" stroke="#6B6B6B" stroke-width="3" stroke-dasharray="6 4"/>
+<text x="1510" y="2110" font-size="20" fill="#6B6B6B">오프라인 · 비동기</text>
+</svg>

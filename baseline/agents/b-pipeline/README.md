@@ -1,15 +1,26 @@
-# 역할 파이프라인 작업 공간
+# 역할 파이프라인 작업 공간 (B)
 
-담당 범위: 대화 이해·기억·후보 탐색·설명 역할 분리. 현재는 실행 가능한 시작 틀이며 해당 아키텍처나 실제 LLM 연동은 구현하지 않았다.
+받는 사람을 기억하는 선물 추천 에이전트. 대화 이해 · 기억 · 취향 매핑 · 설명 생성 · 검증 역할을 나누고, 순위는 공통 PASS 엔진만 결정한다.
 
-1. 이 폴더의 `index.mjs`에서 `interpretMessage`를 구현한다. 프롬프트·도구·내부 모듈도 이 폴더에 추가한다.
-2. 출력 계약은 `{patch, questions: string[], unresolved: boolean}`이다. 미확정 조건은 `unresolved: true`와 질문으로 반환한다.
-3. 자체 테스트는 이 폴더의 `tests/*.test.mjs`에 추가한다. `baseline/`에서 `npm test`를 실행하면 공통·개별 테스트를 함께 찾는다.
-4. 전체 오케스트레이션을 구현할 때는 공통 엔진·검증·비교 계약을 재사용하고 추가 진입점을 문서화한다. 현재 연결기는 해석기 확장만 지원한다.
+![구조도](docs/architecture.png)
+
+- 무엇을 만드는가: [docs/PRD.md](docs/PRD.md)
+- 어떻게 만드는가: [docs/TRD.md](docs/TRD.md)
+- 결정 기록·팀 요청: [docs/decisions.md](docs/decisions.md)
+- Claude Code 실행 순서: [docs/KICKOFF.md](docs/KICKOFF.md)
+
+## 현재 상태
+명세와 작업 규칙만 준비됨. `index.mjs`는 시작 틀 그대로이며 파이프라인은 아직 구현 전이다.
+
+## 계약 (변경 없음)
+- `index.mjs`: `interpretMessage({text,state}) → {patch, questions, unresolved}`, `createAgent({interpret})`
+- 전체 파이프라인은 별도 진입점 `pipeline/index.mjs`의 `createPipeline(deps)`로 추가한다.
 
 ```sh
-# baseline/ 기준
-npm run demo:agent -- b-pipeline
+# 이 폴더 기준
+npm run test:all     # 공통 + b-pipeline 테스트
+npm run check:scope  # 커밋 전 범위 확인
+npm run demo
 ```
 
-브랜치: `codex/architecture-b-pipeline`. 공통 규칙은 [상위 안내](../README.md)를 따른다.
+브랜치: `codex/architecture-b-pipeline`. 공통 규칙은 [상위 안내](../README.md)와 [AGENTS.md](../AGENTS.md)를 따른다.
