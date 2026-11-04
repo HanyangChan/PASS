@@ -10,6 +10,10 @@
 | K5 | 설명은 문장이 아니라 태그·칩 | 사용자 피드백: 설명 글을 읽기 싫어함 |
 | K6 | 저장소는 `node:sqlite` (의존성 0) | baseline처럼 설치 없이 실행. Supabase는 후속 어댑터 |
 | K7 | 실험은 참가자 ID 기반. 정식 인증·공개 배포는 범위 밖 | 수업 범위, 보안 위험 최소화 |
+| K8 | `sessions.state`에는 baseline 세션 상태만 저장한다. `recipientId`·`sensitivity`·`experiment`·`provenance`는 `sessions.meta`(JSON)에 둔다. TRD §5.1의 `sessions.recipient_id`·`experiment` 컬럼은 `meta`로 옮겼다 | baseline `validateSession`이 저장·로드 때 그대로 검증되게 하고, 파이프라인 필드가 엔진 상태에 섞이지 않게 함 (P0) |
+| K9 | 카탈로그 스냅샷은 `data/products-amazon.json`(seed 원본 그대로), 해시는 `data/catalog.sha256`, 출처·기준일은 `data/provenance.json`, 라이선스는 `data/ATTRIBUTION.md`. 도착일 기준일은 복사일 `2026-11-05`로 고정. AC 테스트는 `tests/fixtures/catalog.mjs` 합성 카탈로그를 쓴다 | D4 기본값 이행. `toEngineProduct`가 기준일로 도착일을 만들기 때문에 날짜를 고정해야 순위가 재현됨 (P0) |
+| K10 | `npm test`를 `node --test "tests/**/*.test.mjs"`로 바꿨다 | Node 22에서 `node --test tests/`는 디렉터리를 모듈로 열려다 실패함 (P0) |
+| K11 | `scripts/check-scope.mjs`는 접두 경로를 `git rev-parse --show-prefix`로 얻는다 | 훅은 NFC 경로로, git은 NFD 경로로 한글 폴더명을 보고해 `path.relative`가 `../../인간…` 접두를 만들어 모든 변경을 범위 밖으로 막았음. 범위 밖 파일 차단은 그대로 확인함 (P0) |
 
 ## 팀 결정이 필요한 것 (D)
 | # | 질문 | 현재 기본값 |
