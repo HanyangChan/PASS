@@ -24,14 +24,14 @@ test('table hits never trigger an embedding call', async () => {
 });
 
 test('embeddings: words the table misses are matched by cosine against category docs, in ONE embed call', async () => {
-  const vec = text => (/낚시|운동|fitness/.test(text) ? [1, 0, 0] : /우표/.test(text) ? [0, 0, 1] : [0, 1, 0]);
+  const vec = text => (/클라이밍|운동|fitness/.test(text) ? [1, 0, 0] : /우표/.test(text) ? [0, 0, 1] : [0, 1, 0]);
   const llm = createFakeLlm({ embed: texts => texts.map(vec) });
   const m = createHobbyMapper({ llm, minCosine: 0.8 });
-  const out = await m.map([item('낚시'), item('우표수집', 'm2')]);
+  const out = await m.map([item('클라이밍'), item('우표수집', 'm2')]);
   assert.deepEqual(out, [{ field: 'preferences', value: 'category:fitness', from: 'memory:m1' }]);
   const embeds = llm.calls.filter(c => c.method === 'embed');
   assert.equal(embeds.length >= 1 && embeds.length <= 2, true, 'one for the category index (cached), one for the hobbies');
-  await m.map([item('낚시')]);
+  await m.map([item('클라이밍')]);
   assert.equal(llm.calls.filter(c => c.method === 'embed').length, embeds.length + 1, 'the category index is built once');
 });
 
@@ -46,6 +46,8 @@ test('the map file is a draft, only maps to engine categories, and a bad map is 
   const map = loadHobbyMap();
   assert.match(map.note, /초안/);
   for (const cats of Object.values(map.table)) for (const c of cats) assert.ok(CATEGORIES.includes(c), c);
+  for (const w of ['녹차', '홍차', '와인', '독서', '캠핑', '낚시']) assert.ok(map.table[w]?.length, `draft entry ${w}`);
+  assert.deepEqual([map.table['녹차'], map.table['홍차']], [['coffee_tea'], ['coffee_tea']]);
   assert.throws(() => loadHobbyMap({ note: '초안', table: { 등산: ['not_a_category'] } }), { code: 'invalid_hobby_map' });
 });
 

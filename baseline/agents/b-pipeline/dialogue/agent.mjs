@@ -10,7 +10,8 @@ import { mentionedAllergens } from '../../../src/vendor/allergens.mjs';
 import { LlmError } from '../llm/errors.mjs';
 import { checkKey, parseKey } from '../memory/keys.mjs';
 
-export const LEGACY_QUESTION = '이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.';
+// One question for every path that cannot interpret: no key, LLM error/timeout, empty or unusable answer.
+export const FALLBACK_QUESTION = '받는 분과 예산을 조금 더 구체적으로 알려주세요.';
 const TIMEOUT_MS = 2500; // AC16: LLM path within 3 s overall (draft value, not an experiment setting)
 const SOFT = ['less_sweet', 'unsweetened'];
 const ALIASES = [['엄마', '어머니'], ['어머님', '어머니'], ['아빠', '아버지'], ['아버님', '아버지']];
@@ -89,18 +90,18 @@ function validate(raw, { text, state }) {
   return { patch, memoryCandidates, critiques, mentionedRecipients };
 }
 
-/** createDialogue({llm}) -> {interpret({text,state})}. llm may be null (no key): free text then asks the legacy question. */
+/** createDialogue({llm}) -> {interpret({text,state})}. llm may be null (no key): free text then asks FALLBACK_QUESTION. */
 export function createDialogue({ llm = null } = {}) {
   const ask = question => ({ patch: {}, questions: [question], unresolved: true, critiques: [], memoryCandidates: [], mentionedRecipients: [] });
   return {
     async interpret({ text, state }) {
       const rules = parseRules(text);
       if (!rules.unresolved) return { patch: rules.patch, questions: rules.questions, unresolved: false, critiques: [], memoryCandidates: [], mentionedRecipients: rules.patch.recipients ?? [] };
-      if (!llm) return ask(LEGACY_QUESTION);
+      if (!llm) return ask(FALLBACK_QUESTION);
       let raw;
       try { raw = await llm.json({ role: 'dialogue', system: SYSTEM, input: { text, state }, schema: SCHEMA, timeoutMs: TIMEOUT_MS }); }
-      catch (e) { if (e instanceof LlmError) return ask(LEGACY_QUESTION); throw e; }
-      const question = typeof raw.question === 'string' && raw.question.trim() ? raw.question.trim() : LEGACY_QUESTION;
+      catch (e) { if (e instanceof LlmError) return ask(FALLBACK_QUESTION); throw e; }
+      const question = typeof raw.question === 'string' && raw.question.trim() ? raw.question.trim() : FALLBACK_QUESTION;
       if (raw.unresolved === true) return ask(question);
       const out = validate(raw, { text, state });
       if (!Object.keys(out.patch).length && !out.memoryCandidates.length) return ask(question);

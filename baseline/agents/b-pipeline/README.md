@@ -10,7 +10,13 @@
 - Claude Code 실행 순서: [docs/KICKOFF.md](docs/KICKOFF.md)
 
 ## 현재 상태
-명세와 작업 규칙만 준비됨. `index.mjs`는 시작 틀 그대로이며 파이프라인은 아직 구현 전이다.
+P3까지 구현: 기억 저장·읽기, 대화 이해, 취향 매핑, 오케스트레이터(`pipeline/index.mjs` `createPipeline`). 진행은 [docs/PLAN.md](docs/PLAN.md).
+
+### LLM 키가 없을 때
+- 규칙(`parseRules`)으로 풀리는 문장만 처리된다. 예: "어머니 한 세트 세트당 예산 5만원 이하 배송비 포함 추천".
+- **S1("엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔…")은 키 없이 불가하다.** 질문 "받는 분과 예산을 조금 더 구체적으로 알려주세요."로 끝난다(R9).
+- S2의 "부모님 설 선물 추천해줘"도 '설' 때문에 키가 필요하다. "부모님 선물 추천해줘"는 규칙으로 풀린다(K33).
+- 테스트(`node --test`) 중에는 키가 환경에 있어도 LLM을 만들지 않는다(K23).
 
 ## 계약 (변경 없음)
 - `index.mjs`: `interpretMessage({text,state}) → {patch, questions, unresolved}`, `createAgent({interpret})`

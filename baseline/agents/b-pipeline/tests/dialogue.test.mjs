@@ -5,7 +5,7 @@ import { initial } from '../../../src/vendor/engine.mjs';
 import { runTurn, createSession } from '../../../src/index.mjs';
 import { parseRules } from '../../../src/parser.mjs';
 import { createFakeLlm, LlmError } from '../llm/index.mjs';
-import { createDialogue, toPort, LEGACY_QUESTION } from '../dialogue/agent.mjs';
+import { createDialogue, toPort, FALLBACK_QUESTION } from '../dialogue/agent.mjs';
 import { products } from './fixtures/catalog.mjs';
 
 const S1 = '부모님 추석 선물이야. 엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔. 5만 원';
@@ -48,11 +48,11 @@ test('R9 / S1: a free sentence makes ONE LLM call and yields the group patch plu
   assert.deepEqual([...out.mentionedRecipients].sort(), ['부모님', '아버지', '어머니']);
 });
 
-test('R9: without an LLM the S1 sentence is NOT interpreted: legacy question, empty patch', async () => {
+test('R9: without an LLM the S1 sentence is NOT interpreted: fallback question, empty patch', async () => {
   const d = createDialogue({ llm: null });
   const out = await d.interpret({ text: S1, state: state() });
-  assert.deepEqual(out, { patch: {}, questions: [LEGACY_QUESTION], unresolved: true, critiques: [], memoryCandidates: [], mentionedRecipients: [] });
-  assert.equal(LEGACY_QUESTION, '이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.');
+  assert.deepEqual(out, { patch: {}, questions: [FALLBACK_QUESTION], unresolved: true, critiques: [], memoryCandidates: [], mentionedRecipients: [] });
+  assert.equal(FALLBACK_QUESTION, '받는 분과 예산을 조금 더 구체적으로 알려주세요.');
 });
 
 test('vocabulary: out-of-vocabulary preferences, categories, keys, recipients and invented evidence are dropped', async () => {
@@ -114,15 +114,15 @@ test('AC2: an LLM that cannot resolve returns exactly one question and an empty 
   assert.equal(raw.questions.length, 1); assert.deepEqual(raw.patch, {}); assert.equal(raw.unresolved, true);
 });
 
-test('an LLM with nothing usable is "unresolved" with the legacy question, never an empty "resolved" turn', async () => {
+test('an LLM with nothing usable is "unresolved" with the fallback question, never an empty "resolved" turn', async () => {
   const out = await dlg({ recipients: [], memoryCandidates: [] }).d.interpret({ text: '센스 있는 선물', state: state() });
-  assert.equal(out.unresolved, true); assert.deepEqual(out.questions, [LEGACY_QUESTION]);
+  assert.equal(out.unresolved, true); assert.deepEqual(out.questions, [FALLBACK_QUESTION]);
 });
 
 test('LLM failure or schema violation degrades to the question path and leaks nothing about the user text', async () => {
-  for (const bad of [new LlmError('llm_timeout'), { recipients: 'mom', memoryCandidates: [] }, 'nonsense']) {
+  for (const bad of [new LlmError('llm_timeout'), new LlmError('llm_http'), { recipients: 'mom', memoryCandidates: [] }, 'nonsense', { recipients: [], memoryCandidates: [], question: '   ' }, { recipients: [], memoryCandidates: [], unresolved: true }]) {
     const out = await dlg(bad).d.interpret({ text: S1, state: state() });
-    assert.equal(out.unresolved, true); assert.deepEqual(out.patch, {}); assert.equal(out.questions.length, 1);
+    assert.equal(out.unresolved, true); assert.deepEqual(out.patch, {}); assert.deepEqual(out.questions, [FALLBACK_QUESTION], 'error, timeout and empty answers ask the real question');
     assert.ok(!JSON.stringify(out).includes('땅콩'));
   }
 });

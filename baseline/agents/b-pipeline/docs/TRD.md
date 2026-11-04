@@ -91,6 +91,14 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 
 **LLM 호출 상한:** 한 턴에 ① 1회 + ③ 임베딩 1회 + ④ 1회(+재생성 1회).
 
+### 4.1 요청·이벤트 (P3 구현 기준, K24~K31)
+- 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?}` · `view` · `what_if_budget{amount_krw}` · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId}` · `memory_edit{op: delete|update|resolve_conflict|accept_suggested}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
+- 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `memory_saved`, `session_end`, `error{code}`.
+- `cards`에는 baseline `result`를 그대로 넣고, 상품별 `annotations{id, tags, giftHistory}`와 `banner`(반영 한 줄)를 따로 붙인다.
+- `recipientId`는 사용자가 수령인을 고른 요청에만 보낸다. 문장·칩의 수령인이 항상 우선하고, 표시 이름과 기억 id는 같은 사람으로 정해진다(K36).
+- ③은 ② 다음에 한 번 호출한다(K27). 해석이 안 된 메시지는 아무것도 저장하지 않는다.
+- 해석 실패 질문은 하나다: "받는 분과 예산을 조금 더 구체적으로 알려주세요."(K25)
+
 ## 5. 기억 설계
 ### 5.1 SQLite 스키마 (`db/schema.sql`)
 실제 파일이 기준이다. 아래는 그 요약이며, 이전 초안과 다른 점은 `sessions`(K8)와 CHECK 제약이다.
@@ -155,6 +163,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
 - "부모님"이 두 분 함께인지 한 분인지 모호하면 칩으로 묻는다(`두 분 함께`/`어머니만`/`아버지만`).
 - 함께인 경우: 알레르기·비선호는 합집합, 선호는 둘 중 하나라도 해당하면 포함한다.
 - baseline 상태의 `recipients`에는 표시 이름(예: `['부모님']`)을 넣는다. 기억 연결은 `recipientId`로 한다.
+- R9: 같은 그룹의 두 사람이 각각 언급되면(`['어머니','아버지']`) 표시 이름은 `['부모님']`, 기억은 각자에게 연결한다. 행이 없는 사람은 `new:<이름>` 자리표시로 두고 기억 저장을 수락할 때 행을 만든다(K24, K29). "부모님"만 말하면 기본은 두 분 함께이고 칩은 막지 않는 선택지로 보낸다.
 
 ## 6. 설명 계획기 (결정적, LLM 0회)
 모든 계산은 공통 코어를 다시 호출해서 얻는다. 실제 세션은 바꾸지 않는다.
