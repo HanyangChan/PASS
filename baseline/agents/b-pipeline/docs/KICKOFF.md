@@ -1,5 +1,7 @@
 # Claude Code 실행 순서 — b-pipeline
 
+> **P2부터는 자동화 루프를 쓴다.** 매 단계: `/clear` → (PLAN의 모델 열이 Opus면 `/model opus`, 아니면 `/model opusplan`) → `/next-step` → 보고 확인 → "사람 결정 필요"에만 답하기. 구현·테스트·독립 리뷰(`step-reviewer`, Opus)·커밋·푸시는 `/next-step`이 한다. 아래 수동 절차는 참고용.
+
 ## 0. 준비 (한 번)
 ```sh
 git clone https://github.com/HanyangChan/PASS && cd PASS

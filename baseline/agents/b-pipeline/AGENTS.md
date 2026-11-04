@@ -24,3 +24,7 @@ Use mock or snapshot data. Ask me if anything is unclear.
 - 테스트는 네트워크를 쓰지 않는다(`llm/fake.mjs`, 인메모리 DB).
 - 완료라고 말하기 전에 `npm run test:all` 결과와 해당 AC 통과/실패 표를 보여준다.
 - 단계마다 커밋 하나: `b-pipeline(P<n>): <요약>`. 커밋 전에 `npm run check:scope`.
+
+## 단계 진행 자동화
+- 승인한 계획은 `docs/PLAN.md`에 있다. `/clear` 후에도 이 파일로 이어간다.
+- 사용자가 `/next-step`을 입력하면 다음 단계 하나를 구현 → 테스트 → `step-reviewer` 검토 → 커밋·푸시하고 **멈춰서 보고한다.** 다음 단계로 스스로 넘어가지 않는다.
