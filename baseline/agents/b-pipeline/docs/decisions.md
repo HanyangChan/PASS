@@ -14,6 +14,10 @@
 | K9 | 카탈로그 스냅샷은 `data/products-amazon.json`(seed 원본 그대로), 해시는 `data/catalog.sha256`, 출처·기준일은 `data/provenance.json`, 라이선스는 `data/ATTRIBUTION.md`. 도착일 기준일은 복사일 `2026-11-05`로 고정. AC 테스트는 `tests/fixtures/catalog.mjs` 합성 카탈로그를 쓴다 | D4 기본값 이행. `toEngineProduct`가 기준일로 도착일을 만들기 때문에 날짜를 고정해야 순위가 재현됨 (P0) |
 | K10 | `npm test`를 `node --test "tests/**/*.test.mjs"`로 바꿨다 | Node 22에서 `node --test tests/`는 디렉터리를 모듈로 열려다 실패함 (P0) |
 | K11 | `scripts/check-scope.mjs`는 접두 경로를 `git rev-parse --show-prefix`로 얻는다 | 훅은 NFC 경로로, git은 NFD 경로로 한글 폴더명을 보고해 `path.relative`가 `../../인간…` 접두를 만들어 모든 변경을 범위 밖으로 막았음. 범위 밖 파일 차단은 그대로 확인함 (P0) |
+| K12 | `.claude/hooks/guard-scope.mjs`는 작업 공간·대상·cwd를 모두 NFC로 바꿔 비교한다. `tests/guard-scope.test.mjs`가 NFC·NFD 경로 양쪽에서 범위 안 허용, 범위 밖 차단을 확인한다 | 수정 전 훅은 NFC 경로로 들어온 범위 안 편집을 잘못 차단했음(작업 공간은 NFD). 범위 밖 차단은 원래도 유지됐음 (P1 전) |
+| K13 | TRD §5.1을 실제 `db/schema.sql`에 맞춰 고쳤다(`sessions.meta`, CHECK 제약, NOT NULL). `tests/fixtures/catalog.mjs`는 P1부터 고정하고, 바꿔야 하면 이 표에 이유를 먼저 적는다 | 문서와 스키마가 달라 구현자가 잘못된 컬럼을 쓸 위험 (P1 전) |
+| K14 | 기억 극성: `allergy:`·`dislike:`는 -1(회피), `pref:`·`hobby:`·`constraint:`는 +1. 부호가 반대인 진술은 저장하지 않고 충돌 확인에만 쓴다. 알레르기의 반대 진술은 질문 없이 거부한다 | S5(AC8)와 알레르기 불감소(AC7)를 같은 규칙으로 처리 (P1) |
+| K15 | `memory/write.mjs`의 후보는 `basis:'explicit'`일 때만 받는다. 알레르기는 근거 문장에 해당 알레르겐 이름이 있어야 한다. 피드백 `suggested`의 세션 목록은 `evidence`에 `feedback:<세션ID,…>`로 둔다(스키마 변경 없음) | 규칙 2·3·4를 스키마 변경 없이 구현 (P1) |
 
 ## 팀 결정이 필요한 것 (D)
 | # | 질문 | 현재 기본값 |

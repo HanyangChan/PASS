@@ -8,16 +8,18 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 
-const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+// macOS reports this Korean folder name as NFD in some places and NFC in others; compare in NFC only.
+const nfc = p => String(p).normalize('NFC');
+const workspace = nfc(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..'));
 const input = JSON.parse(readFileSync(0, 'utf8') || '{}');
 const tool = input.tool_name ?? '';
 const args = input.tool_input ?? {};
 const block = msg => { console.error(msg); process.exit(2); };
-const inside = (p, dir) => { const r = path.relative(dir, p); return r === '' || (!r.startsWith('..') && !path.isAbsolute(r)); };
+const inside = (p, dir) => { const r = path.relative(nfc(dir), nfc(p)); return r === '' || (!r.startsWith('..') && !path.isAbsolute(r)); };
 
 if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool)) {
   const raw = args.file_path ?? args.notebook_path ?? '';
-  const target = path.resolve(input.cwd ?? workspace, raw);
+  const target = nfc(path.resolve(nfc(input.cwd ?? workspace), nfc(raw)));
   // Claude Code's own plan/memory files live under ~/.claude; scratch files under the OS temp dir.
   const allowed = [workspace, path.join(os.homedir(), '.claude'), os.tmpdir()];
   if (!allowed.some(dir => inside(target, dir)))

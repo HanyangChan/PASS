@@ -93,33 +93,40 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 
 ## 5. 기억 설계
 ### 5.1 SQLite 스키마 (`db/schema.sql`)
+실제 파일이 기준이다. 아래는 그 요약이며, 이전 초안과 다른 점은 `sessions`(K8)와 CHECK 제약이다.
 ```sql
 create table recipients(
   id text primary key, owner_id text not null, name text not null,
   aliases text not null default '[]',        -- JSON: ["엄마","어머님"]
   group_name text,                           -- '부모님'
-  budget_cap_krw integer,                    -- 교수님처럼 상한 고정 (null = 없음)
-  price_sensitivity text default 'balanced', -- value | balanced | quality
+  budget_cap_krw integer check (budget_cap_krw is null or budget_cap_krw > 0), -- "올리기" 차단에만 사용 (null = 없음)
+  price_sensitivity text not null default 'balanced' check (price_sensitivity in ('value','balanced','quality')),
   created_at text not null);
 create table memories(
   id text primary key, recipient_id text not null references recipients(id) on delete cascade,
   key text not null,          -- memory/keys.mjs 어휘
-  polarity integer not null,  -- 1 | -1
-  strength real not null default 0.7,
-  status text not null,       -- confirmed | suggested
-  source text not null,       -- explicit | feedback | purchase
-  evidence text not null,     -- 근거 문장(사용자 발화 그대로, 200자 이내)
+  polarity integer not null check (polarity in (1,-1)),
+  strength real not null default 0.7 check (strength >= 0 and strength <= 1),
+  status text not null check (status in ('confirmed','suggested')),
+  source text not null check (source in ('explicit','feedback','purchase')),
+  evidence text not null check (length(evidence) between 1 and 200), -- 근거 문장(사용자 발화 그대로)
   created_at text not null, last_used_at text);
 create table gift_history(
   id text primary key, recipient_id text not null references recipients(id) on delete cascade,
-  product_id text not null, occasion text, given_at text, satisfaction integer); -- 1..5 | null
+  product_id text not null, occasion text, given_at text,
+  satisfaction integer check (satisfaction is null or satisfaction between 1 and 5)); -- null = 아직 모름
 create table sessions(
-  id text primary key, owner_id text not null, recipient_id text,
-  version integer not null, state text not null, -- baseline 세션 JSON
-  experiment text not null, updated_at text not null);
+  id text primary key, owner_id text not null,
+  version integer not null check (version >= 0),
+  state text not null,                       -- baseline 세션 상태 JSON만 (validateSession 통과)
+  meta text not null default '{}',           -- JSON: {recipientId, sensitivity, experiment, provenance}
+  updated_at text not null);
 create table events(  -- 실험 로그 (원문 발화 저장 안 함)
-  id integer primary key, session_id text, type text, payload text, at text);
+  id integer primary key, session_id text, type text not null,
+  payload text not null default '{}', at text not null);
 ```
+- `sessions`에는 `recipient_id`·`experiment` 컬럼이 없다. 두 값은 `meta`에 둔다(결정 K8).
+- 인덱스: `recipients(owner_id)`, `memories(recipient_id)`, `gift_history(recipient_id)`, `events(session_id)`.
 모든 조회는 `owner_id`로 거른다. 다른 사용자의 수령인·기억이 섞이면 버그다(AC6).
 
 ### 5.2 기억 키 → 엔진 상태 (`memory/keys.mjs`)
