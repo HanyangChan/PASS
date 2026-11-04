@@ -72,10 +72,18 @@ function validate(raw, { text, state }) {
     const merged = uniq([...base[field], ...next]);
     if (merged.length > base[field].length || (changed && next.length)) patch[field] = merged; // only ever a union
   };
-  additive('preferences', (raw.preferences ?? []).filter(p => SOFT.includes(p) || (p.startsWith('category:') && CATEGORIES.includes(p.slice(9)))));
-  additive('excluded_categories', (raw.excluded_categories ?? []).filter(c => CATEGORIES.includes(c)));
+  // said (K44): a value the LLM proposes counts as spoken only if it is new to the state, or (sweetness) a critique
+  // phrase is in the sentence; an LLM echoing the state's list must not turn memory values into utterances (R6)
+  const said = [];
+  const inSentence = splitCritiques(text).preferences;
+  const spoken = (field, values) => {
+    for (const value of uniq(values)) if (!base[field].includes(value) || (field === 'preferences' && inSentence.includes(value))) said.push({ field, value });
+    return values;
+  };
+  additive('preferences', spoken('preferences', (raw.preferences ?? []).filter(p => SOFT.includes(p) || (p.startsWith('category:') && CATEGORIES.includes(p.slice(9))))));
+  additive('excluded_categories', spoken('excluded_categories', (raw.excluded_categories ?? []).filter(c => CATEGORIES.includes(c))));
   const named = mentionedAllergens(text);
-  additive('excluded_ingredients', (raw.excluded_ingredients ?? []).filter(a => named.includes(a)));
+  additive('excluded_ingredients', spoken('excluded_ingredients', (raw.excluded_ingredients ?? []).filter(a => named.includes(a))));
 
   const memoryCandidates = [];
   for (const c of raw.memoryCandidates ?? []) {
@@ -87,7 +95,7 @@ function validate(raw, { text, state }) {
   }
   const critiques = (raw.critiques ?? []).filter(c => { const r = checkKey(c.key, c.polarity); return r.ok && !r.negation; }).map(c => ({ key: c.key, polarity: c.polarity }));
   const mentionedRecipients = uniq([...(patch.recipients ?? []), ...memoryCandidates.map(c => c.recipientName)]);
-  return { patch, memoryCandidates, critiques, mentionedRecipients };
+  return { patch, memoryCandidates, critiques, mentionedRecipients, said };
 }
 
 // K33: occasion words are taken out before parseRules (which does not know them) and become patch.occasion.
@@ -110,11 +118,47 @@ export function splitOccasion(text) {
   return { occasion: kinds[0], rest };
 }
 
-function rulesWithOccasion(text) {
-  const { occasion, rest } = splitOccasion(text);
-  const rules = parseRules(occasion ? rest : text);
-  if (rules.unresolved || !occasion) return rules;
-  return { ...rules, patch: { ...rules.patch, occasion } };
+// K44: critique phrases are taken out before parseRules (which refuses them) like occasion words (K33).
+// 덜 달게·덜 단·안 단 -> preferences += less_sweet; 실용적인·더 저렴한·더 싼 -> sensitivity 'value' for this session
+// (no budget is changed or filled: R3). Each phrase only on its own (not 단백질, 비싼) with an optional 걸로·거·것 tail.
+const CRITIQUES = [
+  ['덜\\s*달게', { preference: 'less_sweet' }], ['덜\\s*단', { preference: 'less_sweet' }], ['안\\s*단', { preference: 'less_sweet' }],
+  ['실용적인', { sensitivity: 'value' }], ['더\\s*저렴한', { sensitivity: 'value' }], ['더\\s*싼', { sensitivity: 'value' }],
+];
+const CRITIQUE_TAIL = '(?:\\s*(?:걸로|거로|것으로|것|거|게|선물로))?';
+const CRITIQUE_RES = CRITIQUES.map(([w, effect]) => ({ re: new RegExp(`(?<![가-힣])${w}${CRITIQUE_TAIL}(?![가-힣])`, 'g'), effect }));
+
+/** "덜 단 걸로 추천" -> {preferences:['less_sweet'], sensitivity:null, rest:'  추천'}. Pure. */
+export function splitCritiques(text) {
+  let rest = norm(text);
+  const preferences = [];
+  let sensitivity = null;
+  for (const { re, effect } of CRITIQUE_RES) {
+    rest = rest.replace(re, () => {
+      if (effect.preference) preferences.push(effect.preference);
+      if (effect.sensitivity) sensitivity = effect.sensitivity;
+      return ' ';
+    });
+  }
+  return { preferences: uniq(preferences), sensitivity, rest };
+}
+
+function rulesWithExtras(text, state) {
+  const { occasion, rest: afterOccasion } = splitOccasion(text);
+  const c = splitCritiques(afterOccasion);
+  const found = c.preferences.length > 0 || c.sensitivity !== null;
+  const rules = parseRules(found ? c.rest : occasion ? afterOccasion : text);
+  if (rules.unresolved) return { rules };
+  const patch = { ...rules.patch };
+  if (occasion) patch.occasion = occasion;
+  const said = [];
+  if (c.preferences.length) {
+    // a union with the current list (patch lists replace); on a recipient change baseline starts from empty lists
+    const changed = Array.isArray(patch.recipients) && JSON.stringify(patch.recipients) !== JSON.stringify(state.recipients);
+    patch.preferences = uniq([...(changed ? [] : state.preferences), ...c.preferences]);
+    for (const v of c.preferences) said.push({ field: 'preferences', value: v });
+  }
+  return { rules: { ...rules, patch }, said, sensitivity: c.sensitivity, critiques: c.preferences.map(v => ({ key: `pref:${v}`, polarity: 1 })) };
 }
 
 /** createDialogue({llm}) -> {interpret({text,state})}. llm may be null (no key): free text then asks FALLBACK_QUESTION. */
@@ -122,8 +166,8 @@ export function createDialogue({ llm = null } = {}) {
   const ask = question => ({ patch: {}, questions: [question], unresolved: true, critiques: [], memoryCandidates: [], mentionedRecipients: [] });
   return {
     async interpret({ text, state }) {
-      const rules = rulesWithOccasion(text);
-      if (!rules.unresolved) return { patch: rules.patch, questions: rules.questions, unresolved: false, critiques: [], memoryCandidates: [], mentionedRecipients: rules.patch.recipients ?? [] };
+      const { rules, said = [], sensitivity = null, critiques = [] } = rulesWithExtras(text, state);
+      if (!rules.unresolved) return { patch: rules.patch, questions: rules.questions, unresolved: false, critiques, memoryCandidates: [], mentionedRecipients: rules.patch.recipients ?? [], said, sensitivity };
       if (!llm) return ask(FALLBACK_QUESTION);
       let raw;
       try { raw = await llm.json({ role: 'dialogue', system: SYSTEM, input: { text, state }, schema: SCHEMA, timeoutMs: TIMEOUT_MS }); }
@@ -132,13 +176,17 @@ export function createDialogue({ llm = null } = {}) {
       if (raw.unresolved === true) return ask(question);
       const out = validate(raw, { text, state });
       if (!Object.keys(out.patch).length && !out.memoryCandidates.length) return ask(question);
-      return { ...out, questions: [], unresolved: false };
+      return { ...out, questions: [], unresolved: false, sensitivity: null };
     },
   };
 }
 
-/** Adapter to the common runTurn port: {patch, questions, unresolved} only. */
+/**
+ * Adapter to the common runTurn port: {patch, questions, unresolved} only. The port has no sensitivity, so a sentence
+ * that only sets it ("더 저렴한 걸로") would change nothing there: it asks instead of silently ignoring (review).
+ */
 export const toPort = dialogue => async ({ text, state }) => {
-  const { patch, questions, unresolved } = await dialogue.interpret({ text, state });
+  const { patch, questions, unresolved, sensitivity } = await dialogue.interpret({ text, state });
+  if (!unresolved && sensitivity && !Object.keys(patch).length) return { patch: {}, questions: [FALLBACK_QUESTION], unresolved: true };
   return { patch, questions, unresolved };
 };

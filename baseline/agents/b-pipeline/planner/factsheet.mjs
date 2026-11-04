@@ -3,6 +3,7 @@
 import { budgetCost, ALLERGY_NOTICE } from '../../../src/vendor/engine.mjs';
 import { CATEGORY_NAMES } from '../../../src/vendor/catalog.mjs';
 import { giftHistoryHit } from '../pipeline/banner.mjs';
+import { memoryPreferenceTags } from '../explainer/template.mjs';
 import { rankedFor, matchedPreferences } from './engine-facts.mjs';
 import { planContrast } from './contrast.mjs';
 import { planMemoryCf } from './memory-cf.mjs';
@@ -21,7 +22,7 @@ function usedMemoriesFor(product, state, memory, provenance) {
     field === 'preferences' ? matched.has(value)
       : field === 'excluded_ingredients' || field === 'excluded_categories' ? state[field].includes(value)
         : field === 'packaging' ? product.packaging === value : false))
-    .map(m => ({ id: m.memoryId, label: m.label, evidence: m.evidence }));
+    .map(m => ({ id: m.memoryId, label: m.label, evidence: m.evidence, recipientName: m.recipientName ?? null }));
 }
 
 /**
@@ -44,7 +45,8 @@ export async function buildFactsheet({ session, cards, products, state, provenan
       allergyNotice: state.excluded_ingredients.length ? ALLERGY_NOTICE : null,
     };
   });
-  const sheet = { experiment, items };
+  // memoryTags: preference value -> memory wording (same in A and B: tags do not depend on the condition, F5)
+  const sheet = { experiment, items, memoryTags: memoryPreferenceTags(memory, provenance) };
   if (experiment !== 'B') return sheet;
   sheet.contrast = planContrast({ products, state, cards });
   sheet.memoryCf = await planMemoryCf({ session, state, provenance, memory, products, cards, budgetCap });

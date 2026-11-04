@@ -3,6 +3,7 @@
 // Tags: 2..3 per card, each at most 12 characters. Condition A/B does not change tags (F5).
 import { budgetCost } from '../../../src/vendor/engine.mjs';
 import { CATEGORY_NAMES } from '../../../src/vendor/catalog.mjs';
+import { parseKey } from '../memory/keys.mjs';
 
 export const MAX_TAG = 12;
 
@@ -13,9 +14,43 @@ export function wonShort(n) {
   return `${n.toLocaleString('ko-KR')}원`;
 }
 
-function tagsFor(product, state, ranked) {
+/**
+ * The tag of a preference that came from memory: the memory's own words and the person, not the engine category name.
+ * hobby:등산 of 아버지 -> "등산 좋아하심(아버지)"; other keys use their label ("커피·차 선호(어머니)"). Shortened to fit 12.
+ */
+export function memoryTag(item) {
+  const k = parseKey(item?.key);
+  if (!k) return null;
+  const phrase = k.kind === 'hobby' ? `${k.value} 좋아하심` : item.label;
+  const who = item.recipientName;
+  for (const t of [who && `${phrase}(${who})`, phrase, k.kind === 'hobby' && who && `${k.value}(${who})`, k.kind === 'hobby' && k.value]) {
+    if (t && t.length <= MAX_TAG) return t;
+  }
+  return null;
+}
+
+/**
+ * {"category:fitness": "등산 좋아하심(아버지)"} for category preferences whose sources are memories only
+ * (a value the user said this session keeps the engine wording). First memory in memory.items order wins.
+ */
+export function memoryPreferenceTags(memory, provenance) {
+  const out = {};
+  for (const e of provenance?.preferences ?? []) {
+    if (typeof e.value !== 'string' || !e.value.startsWith('category:')) continue;
+    const sources = e.sources ?? [];
+    if (sources.includes('utterance')) continue;
+    const ids = sources.filter(s => s.startsWith('memory:')).map(s => s.slice(7));
+    const m = (memory?.items ?? []).find(i => ids.includes(i.memoryId));
+    const tag = m && memoryTag(m);
+    if (tag) out[e.value] = tag;
+  }
+  return out;
+}
+
+function tagsFor(product, state, ranked, memoryTags) {
   const tags = [];
-  if (state.preferences.includes(`category:${product.category}`)) tags.push(`${CATEGORY_NAMES[product.category]} 선호`);
+  const cat = `category:${product.category}`;
+  if (state.preferences.includes(cat)) tags.push(memoryTags[cat] ?? `${CATEGORY_NAMES[product.category]} 선호`);
   const soft = state.preferences.includes('less_sweet') || state.preferences.includes('unsweetened');
   if (soft && product.sweetness === 'unsweetened') tags.push('단맛 없음');
   else if (state.preferences.includes('less_sweet') && product.sweetness === 'naturally_sweet') tags.push('자연 단맛');
@@ -50,14 +85,15 @@ export function ladderChip(o) {
 }
 
 /**
- * @param {{cards:object[], products:object[], state:object, factsheet?:object}} p  cards = baseline result.cards, state = evaluatedState
+ * @param {{cards:object[], products:object[], state:object, factsheet?:object, memoryTags?:object}} p  cards = baseline result.cards,
+ *   state = evaluatedState, memoryTags = memoryPreferenceTags() (defaults to the factsheet's)
  * @returns {{items:[{id, tags, contrastChip?, memoryCfLine?, ladderChips?, ladderNotice?}]}}
  * The B-only fields go on the rank-1 item and only when the factsheet has them (condition A never does, AC12).
  */
-export function templateExplanations({ cards, products, state, factsheet = null }) {
+export function templateExplanations({ cards, products, state, factsheet = null, memoryTags = factsheet?.memoryTags ?? {} }) {
   const byId = new Map(products.map(p => [p.id, p]));
   const ranked = cards.map(c => byId.get(c.id)).filter(Boolean);
-  const items = ranked.map(p => ({ id: p.id, tags: tagsFor(p, state, ranked) }));
+  const items = ranked.map(p => ({ id: p.id, tags: tagsFor(p, state, ranked, memoryTags) }));
   if (!factsheet || factsheet.experiment !== 'B' || !items.length) return { items };
   const top = items[0];
   const contrast = contrastText(factsheet.contrast);

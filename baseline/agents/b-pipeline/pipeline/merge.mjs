@@ -18,9 +18,12 @@ const uniq = a => [...new Set(a)];
  * @param {string[]} [p.confirmedReleases]  session-only allergies the user confirmed releasing (never applies to remembered ones)
  * @param {{field:string,value:string,from?:string}[]} [p.ragCandidates]  ③ preference mapping
  * @param {object} [p.previousProvenance]  provenance saved with the session, for values already in state
+ * @param {{field:string,value:any}[]|null} [p.said]  list values the user actually said this turn (dialogue). When given,
+ *   a list value that was already in the state and not said keeps its previous sources instead of becoming 'utterance'
+ *   (an additive patch from ① repeats the old list; K44). null = every patch value counts as said (chip edits).
  * @returns {{patch:object, provenance:object, questions:object[], suppressed:object[]}}
  */
-export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {}, confirmedReleases = [] }) {
+export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {}, confirmedReleases = [], said = null }) {
   const u = structuredClone(utterancePatch ?? {});
   checkedPatch(state, u); // refuses unknown keys and bad shapes before anything is merged
   const changed = Object.hasOwn(u, 'recipients') && !same(u.recipients, state.recipients);
@@ -34,11 +37,14 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
     const hit = list.find(e => same(e.value, value));
     if (hit) { if (!hit.sources.includes(source)) hit.sources.push(source); } else list.push({ value, sources: [source] });
   };
-  for (const [field, value] of Object.entries(u)) {
-    if (Array.isArray(value)) value.forEach(v => add(field, v, 'utterance')); else add(field, value, 'utterance');
-  }
   const inherited = (field, value) => previousProvenance[field]?.find(e => same(e.value, value))?.sources ?? ['utterance'];
   const keepBase = (field, value) => { if (!changed) for (const s of inherited(field, value)) add(field, value, s); };
+  const repeated = (field, v) => said !== null && !changed && Array.isArray(base[field]) && base[field].some(b => same(b, v))
+    && !said.some(x => x.field === field && same(x.value, v));
+  for (const [field, value] of Object.entries(u)) {
+    if (Array.isArray(value)) value.forEach(v => (repeated(field, v) ? keepBase(field, v) : add(field, v, 'utterance')));
+    else add(field, value, 'utterance');
+  }
   const memItems = field => (memory?.items ?? []).filter(i => i.field === field);
 
   // excluded categories: (utterance ?? base) ∪ memory dislikes

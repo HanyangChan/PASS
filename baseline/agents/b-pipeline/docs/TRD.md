@@ -41,7 +41,7 @@ memory/read.mjs           # ② 기억 읽기
 memory/write.mjs          # ② 기억 쓰기
 memory/keys.mjs           # 기억 키 ↔ 엔진 상태 변환
 rag/agent.mjs             # ③ 취향 매핑
-rag/index.mjs             # 임베딩 인덱스 (메모리 내 코사인 + 키워드 대체)
+rag/index.mjs             # 임베딩 인덱스 (메모리 내 코사인). 임베딩 매핑은 플래그, 기본 꺼짐 (K43)
 planner/                  # contrast.mjs, memory-cf.mjs, value-ladder.mjs, factsheet.mjs
 explainer/agent.mjs       # ④ 설명 생성 (+ template.mjs)
 verifier/agent.mjs        # ⑤ 검증 (+ banned-words.mjs)
@@ -76,7 +76,7 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 3. **1단계 이해 (병렬):**
    - ① 대화 이해: `parseRules` → 해결 안 되면 LLM 1회 → `{patch, questions, unresolved, critiques, memoryCandidates, mentionedRecipients}`
    - ② 기억 읽기: 수령인 확인 후 확정 기억 → 조건 후보 + 출처
-   - ③ 취향 매핑: 엔진 어휘 밖의 자유 취향(`hobby:hiking` 등) → `category:<c>` 후보
+   - ③ 취향 매핑: 엔진 어휘 밖의 자유 취향(`hobby:hiking` 등) → `category:<c>` 후보. 실험은 표(`config/hobby-map.v1.json`) 매핑만 쓰고, 임베딩은 `ragEmbedding: true`일 때만(K43)
 4. **병합 (`merge.mjs`):**
    - 우선순위: 이번 발화 > 확정 기억 > 선물 이력에서 나온 선호
    - 알레르기·제외 카테고리는 합집합
@@ -98,7 +98,8 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 - `recipientId`는 사용자가 수령인을 고른 요청에만 보낸다. 문장·칩의 수령인이 항상 우선하고, 표시 이름과 기억 id는 같은 사람으로 정해진다(K36).
 - ③은 ② 다음에 한 번 호출한다(K27). 해석이 안 된 메시지는 아무것도 저장하지 않는다.
 - 해석 실패 질문은 하나다: "받는 분과 예산을 조금 더 구체적으로 알려주세요."(K25)
-- 행사 단어는 `parseRules` 전에 떼어 `occasion`으로 넣는다(K33).
+- 행사 단어는 `parseRules` 전에 떼어 `occasion`으로 넣는다(K33). 비평 표현(덜 단·안 단·실용적인·더 저렴한 등)도 그 전에 떼어 `less_sweet`·성향 `value`로 바꾼다. ①은 실제로 말한 목록 값을 `said`로 넘기고, merge는 그 값만 `utterance` 출처로 표시한다(K44).
+- `cards`·`comparison`에는 `hiddenProductIds`("이 상품만" 제외, 세션·수령인 단위)가 붙는다. 순위는 baseline 그대로이고 앱이 숨긴다(K45, 공통 코어 요청 C1).
 - 상한이 있는 수령인: 예산이 없거나 상한을 넘으면 `question`에 `budgetChips`(상한 금액)를 붙인다. 넘는 경우 카드·설명·비교를 보내지 않는다(K37).
 
 ## 5. 기억 설계
@@ -203,6 +204,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
   - 금지어 없음
   - 알레르기 안내 유지
   - 실패하면 ④에 사유를 붙여 1회 재생성하고, 그래도 실패하면 해당 상품만 템플릿으로 바꾼다.
+- **P5 구현 기준:** 검증 규칙 K46, ④ 호출·재생성·빠진 B 칩 채우기 K47, 기억 출처 선호 태그 `등산 좋아하심(아버지)` K48(Factsheet `memoryTags`, `usedMemories[].recipientName`), 숨긴 상품을 가리키는 B 칩 제거 K45, 실험 로그 K49. `explanations.source`는 `llm | mixed | template`.
 
 ## 8. LLM 어댑터 (`llm/`)
 - **인터페이스:** `createLlm({provider}) → { json({system, input, schema, timeoutMs}), embed(texts) } | null`

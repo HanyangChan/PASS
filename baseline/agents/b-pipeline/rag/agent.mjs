@@ -1,5 +1,6 @@
 // ③ preference mapping: free hobbies (hobby:<word>) -> category:<c> candidates for `preferences`.
-// Deterministic keyword table first; embeddings only for words the table misses. Never produces allergies,
+// Deterministic keyword table only by default. Embeddings for words the table misses are behind a flag
+// (`embedding: true`, default off, K43): the experiment uses the table mapping only. Never produces allergies,
 // never ranks. A mapped candidate is still a candidate: merge applies exclusions on top of it (merge.mjs).
 import { readFileSync } from 'node:fs';
 import { CATEGORIES, CATEGORY_NAMES } from '../../../src/vendor/catalog.mjs';
@@ -28,8 +29,12 @@ function tableLookup(table, word) {
   return hit ? table[hit] : null;
 }
 
-/** createHobbyMapper({llm, map}) -> {map(items:[{memoryId, word}]) -> [{field:'preferences', value, from:'memory:<id>'}]} */
-export function createHobbyMapper({ llm = null, map = loadHobbyMap(), minCosine = map.minCosine } = {}) {
+/**
+ * createHobbyMapper({llm, map, embedding}) -> {map(items:[{memoryId, word}]) -> [{field:'preferences', value, from:'memory:<id>'}]}
+ * embedding: false (default) = table only, the LLM's embed() is never called even if it can embed (K43).
+ */
+export function createHobbyMapper({ llm = null, map = loadHobbyMap(), minCosine = map.minCosine, embedding = false } = {}) {
+  if (typeof embedding !== 'boolean') throw new TypeError('embedding must be a boolean');
   let indexPromise = null; // category docs are embedded once per mapper
   const buildIndex = async () => {
     const docs = CATEGORIES.map(c => `${CATEGORY_NAMES[c]} ${c} ${Object.entries(map.table).filter(([, v]) => v.includes(c)).map(([k]) => k).join(' ')}`);
@@ -49,7 +54,7 @@ export function createHobbyMapper({ llm = null, map = loadHobbyMap(), minCosine 
         const cats = tableLookup(map.table, norm(item.word));
         if (cats) cats.forEach(c => push(item, c)); else missed.push(item);
       }
-      if (missed.length && llm?.canEmbed) {
+      if (embedding && missed.length && llm?.canEmbed) {
         try {
           indexPromise ??= buildIndex();
           const index = await indexPromise;

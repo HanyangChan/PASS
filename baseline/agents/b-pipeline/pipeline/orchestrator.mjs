@@ -9,8 +9,9 @@ import { createMemoryWriter } from '../memory/write.mjs';
 import { MemoryError, keyLabel, parseKey, CATEGORY_KO } from '../memory/keys.mjs';
 import { StoreError } from '../db/contract.mjs';
 import { createHobbyMapper } from '../rag/agent.mjs';
-import { templateExplanations, wonShort } from '../explainer/template.mjs';
+import { templateExplanations, memoryPreferenceTags, wonShort } from '../explainer/template.mjs';
 import { buildFactsheet, planValueLadder, shiftSensitivity } from '../planner/index.mjs';
+import { verifyExplanations, B_FIELDS } from '../verifier/agent.mjs';
 import { SENSITIVITIES } from '../db/contract.mjs';
 import { mergeConditions } from './merge.mjs';
 import { dropMemories } from './provenance.mjs';
@@ -31,7 +32,7 @@ const suggestedPrompt = p => ({ ...p, kind: 'suggested', candidates: p.candidate
 
 export const defaultMeta = () => ({
   recipientIds: [], sensitivity: 'balanced', experiment: 'B', provenance: {},
-  pendingCandidates: [], pendingGifts: [], pendingPrompt: null, pendingDismissals: [], ladderStreak: null, pendingSensitivity: null, conflicts: [], satisfactionAsked: false, ended: false,
+  pendingCandidates: [], pendingGifts: [], pendingPrompt: null, pendingDismissals: [], hiddenProductIds: [], ladderStreak: null, pendingSensitivity: null, conflicts: [], satisfactionAsked: false, ended: false,
 });
 
 const invalid = () => new BaselineError('invalid_request');
@@ -46,29 +47,86 @@ const isKnownError = e => e instanceof BaselineError || e instanceof StoreError 
  * @param {object} deps.store       db/store.mjs or db/memory-store.mjs
  * @param {object[]} deps.products  engine products
  * @param {object|null} [deps.llm]  llm/ adapter (null = rules and templates only)
- * @param {Function|null} [deps.explain]  ④ explainer (P5). Any failure falls back to template tags (AC3)
+ * @param {Function|null} [deps.explain]  ④ explainer (explainer/agent.mjs). Its answer is checked by ⑤; failures fall back to the template (AC3, AC11)
  * @param {() => string} [deps.now]
  */
 export function createOrchestrator({ store, products, llm = null, explain = null, now = () => new Date().toISOString(),
-  dialogue = createDialogue({ llm }), hobbyMapper = createHobbyMapper({ llm }), writer = createMemoryWriter({ store }) }) {
+  ragEmbedding = false, dialogue = createDialogue({ llm }), hobbyMapper = createHobbyMapper({ llm, embedding: ragEmbedding }), writer = createMemoryWriter({ store }) }) {
   if (!store || !Array.isArray(products)) throw new TypeError('store and products are required');
   const realIds = ids => ids.filter(id => !isNewRecipientId(id));
   const setCost = id => { const p = products.find(x => x.id === id); return p ? p.price_krw + p.shipping_fee_per_set_krw : Infinity; };
 
+  // K47: the last explanation per session, keyed by its factsheet. A turn that shows the same facts again (view, "이 상품만",
+  // a chip that changes nothing) reuses it instead of paying for another LLM call. In memory only, bounded.
+  const explained = new Map();
+  const remember = (sessionId, key, value) => {
+    explained.delete(sessionId); explained.set(sessionId, { key, ...value });
+    if (explained.size > 500) explained.delete(explained.keys().next().value);
+  };
+
+  /** Experiment log: codes and ids only, never raw text (AGENTS.md). Logging never breaks a turn. */
+  async function log(sessionId, type, payload) {
+    try { await store.logEvent?.({ sessionId, type, payload }); } catch { /* the log is best effort */ }
+  }
+
+  /** B chips that would point at a product the user hid ("이 상품만", K28) are left out. */
+  function withoutHidden(items, factsheet, hidden) {
+    if (!hidden.length || !items.length || factsheet?.experiment !== 'B') return items;
+    const top = { ...items[0] };
+    if (hidden.includes(top.id)) for (const k of B_FIELDS) delete top[k];
+    if (factsheet.contrast && hidden.includes(factsheet.contrast.secondId)) delete top.contrastChip;
+    if (factsheet.memoryCf && hidden.includes(factsheet.memoryCf.newTopId)) delete top.memoryCfLine;
+    if (top.ladderChips) {
+      const options = [...(factsheet.valueLadder?.down ?? []), ...(factsheet.valueLadder?.up ?? [])];
+      top.ladderChips = top.ladderChips.filter(ch => !hidden.includes(options.find(o => o.direction === ch.direction && o.amount_krw === ch.amount_krw)?.newTopId));
+      if (!top.ladderChips.length) delete top.ladderChips;
+    }
+    return [top, ...items.slice(1)];
+  }
+
   /**
-   * 2단계 (TRD §4-7): planner -> Factsheet -> ④ (P5) -> template fallback. Never throws (AC3).
-   * Condition A gets a factsheet without contrast/memoryCf/valueLadder; the cards are the same in A and B (AC12).
+   * 2단계 (TRD §4-7): planner -> Factsheet -> ④ -> ⑤ -> (④ again with the reasons, once) -> template per failing item.
+   * Never throws (AC3). Condition A gets a factsheet without contrast/memoryCf/valueLadder; cards are the same in A and B
+   * (AC12). A verified LLM item keeps the template's B chips it left out, so condition B always shows its facts.
+   * @returns {{items, source:'llm'|'mixed'|'template'}}
    */
-  async function explainCards({ session, cards, state, provenance, memory, experiment, sensitivity = 'balanced', budgetCap = null }) {
+  async function explainCards({ session, cards, state, provenance, memory, experiment, sensitivity = 'balanced', budgetCap = null, hiddenProductIds = [] }) {
     let factsheet = null;
     try { factsheet = await buildFactsheet({ session, cards, products, state, provenance, memory, experiment, sensitivity, budgetCap, now: now() }); } catch { factsheet = null; }
-    const template = () => ({ ...templateExplanations({ cards, products, state, factsheet }), source: 'template' });
-    if (!explain || !cards.length || !factsheet) return template();
-    try {
-      const out = await explain({ cards, products, state, factsheet, experiment });
-      if (!out || !Array.isArray(out.items)) return template();
-      return { items: out.items, source: 'llm' };
-    } catch { return template(); }
+    const draft = templateExplanations({ cards, products, state, factsheet, memoryTags: factsheet?.memoryTags ?? memoryPreferenceTags(memory, provenance) });
+    const done = async (items, source, extra = {}) => {
+      await log(session.id, 'explanations', { experiment, source, cardIds: cards.map(c => c.id), ...extra });
+      return { items: withoutHidden(items, factsheet, hiddenProductIds), source };
+    };
+    if (!explain || !cards.length || !factsheet) return done(draft.items, 'template');
+    const key = JSON.stringify(factsheet);
+    const hit = explained.get(session.id);
+    if (hit?.key === key) return done(hit.items, hit.source, { cached: true });
+    let check = null, retryReasons = null, attempts = 0;
+    const failures = [], passed = new Map(); // an item that passed once is kept even if the retry breaks it
+    while (attempts < 2) {
+      attempts++;
+      let out = null;
+      try { out = await explain({ cards, products, state, factsheet, experiment, draft, retryReasons }); } catch { out = null; }
+      if (!out) { failures.push('llm_failed'); check = null; break; } // no answer at all: a retry would not help (and costs a call)
+      check = verifyExplanations({ output: out, factsheet, products });
+      for (const [id, item] of check.valid) if (!passed.has(id)) passed.set(id, item);
+      if (check.ok) break;
+      failures.push(...check.reasons.map(r => r.code));
+      retryReasons = check.reasons;
+    }
+    const items = draft.items.map(t => {
+      const v = passed.get(t.id);
+      if (!v) return { ...t, fromLlm: false };
+      const filled = { ...v };
+      for (const k of B_FIELDS) if (filled[k] === undefined && t[k] !== undefined) filled[k] = t[k];
+      return { ...filled, fromLlm: true };
+    });
+    const n = items.filter(i => i.fromLlm).length;
+    const source = n === items.length ? 'llm' : n ? 'mixed' : 'template';
+    const final = items.map(({ fromLlm, ...i }) => i);
+    if (source !== 'template') remember(session.id, key, { items: final, source }); // a failed call may succeed next time
+    return done(final, source, { attempts, failures: [...new Set(failures)] });
   }
 
   /** Smallest budget cap among the people of this turn; null = none (R3: used only to block "올리기" and to ask). */
@@ -149,19 +207,21 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     if (cap && (perSet > cap || out.result.cards.some(c => setCost(c.id) > cap))) {
       return ask(`이 분께는 예산 상한 ${wonShort(cap)}(세트당, 배송비 포함)을 정해 두셨어요. 그 안으로 다시 알려주세요.`, true);
     }
-    const tags = templateExplanations({ cards: out.result.cards, products, state });
+    const tags = templateExplanations({ cards: out.result.cards, products, state, memoryTags: memoryPreferenceTags(memory, provenance) });
+    // K28 "이 상품만": the ranking is untouched (baseline result as is); the app hides these ids (common-core request filed)
+    const hiddenProductIds = [...(ctx.meta.hiddenProductIds ?? [])];
     ctx.send({
-      type: out.kind === 'comparison' ? 'comparison' : 'cards', version: out.session.version, result: out.result, banner, recipientChoices: choices,
+      type: out.kind === 'comparison' ? 'comparison' : 'cards', version: out.session.version, result: out.result, banner, recipientChoices: choices, hiddenProductIds,
       annotations: out.result.cards.map(c => ({ id: c.id, tags: tags.items.find(i => i.id === c.id)?.tags ?? [], giftHistory: giftHistoryHit(c.id, memory?.giftHistory, now()) })),
     });
     for (const p of prompts) ctx.send(p);
     if (out.kind === 'comparison') return;
-    const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap });
+    const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap, hiddenProductIds });
     ctx.send({ type: 'explanations', version: out.session.version, ...ex });
   }
 
   /** ② memory, ③ mapping, merge, runTurn(patch), save, present. Shared by message and chip turns. */
-  async function recommend(ctx, { utterancePatch, candidates = [], confirmedReleases = [], choice, extraPrompts = [], sensitivity }) {
+  async function recommend(ctx, { utterancePatch, candidates = [], confirmedReleases = [], choice, extraPrompts = [], sensitivity, said = null }) {
     const { ownerId, session, meta } = ctx;
     if (!object(utterancePatch)) throw invalid();
     const u = structuredClone(utterancePatch);
@@ -189,7 +249,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const mapped = await hobbyMapper.map([...memory.hobbies.map(h => ({ memoryId: h.memoryId, word: h.word })), ...spoken]);
     const ragCandidates = mapped.map(r => (r.from.startsWith('memory:utterance-') ? { ...r, from: 'utterance' } : r));
 
-    const merged = mergeConditions({ state: session.state, utterancePatch: u, memory, ragCandidates, previousProvenance: meta.provenance, confirmedReleases });
+    const merged = mergeConditions({ state: session.state, utterancePatch: u, memory, ragCandidates, previousProvenance: meta.provenance, confirmedReleases, said });
     const out = await runTurn({ session, request: { kind: 'patch', patch: merged.patch, expectedVersion: session.version }, products });
     const changed = JSON.stringify(out.session.state.recipients) !== JSON.stringify(session.state.recipients);
     // merge owns the list fields and packaging: an empty result there must clear the old record (banner, AC9)
@@ -202,7 +262,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const kinds = [...new Set(rows.map(r => r.priceSensitivity))];
       meta.sensitivity = kinds.length === 1 ? kinds[0] : 'balanced';
       // answers that belong to the previous people must not be written to the new ones (review)
-      meta.ladderStreak = null; meta.pendingSensitivity = null; meta.pendingDismissals = [];
+      meta.ladderStreak = null; meta.pendingSensitivity = null; meta.pendingDismissals = []; meta.hiddenProductIds = [];
     }
     if (sensitivity !== undefined) { meta.sensitivity = sensitivity; meta.ladderStreak = null; } // the chip wins over the person's default
     meta.recipientIds = ids;
@@ -247,7 +307,14 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const d = await dialogue.interpret({ text: request.text, state: structuredClone(ctx.session.state) });
       // AC2: nothing is saved; exactly one question
       if (d.unresolved) { ctx.send({ type: 'question', question: d.questions[0] || FALLBACK_QUESTION, version: ctx.session.version, banner: null, recipientChoices: null }); return; }
-      await recommend(ctx, { utterancePatch: d.patch, candidates: d.memoryCandidates ?? [], choice: request.recipientChoice });
+      // K44: "더 저렴한·실용적인" sets this session's sensitivity like the 가성비 chip (B only; A has no price options).
+      // A sentence that ONLY sets it changes nothing in A, so A asks the one question instead (nothing saved, AC2).
+      const sensitivity = d.sensitivity && ctx.meta.experiment === 'B' ? d.sensitivity : undefined;
+      if (d.sensitivity && !sensitivity && !Object.keys(d.patch).length) {
+        ctx.send({ type: 'question', question: FALLBACK_QUESTION, version: ctx.session.version, banner: null, recipientChoices: null });
+        return;
+      }
+      await recommend(ctx, { utterancePatch: d.patch, candidates: d.memoryCandidates ?? [], choice: request.recipientChoice, said: d.said ?? null, sensitivity });
     },
     async patch(ctx, request) {
       const releases = request.confirmedReleases ?? [];
@@ -306,7 +373,8 @@ export function createOrchestrator({ store, products, llm = null, explain = null
         if (!product || !meta.recipientIds.length) throw invalid();
         if (request.action === 'dismissed') {
           // K28: a dismissal is first asked about ("이 상품만 / 이런 종류 모두"); only "이런 종류 모두" becomes a
-          // suggested dislike:category signal. "이 상품만" records nothing (the engine has no per-product exclusion).
+          // suggested dislike:category signal. "이 상품만" records no memory: the product id goes to meta.hiddenProductIds
+          // (this session, these people) and the cards event tells the app to hide it. Ranking is never changed here.
           if (request.scope === undefined) {
             if (realIds(meta.recipientIds).length) {
               meta.pendingDismissals = [...meta.pendingDismissals.filter(id => id !== product.id), product.id];
@@ -315,6 +383,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
           } else {
             if (!DISMISS_SCOPES.includes(request.scope) || !meta.pendingDismissals.includes(product.id)) throw invalid();
             meta.pendingDismissals = meta.pendingDismissals.filter(id => id !== product.id);
+            if (request.scope === 'product' && !meta.hiddenProductIds.includes(product.id)) meta.hiddenProductIds = [...meta.hiddenProductIds, product.id];
             if (request.scope === 'category') {
               for (const recipientId of realIds(meta.recipientIds)) {
                 const r = await writer.recordFeedback(ownerId, { recipientId, key: `dislike:category:${product.category}`, polarity: -1, sessionId: session.id, productId: product.id });
@@ -408,6 +477,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
   async function runPipelineTurn({ ownerId, sessionId, recipientId, request, experiment, emit }) {
     const events = [];
     const send = e => { events.push(e); emit?.(e); };
+    let loggedExperiment = EXPERIMENTS.includes(experiment) ? experiment : null;
     try {
       if (!object(request) || !REQUEST_KINDS.includes(request.kind)) throw invalid();
       if (experiment !== undefined && !EXPERIMENTS.includes(experiment)) throw invalid();
@@ -415,11 +485,18 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const ctx = { ownerId, recipientId, session: row.session, meta: { ...defaultMeta(), ...row.meta }, send, isNew: row.isNew === true };
       if (request.expectedVersion !== undefined && request.expectedVersion !== ctx.session.version) throw new BaselineError('version_conflict');
       if (experiment !== undefined) ctx.meta.experiment = experiment;
+      loggedExperiment = ctx.meta.experiment; // the condition the turn actually ran under (stored in meta)
       await handlers[request.kind](ctx, request);
     } catch (e) {
       if (!isKnownError(e)) throw e;
       send({ type: 'error', code: e.code });
     }
+    // one row per turn: the request kind and the event types only (no text, no candidates, no evidence)
+    await log(typeof sessionId === 'string' ? sessionId : null, 'turn', {
+      requestKind: object(request) && REQUEST_KINDS.includes(request.kind) ? request.kind : 'invalid',
+      experiment: loggedExperiment,
+      events: events.map(e => e.type), errorCode: events.find(e => e.type === 'error')?.code ?? null,
+    });
     return { events };
   }
 

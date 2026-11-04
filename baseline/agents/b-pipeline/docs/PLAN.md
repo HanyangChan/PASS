@@ -38,6 +38,6 @@
 | P2 ✓ | dialogue/agent(parseRules → LLM 1회), rag/index·agent, config/hobby-map.v1.json(초안, D5), index.mjs 연결(키 없으면 기존 질문 유지) | AC2 7 16(규칙) | dialogue, rag, index-contract + 공통 agents.test | Sonnet |
 | P3 ✓ | pipeline/index(createPipeline), orchestrator(runPipelineTurn: 세션 DB 로드 → 의도 분기(message/patch/view/what_if_budget/feedback/memory_edit/end_session) → ① → ②③ → merge → runTurn(kind:'patch') → CAS 저장 → cards → explainCards(템플릿) → explanations / memory_prompt), memoryBanner, giftHistoryHit | AC1 2 3 5 6 9 | orchestrator(baseline deepEqual, 이벤트 순서, S1→S2 통합, stale) | **Opus** |
 | P4 ✓ | planner/contrast, memory-cf(R6), value-ladder(budgetAlternatives·rankProducts·what_if, 상한 R3, 성향 이동), factsheet(조건 A 키 없음) | AC7 10 12 13 14 15 | planner | **Opus** |
-| P5 | verifier(먼저) → explainer/template(100% 통과) → explainer/agent(LLM 1회 + 재생성 1회 → 템플릿), banned-words(R7), events 로깅(원문 없음) | AC3 7 11 12 14 | verifier, explainer, logging | **Opus** |
+| P5 ✓ | verifier(먼저) → explainer/template(100% 통과) → explainer/agent(LLM 1회 + 재생성 1회 → 템플릿), banned-words(R7), events 로깅(원문 없음) | AC3 7 11 12 14 | verifier, explainer, logging | **Opus** |
 | P6 | server/index.mjs(node:http, SSE, 입력 검증), scripts/latency.mjs, app/ 복사(R1) + pipelineChatService.ts + 칩·반영 한 줄·기억할까요?·[수정]·참가자 ID | AC3 4 9 15 16 | server(핸들러 직접 호출) | Sonnet |
 | P7 | eval/simulator, personas 2명, metrics. 실제 LLM 실행 전 예상 호출·토큰 보고 후 승인 | 전체 회귀 | eval | Sonnet |

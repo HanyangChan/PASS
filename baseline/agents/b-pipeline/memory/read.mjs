@@ -34,11 +34,12 @@ export async function loadMemory(store, ownerId, recipientIds, { now = new Date(
   const conditions = { preferences: [], excluded_categories: [], excluded_ingredients: [], packaging: null };
   const items = [], hobbies = [], giftHistory = [], used = [];
   for (const recipientId of recipientIds) {
+    const recipientName = (await store.getRecipient(ownerId, recipientId))?.name ?? null; // for "등산 좋아하심(아버지)" tags
     for (const m of await store.listMemories(ownerId, recipientId, { status: 'confirmed' })) {
       const check = checkKey(m.key, m.polarity);
       if (!check.ok || check.negation) continue;
       const mapped = keyToField(m.key);
-      items.push({ memoryId: m.id, recipientId, key: m.key, field: mapped?.field ?? null, value: mapped?.value ?? null, label: keyLabel(m.key), evidence: m.evidence });
+      items.push({ memoryId: m.id, recipientId, recipientName, key: m.key, field: mapped?.field ?? null, value: mapped?.value ?? null, label: keyLabel(m.key), evidence: m.evidence });
       used.push(m.id);
       if (!mapped) { const k = parseKey(m.key); if (k.kind === 'hobby') hobbies.push({ memoryId: m.id, recipientId, word: k.value }); continue; }
       if (mapped.field === 'packaging') conditions.packaging = conditions.packaging === 'formal' || mapped.value === 'formal' ? 'formal' : mapped.value;

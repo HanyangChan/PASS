@@ -29,7 +29,7 @@ const msg = text => ({ kind: 'message', text });
 function setup(make, { llm = null, replies, now = () => '2026-09-20T03:00:00.000Z', ...rest } = {}) {
   const store = make();
   const fake = replies ? createFakeLlm({ json: replies }) : llm;
-  const pipe = createPipeline({ store, products, llm: fake, now, ...rest });
+  const pipe = createPipeline({ store, products, llm: fake, now, explain: null, ...rest });
   const turn = (sessionId, request, extra = {}) => pipe.runPipelineTurn({ ownerId: 'userA', sessionId, request, ...extra });
   return { store, pipe, turn, llm: fake };
 }
@@ -295,8 +295,16 @@ for (const [name, make] of Object.entries(stores)) {
     assert.deepEqual([p.kind, p.productId, p.text, p.chips.map(c => c.label)], ['dismiss_scope', 'drip-coffee', '이 상품만 뺄까요, 이런 종류 모두 뺄까요?', ['이 상품만', '이런 종류 모두']]);
     assert.ok(types(out).indexOf('cards') < types(out).indexOf('memory_prompt'));
     assert.deepEqual(await store.listMemories('userA', mom.id), [], 'the dismissal itself records nothing');
-    await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee', scope: 'product' });
+    const before = ev(await turn('s', { kind: 'view' }), 'cards');
+    assert.deepEqual(before.hiddenProductIds, []);
+    const only = await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee', scope: 'product' });
     assert.deepEqual(await store.listMemories('userA', mom.id), [], '"이 상품만" records nothing');
+    // the ranking is the baseline's, unchanged; the app is told to hide the product (common-core request: excluded_product_ids)
+    assert.deepEqual(ev(only, 'cards').result, before.result);
+    assert.deepEqual(ev(only, 'cards').hiddenProductIds, ['drip-coffee']);
+    assert.deepEqual(ev(await turn('s', { kind: 'view' }), 'cards').hiddenProductIds, ['drip-coffee'], 'kept for the session');
+    assert.deepEqual(ev(await turn('s', msg('아버지 한 세트 세트당 예산 5만원 이하 배송비 포함 추천')), 'cards').hiddenProductIds, [], 'a new person starts with nothing hidden');
+    await turn('s', msg(CLEAR));
     assert.equal(ev(await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee', scope: 'category' }), 'error').code, 'invalid_request', 'answered already');
     await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'coffee-beans' });
     await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'coffee-beans', scope: 'category' });
