@@ -52,7 +52,11 @@ for (const [name, make] of Object.entries(stores)) {
     for (const bad of [{ polarity: 0 }, { status: 'inferred' }, { source: 'age' }, { evidence: '' }, { evidence: 'x'.repeat(201) }, { strength: 2 }]) {
       await assert.rejects(s.addMemory('userA', { ...memory, recipientId: r.id, ...bad }), { code: 'invalid_store_input' });
     }
+    for (const bad of [{ signals: 'a' }, { signals: [1] }, { signals: ['x'.repeat(101)] }]) {
+      await assert.rejects(s.addMemory('userA', { ...memory, recipientId: r.id, ...bad }), { code: 'invalid_store_input' }, JSON.stringify(bad));
+    }
     const m = await s.addMemory('userA', { ...memory, recipientId: r.id });
+    assert.deepEqual(m.signals, [], 'signals default to an empty list');
     await assert.rejects(s.updateMemory('userA', m.id, { key: 'pref:less_sweet' }), { code: 'invalid_store_input' });
     const edited = await s.updateMemory('userA', m.id, { strength: 0.9 });
     assert.equal(edited.strength, 0.9);
@@ -130,3 +134,17 @@ test('sqlite store persists to a file path and reopens', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+for (const [name, make] of Object.entries(stores)) {
+  test(`${name} store: signals (suggested-feedback sessions) are their own column and never touch evidence`, async () => {
+    const s = make();
+    const r = await s.createRecipient('userA', { name: '어머니' });
+    const m = await s.addMemory('userA', { recipientId: r.id, key: 'pref:category:fitness', polarity: 1, status: 'suggested', source: 'feedback', evidence: '행동 피드백', signals: ['s1'] });
+    assert.deepEqual(m.signals, ['s1']);
+    const u = await s.updateMemory('userA', m.id, { signals: ['s1', 's2'] });
+    assert.deepEqual(u.signals, ['s1', 's2']);
+    assert.equal(u.evidence, '행동 피드백');
+    assert.deepEqual((await s.getMemory('userA', m.id)).signals, ['s1', 's2']);
+    s.close();
+  });
+}

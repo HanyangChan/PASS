@@ -5,6 +5,8 @@ import { initial } from '../../../src/vendor/engine.mjs';
 import { checkedPatch } from '../../../src/contracts.mjs';
 import { mergeConditions } from '../pipeline/merge.mjs';
 import { products } from './fixtures/catalog.mjs';
+import { loadMemory } from '../memory/read.mjs';
+import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
 
 const state = (over = {}) => ({ ...initial(), ...over, budget: { ...initial().budget, ...(over.budget ?? {}) } });
 const mem = (items, extra = {}) => ({
@@ -73,18 +75,44 @@ test('excluded categories are a union of state/utterance and memory dislikes', (
   assert.deepEqual(out.patch.excluded_categories.sort(), ['beauty', 'snack']);
 });
 
-test('AC7: an utterance (or LLM/chip) patch that empties or shrinks allergies keeps them and asks to delete the memory (R5)', () => {
+test('AC7: a patch that empties or shrinks a remembered allergy keeps it and asks to delete the memory (R5)', () => {
   const cur = state({ recipients: ['부모님'], excluded_ingredients: ['땅콩', '우유'] });
   for (const u of [{ excluded_ingredients: [] }, { excluded_ingredients: ['우유'] }]) {
     const out = mergeConditions({ state: cur, utterancePatch: u, memory: S2_MEMORY(), products });
     assert.ok(out.patch.excluded_ingredients.includes('땅콩'), JSON.stringify(u));
-    assert.ok(out.patch.excluded_ingredients.includes('우유'));
-    assert.equal(out.questions.length, 1);
-    assert.equal(out.questions[0].type, 'allergy_release');
-    assert.equal(out.questions[0].text, '기억에서도 삭제할까요?');
-    assert.ok(out.questions[0].ingredients.includes('땅콩'));
+    assert.ok(out.patch.excluded_ingredients.includes('우유'), 'the session allergy is also kept until the user confirms');
+    const del = out.questions.filter(q => q.type === 'allergy_release');
+    assert.equal(del.length, 1);
+    assert.equal(del[0].text, '기억에서도 삭제할까요?');
+    assert.deepEqual(del[0].ingredients, ['땅콩']); assert.deepEqual(del[0].memoryIds, ['m2']);
     checkedPatch(cur, out.patch);
   }
+});
+
+test('item 4: a session-only allergy (not in memory) is released after ONE confirmation question', () => {
+  const cur = state({ recipients: ['친구'], excluded_ingredients: ['우유'] });
+  const ask = mergeConditions({ state: cur, utterancePatch: { excluded_ingredients: [] }, memory: mem([]), products });
+  assert.deepEqual(ask.patch.excluded_ingredients, ['우유'], 'not released before the answer');
+  assert.deepEqual(ask.questions, [{ type: 'allergy_release_session', ingredients: ['우유'], text: '알레르기 제외를 해제할까요?' }]);
+  const yes = mergeConditions({ state: cur, utterancePatch: { excluded_ingredients: [] }, memory: mem([]), products, confirmedReleases: ['우유'] });
+  assert.deepEqual(yes.patch.excluded_ingredients, []);
+  assert.deepEqual(yes.questions, []);
+  assert.equal(prov(yes, 'excluded_ingredients', '우유'), undefined);
+  checkedPatch(cur, yes.patch);
+});
+
+test('item 4 / AC7: a confirmed release never reaches a remembered allergy; that one still needs the memory deletion', () => {
+  const cur = state({ recipients: ['부모님'], excluded_ingredients: ['땅콩', '우유'] });
+  const out = mergeConditions({ state: cur, utterancePatch: { excluded_ingredients: [] }, memory: S2_MEMORY(), products, confirmedReleases: ['땅콩', '우유'] });
+  assert.deepEqual(out.patch.excluded_ingredients, ['땅콩'], '우유 (session-only) released, 땅콩 (memory) kept');
+  assert.equal(out.questions.length, 1); assert.equal(out.questions[0].type, 'allergy_release');
+  assert.ok(prov(out, 'excluded_ingredients', '땅콩'));
+});
+
+test('item 4: a release confirmation without the user shrinking anything changes nothing', () => {
+  const cur = state({ recipients: ['친구'], excluded_ingredients: ['우유'] });
+  const out = mergeConditions({ state: cur, utterancePatch: { budget: { amount_krw: 30000 } }, memory: mem([]), products, confirmedReleases: ['우유'] });
+  assert.deepEqual(out.patch.excluded_ingredients ?? cur.excluded_ingredients, ['우유']);
 });
 
 test('AC7: allergies never shrink for any non-recipient patch, including an LLM patch with unrelated fields', () => {
@@ -104,17 +132,23 @@ test('AC8 / AC9: after the memory is deleted the next merge no longer carries it
   assert.equal(Object.hasOwn(out.patch, 'excluded_ingredients'), false);
 });
 
-test('gift history: a well-liked past gift adds its category as the weakest preference; low scores and excluded categories add nothing', () => {
+test('item 1: gift history alone never changes preferences (engine has category +3 and no repeat avoidance)', () => {
   const m = { ...mem([]), giftHistory: [
     { id: 'g1', productId: 'yakgwa-set', satisfaction: 5, occasion: '추석', givenAt: '2025-09-30' },
-    { id: 'g2', productId: 'hiking-socks', satisfaction: 2, occasion: '생일', givenAt: '2025-05-01' },
-    { id: 'g3', productId: 'coffee-beans', satisfaction: null, occasion: null, givenAt: null },
+    { id: 'g2', productId: 'hiking-socks', satisfaction: 4, occasion: '생일', givenAt: '2025-05-01' },
   ] };
   const out = mergeConditions({ state: state(), utterancePatch: { recipients: ['부모님'] }, memory: m, products });
+  assert.deepEqual(out.patch, { recipients: ['부모님'] });
+  assert.equal(Object.hasOwn(out.provenance, 'preferences'), false);
+  const withMem = mergeConditions({ state: state(), utterancePatch: { recipients: ['부모님'] }, memory: { ...S2_MEMORY(), giftHistory: m.giftHistory }, products });
+  assert.deepEqual(withMem.patch.preferences, ['less_sweet'], 'only the confirmed memory contributes');
+});
+
+test('item 1: a preference chip the user presses is an utterance patch, so it applies and is attributed to the utterance', () => {
+  const m = { ...mem([]), giftHistory: [{ id: 'g1', productId: 'yakgwa-set', satisfaction: 5, occasion: '추석', givenAt: '2025-09-30' }] };
+  const out = mergeConditions({ state: state({ recipients: ['부모님'] }), utterancePatch: { preferences: ['category:food'] }, memory: m, products });
   assert.deepEqual(out.patch.preferences, ['category:food']);
-  assert.deepEqual(prov(out, 'preferences', 'category:food'), ['history:g1']);
-  const blocked = mergeConditions({ state: state(), utterancePatch: { recipients: ['부모님'], excluded_categories: ['food'] }, memory: m, products });
-  assert.equal(Object.hasOwn(blocked.patch, 'preferences'), false);
+  assert.deepEqual(prov(out, 'preferences', 'category:food'), ['utterance']);
 });
 
 test('RAG candidates join as preferences with source "rag" and never override an exclusion', () => {
@@ -135,3 +169,21 @@ test('merge does not mutate its inputs', () => {
   mergeConditions({ state: cur, utterancePatch: u, memory: m, products });
   assert.deepEqual([cur, u, m], snap);
 });
+
+for (const [name, make] of Object.entries(stores)) {
+  test(`[${name}] item 5: 어머니 → 부모님 turn keeps the mother's allergy as a group union`, async () => {
+    const store = make();
+    const { mom, dad } = await seedPeople(store);
+    await seedS1Memories(store, { mom, dad });
+    // Turn 1 was the mother alone: her allergy is in state. Turn 2 switches to the group.
+    const turn1 = mergeConditions({ state: state(), utterancePatch: { recipients: ['어머니'] }, memory: await loadMemory(store, 'userA', [mom.id]), products });
+    assert.deepEqual(turn1.patch.excluded_ingredients, ['땅콩']);
+    const cur = state({ recipients: ['어머니'], excluded_ingredients: ['땅콩'], preferences: ['less_sweet'] });
+    const group = await loadMemory(store, 'userA', [mom.id, dad.id]);
+    const turn2 = mergeConditions({ state: cur, utterancePatch: { recipients: ['부모님'] }, memory: group, products });
+    assert.deepEqual(turn2.patch.excluded_ingredients, ['땅콩'], 'union survives the baseline reset');
+    assert.deepEqual(turn2.questions, []);
+    checkedPatch(cur, turn2.patch);
+    store.close?.();
+  });
+}

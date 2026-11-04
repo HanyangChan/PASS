@@ -20,7 +20,8 @@ create table if not exists memories(
   strength real not null default 0.7 check (strength >= 0 and strength <= 1),
   status text not null check (status in ('confirmed','suggested')),
   source text not null check (source in ('explicit','feedback','purchase')),
-  evidence text not null check (length(evidence) between 1 and 200), -- user's own sentence
+  evidence text not null check (length(evidence) between 1 and 200), -- user's own sentence only
+  signals text not null default '[]',          -- JSON: session ids of suggested-feedback signals (never in evidence)
   created_at text not null,
   last_used_at text);
 create index if not exists memories_recipient on memories(recipient_id);

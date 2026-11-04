@@ -3,6 +3,8 @@
 import { checkKey, conflicts, isAllergyKey, keyLabel, parseKey, MemoryError } from './keys.mjs';
 import { mentionedAllergens } from '../../../src/vendor/allergens.mjs';
 
+// evidence is NOT NULL, but a suggested feedback row has no user sentence; this fixed label is not one (guess, see decisions K17).
+const FEEDBACK_EVIDENCE = '행동 피드백(찜·제외)';
 const fail = code => { throw new MemoryError(code); };
 
 export function createMemoryWriter({ store }) {
@@ -15,11 +17,15 @@ export function createMemoryWriter({ store }) {
     if (c.basis !== 'explicit') return { rejected: { candidate: c, reason: 'not_explicit' } };
     if (c.source !== undefined && c.source !== 'explicit') return { rejected: { candidate: c, reason: allergy ? 'allergy_explicit_only' : 'not_explicit' } };
     if (typeof c.evidence !== 'string' || !c.evidence.trim() || c.evidence.length > 200) return { rejected: { candidate: c, reason: 'no_evidence' } };
-    if (allergy && check.negation) return { rejected: { candidate: c, reason: 'allergy_cannot_decrease' } };
     if (allergy && !mentionedAllergens(c.evidence).includes(parseKey(key).value)) return { rejected: { candidate: c, reason: 'allergy_needs_explicit_mention' } };
     if (!existingByRecipient.has(c.recipientId)) existingByRecipient.set(c.recipientId, await store.listMemories(ownerId, c.recipientId));
     const existing = existingByRecipient.get(c.recipientId);
     const clash = existing.find(m => m.status === 'confirmed' && conflicts(m, c));
+    if (clash && allergy) {
+      // Never refused, never applied: the user is asked, and only an accepted answer deletes (resolveConflict).
+      const question = '기억에서 삭제할까요?';
+      return { conflict: { candidate: c, existing: clash, question, prompt: { type: 'memory_prompt', kind: 'allergy_delete', memoryId: clash.id, text: question } } };
+    }
     if (clash) return { conflict: { candidate: c, existing: clash, question: '기억을 바꿀까요?' } };
     if (check.negation) return { rejected: { candidate: c, reason: 'nothing_to_negate' } };
     if (existing.some(m => m.key === c.key && m.polarity === c.polarity && m.status === 'confirmed')) return { duplicate: true };
@@ -58,12 +64,11 @@ export function createMemoryWriter({ store }) {
       return { saved, conflicts: r.conflicts, rejected: r.rejected };
     },
 
-    /** "기억을 바꿀까요?" answer. accept removes the old memory; allergies can never be removed this way. */
+    /** "기억을 바꿀까요?" / "기억에서 삭제할까요?" answer. Only an explicit accept removes the old memory (an allergy included). */
     async resolveConflict(ownerId, { existingId, accept }) {
       const m = await store.getMemory(ownerId, existingId);
       if (!m) fail('not_found');
-      if (!accept) return { changed: false };
-      if (isAllergyKey(m.key)) fail('allergy_cannot_decrease');
+      if (accept !== true) return { changed: false };
       await store.deleteMemory(ownerId, existingId);
       return { changed: true };
     },
@@ -78,12 +83,11 @@ export function createMemoryWriter({ store }) {
       if (clash) return { memory: null, prompt: null, conflict: { existing: clash, question: '기억을 바꿀까요?' } };
       const same = existing.find(m => m.status === 'suggested' && m.key === key && m.polarity === polarity);
       if (!same) {
-        const memory = await store.addMemory(ownerId, { recipientId, key, polarity, strength: 0.5, status: 'suggested', source: 'feedback', evidence: `feedback:${sessionId}`.slice(0, 200) });
+        const memory = await store.addMemory(ownerId, { recipientId, key, polarity, strength: 0.5, status: 'suggested', source: 'feedback', evidence: FEEDBACK_EVIDENCE, signals: [sessionId] });
         return { memory, prompt: null };
       }
-      const sessions = same.evidence.replace(/^feedback:/, '').split(',');
-      if (sessions.includes(sessionId)) return { memory: same, prompt: null };
-      const memory = await store.updateMemory(ownerId, same.id, { evidence: `feedback:${[...sessions, sessionId].join(',')}`.slice(0, 200) });
+      if (same.signals.includes(sessionId)) return { memory: same, prompt: null };
+      const memory = await store.updateMemory(ownerId, same.id, { signals: [...same.signals, sessionId] });
       return { memory, prompt: { type: 'memory_prompt', text: '다음에도 기억할까요?', candidates: [{ memoryId: memory.id, recipientId, key, polarity, label: keyLabel(key) }] } };
     },
 

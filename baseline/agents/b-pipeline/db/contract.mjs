@@ -33,15 +33,16 @@ export const RECIPIENT_FIELDS = ['name', 'aliases', 'groupName', 'budgetCapKrw',
 export function memoryInput(m) {
   const v = {
     recipientId: m.recipientId, key: m.key, polarity: m.polarity, strength: m.strength ?? 0.7,
-    status: m.status, source: m.source, evidence: m.evidence,
+    status: m.status, source: m.source, evidence: m.evidence, signals: m.signals ?? [],
   };
   if (!str(v.recipientId) || !str(v.key, 100) || ![1, -1].includes(v.polarity)) fail();
   if (typeof v.strength !== 'number' || !(v.strength >= 0 && v.strength <= 1)) fail();
   if (!STATUSES.includes(v.status) || !SOURCES.includes(v.source) || !str(v.evidence, 200)) fail();
+  if (!Array.isArray(v.signals) || v.signals.length > 50 || !v.signals.every(x => str(x, 100))) fail();
   return v;
 }
 // key/source/recipient are identity: editing them means delete + add.
-export const MEMORY_EDITABLE = ['polarity', 'strength', 'status', 'evidence'];
+export const MEMORY_EDITABLE = ['polarity', 'strength', 'status', 'evidence', 'signals'];
 
 export function giftInput(g) {
   const v = { recipientId: g.recipientId, productId: g.productId, occasion: g.occasion ?? null, givenAt: g.givenAt ?? null, satisfaction: g.satisfaction ?? null };

@@ -1,24 +1,26 @@
 // Condition merge (TRD §4 step 4). Pure: no store, no LLM, no ranking.
-// Priority: this utterance > confirmed memory > gift history (> rag mapping, which only adds preferences).
+// Priority: this utterance > confirmed memory (> rag mapping, which only adds preferences).
+// Gift history never enters preferences: the engine gives category +3 and has no repeat avoidance. It is display-only;
+// a preference from it exists only when the user presses a chip, which arrives here as an utterance patch.
 // Allergies never shrink. Excluded categories are a union. Budget is never filled from memory or recipient caps (R3).
 import { initial } from '../../../src/vendor/engine.mjs';
 import { checkedPatch } from '../../../src/contracts.mjs';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const uniq = a => [...new Set(a)];
-const GOOD_SATISFACTION = 4;
 
 /**
  * @param {object} p
  * @param {object} p.state              current baseline state
  * @param {object} p.utterancePatch     patch from the utterance, a chip edit or the LLM (all treated alike)
  * @param {object} p.memory             result of loadMemory()
- * @param {object[]} p.products         engine products (only to map gift-history products to categories)
+ * @param {object[]} [p.products]      engine products (unused for now; kept for the caller's signature)
+ * @param {string[]} [p.confirmedReleases]  session-only allergies the user confirmed releasing (never applies to remembered ones)
  * @param {{field:string,value:string,from?:string}[]} [p.ragCandidates]  ③ preference mapping
  * @param {object} [p.previousProvenance]  provenance saved with the session, for values already in state
  * @returns {{patch:object, provenance:object, questions:object[], suppressed:object[]}}
  */
-export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {} }) {
+export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {}, confirmedReleases = [] }) {
   const u = structuredClone(utterancePatch ?? {});
   checkedPatch(state, u); // refuses unknown keys and bad shapes before anything is merged
   const changed = Object.hasOwn(u, 'recipients') && !same(u.recipients, state.recipients);
@@ -38,7 +40,6 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
   const inherited = (field, value) => previousProvenance[field]?.find(e => same(e.value, value))?.sources ?? ['utterance'];
   const keepBase = (field, value) => { if (!changed) for (const s of inherited(field, value)) add(field, value, s); };
   const memItems = field => (memory?.items ?? []).filter(i => i.field === field);
-  const categoryOf = id => products.find(p => p.id === id)?.category;
 
   // excluded categories: (utterance ?? base) ∪ memory dislikes
   {
@@ -50,22 +51,25 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
   }
   const excludedCategories = patch.excluded_categories ?? base.excluded_categories;
 
-  // excluded ingredients (allergies): base ∪ utterance ∪ memory. Never shrinks.
+  // excluded ingredients (allergies): base ∪ utterance ∪ memory. Shrinks only for a session-only allergy the user confirmed.
   {
-    base.excluded_ingredients.forEach(v => keepBase('excluded_ingredients', v));
-    const result = uniq([...base.excluded_ingredients, ...(u.excluded_ingredients ?? [])]);
+    const remembered = new Set(memItems('excluded_ingredients').map(i => i.value));
+    const removed = Object.hasOwn(u, 'excluded_ingredients') ? base.excluded_ingredients.filter(v => !u.excluded_ingredients.includes(v)) : [];
+    const released = removed.filter(v => !remembered.has(v) && confirmedReleases.includes(v));
+    base.excluded_ingredients.filter(v => !released.includes(v)).forEach(v => keepBase('excluded_ingredients', v));
+    const result = uniq([...base.excluded_ingredients, ...(u.excluded_ingredients ?? [])]).filter(v => !released.includes(v));
     for (const i of memItems('excluded_ingredients')) { add('excluded_ingredients', i.value, `memory:${i.memoryId}`); if (!result.includes(i.value)) result.push(i.value); }
-    if (Object.hasOwn(u, 'excluded_ingredients')) {
-      const removed = base.excluded_ingredients.filter(v => !u.excluded_ingredients.includes(v));
-      if (removed.length) {
-        const memoryIds = memItems('excluded_ingredients').filter(i => removed.includes(i.value)).map(i => i.memoryId);
-        questions.push({ type: 'allergy_release', ingredients: removed, memoryIds, text: '기억에서도 삭제할까요?' });
-      }
+    const inMemory = removed.filter(v => remembered.has(v));
+    if (inMemory.length) {
+      const memoryIds = memItems('excluded_ingredients').filter(i => inMemory.includes(i.value)).map(i => i.memoryId);
+      questions.push({ type: 'allergy_release', ingredients: inMemory, memoryIds, text: '기억에서도 삭제할까요?' });
     }
+    const pending = removed.filter(v => !remembered.has(v) && !released.includes(v));
+    if (pending.length) questions.push({ type: 'allergy_release_session', ingredients: pending, text: '알레르기 제외를 해제할까요?' });
     if (Object.hasOwn(u, 'excluded_ingredients') || !same(result, base.excluded_ingredients)) patch.excluded_ingredients = result;
   }
 
-  // preferences: (utterance ?? base) + memory + gift history + rag; values the user removed this session stay removed
+  // preferences: (utterance ?? base) + memory + rag; values the user removed this session stay removed
   {
     const hasU = Object.hasOwn(u, 'preferences');
     const start = hasU ? u.preferences : base.preferences;
@@ -83,11 +87,6 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
         continue;
       }
       add('preferences', i.value, `memory:${i.memoryId}`); if (!result.includes(i.value)) result.push(i.value);
-    }
-    for (const g of memory?.giftHistory ?? []) {
-      const c = categoryOf(g.productId), v = c && `category:${c}`;
-      if (!v || !(g.satisfaction >= GOOD_SATISFACTION) || !allowed(v)) continue;
-      add('preferences', v, `history:${g.id}`); if (!result.includes(v)) result.push(v);
     }
     for (const r of ragCandidates) {
       if (r.field !== 'preferences' || !allowed(r.value)) continue;

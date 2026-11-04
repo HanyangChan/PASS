@@ -16,7 +16,7 @@ const toRecipient = r => r && {
 };
 const toMemory = m => m && {
   id: m.id, recipientId: m.recipient_id, key: m.key, polarity: m.polarity, strength: m.strength,
-  status: m.status, source: m.source, evidence: m.evidence, createdAt: m.created_at, lastUsedAt: m.last_used_at,
+  status: m.status, source: m.source, evidence: m.evidence, signals: JSON.parse(m.signals ?? '[]'), createdAt: m.created_at, lastUsedAt: m.last_used_at,
 };
 const toGift = g => g && { id: g.id, recipientId: g.recipient_id, productId: g.product_id, occasion: g.occasion, givenAt: g.given_at, satisfaction: g.satisfaction };
 
@@ -26,6 +26,7 @@ export function createSqliteStore({ path = ':memory:', now = () => new Date().to
   const db = new DatabaseSync(path);
   db.exec('pragma foreign_keys = on;');
   db.exec(SCHEMA);
+  if (!db.prepare('pragma table_info(memories)').all().some(c => c.name === 'signals')) db.exec("alter table memories add column signals text not null default '[]'");
   const q = sql => db.prepare(sql);
   const ownRecipient = (ownerId, id) => q('select * from recipients where id = ? and owner_id = ?').get(id, ownerId);
   const ownMemory = (ownerId, id) => q('select m.* from memories m join recipients r on r.id = m.recipient_id where m.id = ? and r.owner_id = ?').get(id, ownerId);
@@ -57,8 +58,8 @@ export function createSqliteStore({ path = ':memory:', now = () => new Date().to
       const v = memoryInput(input);
       if (!ownRecipient(ownerId, v.recipientId)) notFound();
       const id = newId();
-      q('insert into memories(id, recipient_id, key, polarity, strength, status, source, evidence, created_at) values (?,?,?,?,?,?,?,?,?)')
-        .run(id, v.recipientId, v.key, v.polarity, v.strength, v.status, v.source, v.evidence, now());
+      q('insert into memories(id, recipient_id, key, polarity, strength, status, source, evidence, signals, created_at) values (?,?,?,?,?,?,?,?,?,?)')
+        .run(id, v.recipientId, v.key, v.polarity, v.strength, v.status, v.source, v.evidence, JSON.stringify(v.signals), now());
       return toMemory(ownMemory(ownerId, id));
     },
     async listMemories(ownerId, recipientId, { status } = {}) {
@@ -74,7 +75,7 @@ export function createSqliteStore({ path = ':memory:', now = () => new Date().to
       const m = toMemory(ownMemory(ownerId, id)); if (!m) notFound();
       if (Object.keys(patch).some(k => !MEMORY_EDITABLE.includes(k))) throw new StoreError('invalid_store_input');
       const v = memoryInput({ ...m, ...patch });
-      q('update memories set polarity = ?, strength = ?, status = ?, evidence = ? where id = ?').run(v.polarity, v.strength, v.status, v.evidence, id);
+      q('update memories set polarity = ?, strength = ?, status = ?, evidence = ?, signals = ? where id = ?').run(v.polarity, v.strength, v.status, v.evidence, JSON.stringify(v.signals), id);
       return toMemory(ownMemory(ownerId, id));
     },
     async deleteMemory(ownerId, id) {

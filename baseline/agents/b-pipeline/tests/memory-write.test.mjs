@@ -67,15 +67,32 @@ for (const [name, make] of Object.entries(stores)) {
     assert.equal((await store.listMemories('userA', mom.id)).length, 0);
   });
 
-  test(`[${name}] rule 2 / AC7: an opposite allergy statement never removes or changes the allergy`, async () => {
+  test(`[${name}] rule 2 / AC7: an opposite allergy statement is never refused; it asks "기억에서 삭제할까요?" and changes nothing until accepted`, async () => {
     const { store, w, mom, dad } = await setup();
     const { peanut } = await seedS1Memories(store, { mom, dad });
     const r = await w.propose('userA', [cand(mom.id, 'allergy:땅콩', 1, '이제 땅콩 먹어도 돼')]);
     assert.equal(r.accepted.length, 0);
-    assert.equal(r.conflicts.length, 0, 'no "change it?" question for allergies');
-    assert.equal(r.rejected[0].reason, 'allergy_cannot_decrease');
-    await assert.rejects(w.resolveConflict('userA', { existingId: peanut.id, accept: true }), { code: 'allergy_cannot_decrease' });
+    assert.equal(r.rejected.length, 0, 'not refused');
+    assert.equal(r.conflicts.length, 1);
+    assert.equal(r.conflicts[0].existing.id, peanut.id);
+    assert.equal(r.conflicts[0].question, '기억에서 삭제할까요?');
+    assert.deepEqual(r.conflicts[0].prompt, { type: 'memory_prompt', kind: 'allergy_delete', memoryId: peanut.id, text: '기억에서 삭제할까요?' });
+    const c = await w.confirm('userA', [cand(mom.id, 'allergy:땅콩', 1, '이제 땅콩 먹어도 돼')]);
+    assert.equal(c.saved.length, 0, 'confirm never stores the negation or deletes');
     assert.ok(await store.getMemory('userA', peanut.id));
+    await w.resolveConflict('userA', { existingId: peanut.id, accept: false });
+    assert.ok(await store.getMemory('userA', peanut.id), 'declining keeps the allergy');
+  });
+
+  test(`[${name}] rule 2: accepting the delete question is an explicit deletion (real delete); the sentence must still name the allergen`, async () => {
+    const { store, w, mom, dad } = await setup();
+    const { peanut } = await seedS1Memories(store, { mom, dad });
+    const vague = await w.propose('userA', [cand(mom.id, 'allergy:땅콩', 1, '이제 괜찮대')]);
+    assert.equal(vague.conflicts.length, 0); assert.equal(vague.rejected[0].reason, 'allergy_needs_explicit_mention');
+    const other = await w.propose('userA', [cand(dad.id, 'allergy:땅콩', 1, '땅콩 먹어도 돼')]);
+    assert.equal(other.conflicts.length, 0, "the mother's allergy is not touched by a father-side statement");
+    assert.deepEqual(await w.resolveConflict('userA', { existingId: peanut.id, accept: true }), { changed: true });
+    assert.equal(await store.getMemory('userA', peanut.id), null);
   });
 
   test(`[${name}] rule 2 / AC7: only the evidence sentence of an allergy is editable; polarity, status and strength are locked`, async () => {
@@ -104,11 +121,15 @@ for (const [name, make] of Object.entries(stores)) {
     const first = await fb('s1');
     assert.equal(first.prompt, null);
     assert.equal(first.memory.status, 'suggested'); assert.equal(first.memory.source, 'feedback');
+    assert.deepEqual(first.memory.signals, ['s1']);
+    assert.ok(!/s1|feedback:/.test(first.memory.evidence), 'evidence holds no session ids; it is not a user sentence either');
     const same = await fb('s1', 'hiking-socks');
     assert.equal(same.prompt, null, 'same session does not count twice');
     const second = await fb('s2');
     assert.equal(second.prompt.type, 'memory_prompt');
     assert.equal(second.prompt.candidates[0].memoryId, first.memory.id);
+    assert.deepEqual(second.memory.signals, ['s1', 's2']);
+    assert.equal(second.memory.evidence, first.memory.evidence, 'evidence is untouched by later signals');
     assert.equal((await store.listMemories('userA', mom.id)).length, 1, 'one row per key');
     const accepted = await w.acceptSuggested('userA', [first.memory.id]);
     assert.equal(accepted[0].status, 'confirmed');
