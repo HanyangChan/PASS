@@ -17,6 +17,7 @@ npm run demo
 - `src/index.mjs`: `runTurn`, 세션 상태, 질문, 가상 예산 비교, 결과 검증, 설명.
 - `src/vendor/`: 기존 `PASS-auth/lib` 엔진과 의존 파일의 독립 스냅샷. 원본·해시를 `provenance.json`에 기록했다. 순위·금액·예산 대안 계산은 여기서만 한다.
 - `examples/`: 고정 합성 상품 3개와 실행 예제. 실상품 데이터가 아니다.
+- `agents/`: 다섯 설계별 작업 폴더, 공통 연결기, 실행 예제 선택. [작업 안내](agents/README.md).
 - `tests/`: 공통 수용 기준. 브랜치에서도 같은 검사를 실행한다.
 
 ## 사용 계약
@@ -51,3 +52,14 @@ const output = await runTurn({
 알레르겐 정보는 기존 엔진의 선언·추정 태그 기준이다. 미표기 성분의 안전을 보장하지 않으며 기존 성분표 확인 안내를 유지한다. 설명은 엔진의 이름·비용·예산 사실로만 만든다. 이미지, SSE, RAG, 벡터/그래프 검색, 반성 루프, 합성 사용자, 실제 Gemini 호출은 각 브랜치 범위다.
 
 설계별 대응과 분기 원칙은 [공통 범위](docs/common-scope.md), 검증 기준은 [수용 기준](docs/acceptance.md)을 참조한다.
+
+## 에이전트 작업 시작
+
+`agents/a-router`, `b-pipeline`, `c-attribution`, `d-langgraph`, `e-tiered` 중 담당 폴더에서 시작한다. 각 폴더의 `index.mjs`는 공통 코어의 해석기 확장 지점에 연결된 시작 틀이다.
+
+```sh
+npm run demo:agent -- a-router
+npm test
+```
+
+에이전트 구성·브랜치·확장 한계는 [agents 안내](agents/README.md)를 따른다.
