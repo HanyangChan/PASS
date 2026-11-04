@@ -149,3 +149,42 @@ test('guards: money fields need words in the text; critiques are vocabulary-chec
   assert.deepEqual(out.critiques, [{ key: 'dislike:category:snack', polarity: -1 }]);
   assert.equal(Object.hasOwn(out.patch, 'excluded_categories'), false);
 });
+
+test('K33: "부모님 설 선물 추천해줘" is solved WITHOUT an LLM: occasion split off, the rest goes to parseRules', async () => {
+  for (const llm of [null, createFakeLlm({ json: [] })]) {
+    const d = createDialogue({ llm });
+    const out = await d.interpret({ text: '부모님 설 선물 추천해줘', state: state() });
+    assert.equal(out.unresolved, false);
+    assert.deepEqual(out.patch, { recipients: ['부모님'], occasion: '설' });
+    assert.deepEqual(out.mentionedRecipients, ['부모님']);
+    if (llm) assert.equal(llm.calls.length, 0);
+  }
+  // the common port gives the same result through the baseline runTurn (createAgent default, no key in tests)
+  const out = await runTurn({ session: createSession('k33'), products, interpret: toPort(createDialogue({ llm: null })), request: { kind: 'message', text: '부모님 설 선물 추천해줘', expectedVersion: 0 } });
+  assert.equal(out.kind, 'question');
+  assert.equal(out.question, '예산 상한을 알려주세요.');
+  assert.deepEqual([out.session.state.recipients, out.session.state.occasion], [['부모님'], '설']);
+});
+
+test('K33: occasion words and their canonical value; 설 only as a word; two occasions are not guessed', async () => {
+  const d = createDialogue({ llm: null });
+  const cases = [
+    ['부모님 설날 선물 추천해줘', '설'], ['어머니 추석 선물 추천해줘', '추석'], ['부모님 명절 선물 추천해줘', '명절'],
+    ['친구 생일 선물 추천해줘', '생일'], ['아버지 생신 선물 추천해줘', '생신'], ['교수님 스승의 날 선물 추천해줘', '스승의 날'],
+    ['교수님 스승의날 선물 추천해줘', '스승의 날'], ['부모님 어버이날 선물 추천해줘', '어버이날'], ['친구 크리스마스 선물 추천해줘', '크리스마스'],
+    ['부모님 기념일 선물 추천해줘', '기념일'], ['친구 생일선물 3만원 추천', '생일'], ['추석에 어머니 선물 추천해줘', '추석'],
+  ];
+  for (const [text, occasion] of cases) {
+    const out = await d.interpret({ text, state: state() });
+    assert.equal(out.unresolved, false, text);
+    assert.equal(out.patch.occasion, occasion, text);
+  }
+  assert.equal((await d.interpret({ text: '부모님 추석 명절 선물 추천해줘', state: state() })).patch.occasion, '추석', '추석 명절 = 추석');
+  for (const text of ['부모님 설명 선물 추천해줘', '부모님 추석 그리고 생일 선물 추천해줘']) {
+    const out = await d.interpret({ text, state: state() });
+    assert.equal(out.unresolved, true, text);
+  }
+  // without an occasion the rule path is exactly parseRules (AC16 unchanged)
+  const plain = await d.interpret({ text: '부모님 선물 추천해줘', state: state() });
+  assert.deepEqual(plain.patch, parseRules('부모님 선물 추천해줘').patch);
+});

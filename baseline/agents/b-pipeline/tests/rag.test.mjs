@@ -46,7 +46,8 @@ test('the map file is a draft, only maps to engine categories, and a bad map is 
   const map = loadHobbyMap();
   assert.match(map.note, /초안/);
   for (const cats of Object.values(map.table)) for (const c of cats) assert.ok(CATEGORIES.includes(c), c);
-  for (const w of ['녹차', '홍차', '와인', '독서', '캠핑', '낚시']) assert.ok(map.table[w]?.length, `draft entry ${w}`);
+  for (const w of ['녹차', '홍차', '캠핑', '낚시']) assert.ok(map.table[w]?.length, `draft entry ${w}`);
+  for (const w of ['와인', '독서']) assert.equal(map.table[w], undefined, `K32: no engine category fits ${w}, so it is not mapped`);
   assert.deepEqual([map.table['녹차'], map.table['홍차']], [['coffee_tea'], ['coffee_tea']]);
   assert.throws(() => loadHobbyMap({ note: '초안', table: { 등산: ['not_a_category'] } }), { code: 'invalid_hobby_map' });
 });

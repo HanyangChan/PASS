@@ -98,7 +98,7 @@ for (const [name, make] of Object.entries(stores)) {
 
   test(`[${name}] AC4 + R8 + AC5: S1 -> purchased -> end_session -> confirm -> S2 (empty DB at start)`, async () => {
     let clock = '2026-09-20T03:00:00.000Z';
-    const { store, turn, llm } = setup(make, { replies: [S1_REPLY, { recipients: ['부모님'], occasion: '설', memoryCandidates: [] }], now: () => clock });
+    const { store, turn, llm } = setup(make, { replies: [S1_REPLY], now: () => clock });
     assert.deepEqual(types(await turn('s1', msg(S1))), ['question']);
     const cards = ev(await turn('s1', msg(REST)), 'cards');
     assert.ok(cards.result.cards.length > 0);
@@ -130,7 +130,8 @@ for (const [name, make] of Object.entries(stores)) {
     // S2: next year, a new session, only "부모님 설 선물 추천해줘"
     clock = '2027-01-25T03:00:00.000Z';
     const s2 = await turn('s2', msg('부모님 설 선물 추천해줘'));
-    assert.equal(llm.calls.length, 2, 'one ① call per free sentence');
+    assert.equal(llm.calls.length, 1, 'K33: "부모님 설 선물 추천해줘" is solved by rules (occasion split), no ① call');
+    assert.equal((await store.getSession('userA', 's2')).session.state.occasion, '설');
     const q = ev(s2, 'question');
     assert.equal(q.question, '예산 상한을 알려주세요.');
     assert.equal(q.banner.text, '지난 추석 기억을 반영했어요: 단 음식 X · 땅콩 제외 · 등산');
@@ -283,6 +284,28 @@ for (const [name, make] of Object.entries(stores)) {
     const out = await turn('s', { kind: 'patch', patch: { preferences: [] } });
     assert.equal(ev(out, 'cards').banner.text, '지난 기억을 반영했어요: 땅콩 제외');
     assert.equal((await store.getSession('userA', 's')).meta.provenance.preferences, undefined);
+  });
+
+  test(`[${name}] K28: 제외 asks "이 상품만 / 이런 종류 모두"; only "이런 종류 모두" records a suggested dislike`, async () => {
+    const { store, turn } = setup(make);
+    const { mom } = await seedPeople(store);
+    await turn('s', msg(CLEAR));
+    const out = await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee' });
+    const p = ev(out, 'memory_prompt');
+    assert.deepEqual([p.kind, p.productId, p.text, p.chips.map(c => c.label)], ['dismiss_scope', 'drip-coffee', '이 상품만 뺄까요, 이런 종류 모두 뺄까요?', ['이 상품만', '이런 종류 모두']]);
+    assert.ok(types(out).indexOf('cards') < types(out).indexOf('memory_prompt'));
+    assert.deepEqual(await store.listMemories('userA', mom.id), [], 'the dismissal itself records nothing');
+    await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee', scope: 'product' });
+    assert.deepEqual(await store.listMemories('userA', mom.id), [], '"이 상품만" records nothing');
+    assert.equal(ev(await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'drip-coffee', scope: 'category' }), 'error').code, 'invalid_request', 'answered already');
+    await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'coffee-beans' });
+    await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'coffee-beans', scope: 'category' });
+    assert.deepEqual((await store.listMemories('userA', mom.id)).map(m => [m.key, m.polarity, m.status]), [['dislike:category:coffee_tea', -1, 'suggested']]);
+    assert.deepEqual((await store.getSession('userA', 's')).session.state.excluded_categories, [], 'suggested only: no condition yet');
+    // 찜 is unchanged: a suggested pref:category signal right away
+    await turn('s', { kind: 'feedback', action: 'chosen', productId: 'hiking-socks' });
+    assert.ok((await store.listMemories('userA', mom.id)).some(m => m.key === 'pref:category:fitness' && m.status === 'suggested'));
+    assert.equal(ev(await turn('s', { kind: 'feedback', action: 'dismissed', productId: 'hand-cream', scope: 'everything' }), 'error').code, 'invalid_request');
   });
 
   test(`[${name}] AC2: an uninterpretable FIRST message creates no session row`, async () => {

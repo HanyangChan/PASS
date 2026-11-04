@@ -6,7 +6,7 @@ import { ALLERGEN_NAMES } from '../../../src/vendor/allergens.mjs';
 
 const SOFT = ['less_sweet', 'unsweetened'];
 const PACKAGING = ['formal', 'basic'];
-const CATEGORY_KO = {
+export const CATEGORY_KO = {
   food: '식품', snack: '과자·간식', coffee_tea: '커피·차', health: '건강식품', beauty: '뷰티', makeup: '메이크업',
   personal_care: '생활가전', kitchen: '주방용품', decor: '홈데코', jewelry: '주얼리', watch: '시계', bag: '가방',
   accessory: '패션소품', audio: '음향기기', toy: '장난감', fitness: '운동용품',

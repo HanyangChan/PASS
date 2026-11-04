@@ -1,31 +1,76 @@
 {
-  "note": "초안, 팀 확정 필요 (decisions D5). 취미어 -> 엔진 카테고리. 엔진 카테고리 밖의 값은 로드 때 거부한다.",
+  "note": "초안, 팀 확정 필요 (decisions D5). 취미어 -> 엔진 카테고리. 엔진 카테고리 밖의 값은 로드 때 거부한다. 맞는 카테고리가 없는 취미(와인·독서 등)는 매핑하지 않는다(K32).",
   "minCosine": 0.75,
   "table": {
-    "등산": ["fitness"],
-    "산책": ["fitness"],
-    "운동": ["fitness"],
-    "헬스": ["fitness"],
-    "러닝": ["fitness"],
-    "골프": ["fitness"],
-    "요가": ["fitness"],
-    "자전거": ["fitness"],
-    "커피": ["coffee_tea"],
-    "차": ["coffee_tea"],
-    "티": ["coffee_tea"],
-    "녹차": ["coffee_tea"],
-    "홍차": ["coffee_tea"],
-    "와인": ["kitchen"],
-    "요리": ["kitchen"],
-    "베이킹": ["kitchen"],
-    "음악": ["audio"],
-    "음악감상": ["audio"],
-    "스킨케어": ["beauty"],
-    "화장품": ["makeup"],
-    "인테리어": ["decor"],
-    "식물": ["decor"],
-    "독서": ["decor"],
-    "캠핑": ["fitness", "kitchen"],
-    "낚시": ["fitness"]
+    "등산": [
+      "fitness"
+    ],
+    "산책": [
+      "fitness"
+    ],
+    "운동": [
+      "fitness"
+    ],
+    "헬스": [
+      "fitness"
+    ],
+    "러닝": [
+      "fitness"
+    ],
+    "골프": [
+      "fitness"
+    ],
+    "요가": [
+      "fitness"
+    ],
+    "자전거": [
+      "fitness"
+    ],
+    "커피": [
+      "coffee_tea"
+    ],
+    "차": [
+      "coffee_tea"
+    ],
+    "티": [
+      "coffee_tea"
+    ],
+    "녹차": [
+      "coffee_tea"
+    ],
+    "홍차": [
+      "coffee_tea"
+    ],
+    "요리": [
+      "kitchen"
+    ],
+    "베이킹": [
+      "kitchen"
+    ],
+    "음악": [
+      "audio"
+    ],
+    "음악감상": [
+      "audio"
+    ],
+    "스킨케어": [
+      "beauty"
+    ],
+    "화장품": [
+      "makeup"
+    ],
+    "인테리어": [
+      "decor"
+    ],
+    "식물": [
+      "decor"
+    ],
+    "캠핑": [
+      "fitness",
+      "kitchen"
+    ],
+    "낚시": [
+      "fitness"
+    ]
   }
 }

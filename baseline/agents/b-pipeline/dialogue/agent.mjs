@@ -90,12 +90,39 @@ function validate(raw, { text, state }) {
   return { patch, memoryCandidates, critiques, mentionedRecipients };
 }
 
+// K33: occasion words are taken out before parseRules (which does not know them) and become patch.occasion.
+// Longest first; each word only on its own (not 설명·연설) or glued to 선물, optionally followed by a particle (에·엔·용·때).
+const OCCASIONS = [['스승의\\s*날', '스승의 날'], ['어버이날', '어버이날'], ['크리스마스', '크리스마스'], ['기념일', '기념일'],
+  ['설날', '설'], ['추석', '추석'], ['명절', '명절'], ['생신', '생신'], ['생일', '생일'], ['설', '설']];
+const OCCASION_RE = new RegExp(`(?<![가-힣])(${OCCASIONS.map(([w]) => w).join('|')})(?:에|엔|용|때)?(?![가-힣])`, 'g');
+const OCCASION_RE_TIGHT = new RegExp(`(?<![가-힣])(${OCCASIONS.map(([w]) => w).join('|')})(?=선물)`, 'g'); // 생일선물, 설선물
+const canonOccasion = w => OCCASIONS.find(([re]) => new RegExp(`^${re}$`).test(w))[1];
+
+/** "부모님 설 선물 추천해줘" -> {occasion:'설', rest:'부모님  선물 추천해줘'}. Two different occasions: left as is. */
+export function splitOccasion(text) {
+  const t = norm(text);
+  const found = [];
+  let rest = t.replace(OCCASION_RE, (_, w) => { found.push(canonOccasion(w)); return ' '; });
+  rest = rest.replace(OCCASION_RE_TIGHT, (_, w) => { found.push(canonOccasion(w)); return ' '; });
+  let kinds = uniq(found);
+  if (kinds.length === 2 && kinds.includes('명절')) kinds = kinds.filter(k => k !== '명절'); // "추석 명절" = 추석
+  if (kinds.length !== 1) return { occasion: null, rest: t };
+  return { occasion: kinds[0], rest };
+}
+
+function rulesWithOccasion(text) {
+  const { occasion, rest } = splitOccasion(text);
+  const rules = parseRules(occasion ? rest : text);
+  if (rules.unresolved || !occasion) return rules;
+  return { ...rules, patch: { ...rules.patch, occasion } };
+}
+
 /** createDialogue({llm}) -> {interpret({text,state})}. llm may be null (no key): free text then asks FALLBACK_QUESTION. */
 export function createDialogue({ llm = null } = {}) {
   const ask = question => ({ patch: {}, questions: [question], unresolved: true, critiques: [], memoryCandidates: [], mentionedRecipients: [] });
   return {
     async interpret({ text, state }) {
-      const rules = parseRules(text);
+      const rules = rulesWithOccasion(text);
       if (!rules.unresolved) return { patch: rules.patch, questions: rules.questions, unresolved: false, critiques: [], memoryCandidates: [], mentionedRecipients: rules.patch.recipients ?? [] };
       if (!llm) return ask(FALLBACK_QUESTION);
       let raw;

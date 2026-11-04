@@ -6,25 +6,32 @@ import { runTurn, createSession, BaselineError } from '../../../src/index.mjs';
 import { createDialogue, FALLBACK_QUESTION } from '../dialogue/agent.mjs';
 import { loadMemory, findRecipient } from '../memory/read.mjs';
 import { createMemoryWriter } from '../memory/write.mjs';
-import { MemoryError, keyLabel, parseKey } from '../memory/keys.mjs';
+import { MemoryError, keyLabel, parseKey, CATEGORY_KO } from '../memory/keys.mjs';
 import { StoreError } from '../db/contract.mjs';
 import { createHobbyMapper } from '../rag/agent.mjs';
-import { templateExplanations } from '../explainer/template.mjs';
+import { templateExplanations, wonShort } from '../explainer/template.mjs';
+import { buildFactsheet, planValueLadder, shiftSensitivity } from '../planner/index.mjs';
+import { SENSITIVITIES } from '../db/contract.mjs';
 import { mergeConditions } from './merge.mjs';
 import { dropMemories } from './provenance.mjs';
 import { memoryBanner, giftHistoryHit } from './banner.mjs';
 import { resolveRecipients, linkCandidates, materialize, isNewRecipientId } from './recipients.mjs';
 
-export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'feedback', 'memory_edit', 'memory_confirm', 'end_session'];
+export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'ladder_pick', 'feedback', 'memory_edit', 'memory_confirm', 'end_session'];
 export const EXPERIMENTS = ['A', 'B'];
 const FEEDBACK_ACTIONS = ['chosen', 'dismissed', 'purchased', 'satisfaction'];
-const EDIT_OPS = ['delete', 'update', 'resolve_conflict', 'accept_suggested'];
+const EDIT_OPS = ['delete', 'update', 'resolve_conflict', 'accept_suggested', 'sensitivity'];
+const SENSITIVITY_TEXT = { value: '가성비 위주로 기억할까요?', balanced: '균형 있게 고르는 걸로 기억할까요?', quality: '품질 우선으로 기억할까요?' };
 const REMEMBER_TEXT = '다음에도 기억할까요?';
 const SATISFACTION_TEXT = '지난번 선물은 마음에 들어하셨나요?';
+const DISMISS_TEXT = '이 상품만 뺄까요, 이런 종류 모두 뺄까요?';
+const DISMISS_SCOPES = ['product', 'category'];
+const DISMISS_CHIPS = [{ label: '이 상품만', scope: 'product' }, { label: '이런 종류 모두', scope: 'category' }];
+const suggestedPrompt = p => ({ ...p, kind: 'suggested', candidates: p.candidates.map(({ memoryId, label }) => ({ memoryId, label })) });
 
 export const defaultMeta = () => ({
   recipientIds: [], sensitivity: 'balanced', experiment: 'B', provenance: {},
-  pendingCandidates: [], pendingGifts: [], pendingPrompt: null, conflicts: [], satisfactionAsked: false, ended: false,
+  pendingCandidates: [], pendingGifts: [], pendingPrompt: null, pendingDismissals: [], ladderStreak: null, pendingSensitivity: null, conflicts: [], satisfactionAsked: false, ended: false,
 });
 
 const invalid = () => new BaselineError('invalid_request');
@@ -46,16 +53,29 @@ export function createOrchestrator({ store, products, llm = null, explain = null
   dialogue = createDialogue({ llm }), hobbyMapper = createHobbyMapper({ llm }), writer = createMemoryWriter({ store }) }) {
   if (!store || !Array.isArray(products)) throw new TypeError('store and products are required');
   const realIds = ids => ids.filter(id => !isNewRecipientId(id));
+  const setCost = id => { const p = products.find(x => x.id === id); return p ? p.price_krw + p.shipping_fee_per_set_krw : Infinity; };
 
-  /** 2단계: template now; P4/P5 add the planner and the LLM explainer behind the same call. Never throws. */
-  async function explainCards({ cards, state, provenance, memory, experiment }) {
-    const template = () => ({ ...templateExplanations({ cards, products, state }), source: 'template' });
-    if (!explain || !cards.length) return template();
+  /**
+   * 2단계 (TRD §4-7): planner -> Factsheet -> ④ (P5) -> template fallback. Never throws (AC3).
+   * Condition A gets a factsheet without contrast/memoryCf/valueLadder; the cards are the same in A and B (AC12).
+   */
+  async function explainCards({ session, cards, state, provenance, memory, experiment, sensitivity = 'balanced', budgetCap = null }) {
+    let factsheet = null;
+    try { factsheet = await buildFactsheet({ session, cards, products, state, provenance, memory, experiment, sensitivity, budgetCap, now: now() }); } catch { factsheet = null; }
+    const template = () => ({ ...templateExplanations({ cards, products, state, factsheet }), source: 'template' });
+    if (!explain || !cards.length || !factsheet) return template();
     try {
-      const out = await explain({ cards, products, state, provenance, memory, experiment });
+      const out = await explain({ cards, products, state, factsheet, experiment });
       if (!out || !Array.isArray(out.items)) return template();
       return { items: out.items, source: 'llm' };
     } catch { return template(); }
+  }
+
+  /** Smallest budget cap among the people of this turn; null = none (R3: used only to block "올리기" and to ask). */
+  async function budgetCapOf(ownerId, ids) {
+    const caps = [];
+    for (const id of ids) { const r = await store.getRecipient(ownerId, id); if (r?.budgetCapKrw) caps.push(r.budgetCapKrw); }
+    return caps.length ? Math.min(...caps) : null;
   }
 
   async function recipientChoices(ownerId, state, ids) {
@@ -108,16 +128,27 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     await store.saveSession(ctx.ownerId, session, ctx.meta, ctx.session.version); // CAS: version_conflict if someone saved first
   }
 
-  /** Send question | cards, then memory prompts, then explanations (AC3: cards always first). */
+  /**
+   * Send question | cards, then memory prompts, then explanations (AC3: cards always first).
+   * R3: with a budget cap, a missing budget is asked with a cap chip, and a budget above the cap is asked instead of
+   * shown (never clamped). The same gate covers what_if_budget, so nothing above the cap is ever shown (AC14).
+   */
   async function present(ctx, out, { memory, provenance, prompts = [], ids }) {
     const banner = memoryBanner(memory, provenance);
     const choices = await recipientChoices(ctx.ownerId, out.session.state, ids);
-    if (out.kind === 'question') {
-      ctx.send({ type: 'question', question: out.question, version: out.session.version, banner, recipientChoices: choices });
+    const cap = await budgetCapOf(ctx.ownerId, ids);
+    const capChips = cap ? [{ label: wonShort(cap), amount_krw: cap }] : null;
+    const ask = (question, budgetQuestion) => {
+      ctx.send({ type: 'question', question, version: out.session.version, banner, recipientChoices: choices, budgetChips: budgetQuestion ? capChips : null });
       for (const p of prompts) ctx.send(p);
-      return;
-    }
+    };
+    if (out.kind === 'question') return ask(out.question, out.session.state.budget.amount_krw === null);
     const state = out.evaluatedState;
+    // K37: the cap is per set with shipping. A per-set budget above it, or a card above it (shipping excluded), is asked.
+    const perSet = state.budget.scope === 'total' ? Math.floor(state.budget.amount_krw / (state.quantity || 1)) : state.budget.amount_krw;
+    if (cap && (perSet > cap || out.result.cards.some(c => setCost(c.id) > cap))) {
+      return ask(`이 분께는 예산 상한 ${wonShort(cap)}(세트당, 배송비 포함)을 정해 두셨어요. 그 안으로 다시 알려주세요.`, true);
+    }
     const tags = templateExplanations({ cards: out.result.cards, products, state });
     ctx.send({
       type: out.kind === 'comparison' ? 'comparison' : 'cards', version: out.session.version, result: out.result, banner, recipientChoices: choices,
@@ -125,12 +156,12 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     });
     for (const p of prompts) ctx.send(p);
     if (out.kind === 'comparison') return;
-    const ex = await explainCards({ cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment });
+    const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap });
     ctx.send({ type: 'explanations', version: out.session.version, ...ex });
   }
 
   /** ② memory, ③ mapping, merge, runTurn(patch), save, present. Shared by message and chip turns. */
-  async function recommend(ctx, { utterancePatch, candidates = [], confirmedReleases = [], choice }) {
+  async function recommend(ctx, { utterancePatch, candidates = [], confirmedReleases = [], choice, extraPrompts = [], sensitivity }) {
     const { ownerId, session, meta } = ctx;
     if (!object(utterancePatch)) throw invalid();
     const u = structuredClone(utterancePatch);
@@ -165,9 +196,18 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const kept = { ...meta.provenance, ...merged.provenance };
     for (const f of MERGED_FIELDS) if (!merged.provenance[f]) delete kept[f];
     meta.provenance = changed ? merged.provenance : kept;
+    if (JSON.stringify(ids) !== JSON.stringify(meta.recipientIds)) {
+      // a new person: start from their remembered sensitivity when all of them agree, else balanced (F4)
+      const rows = (await Promise.all(realIds(ids).map(id => store.getRecipient(ownerId, id)))).filter(Boolean);
+      const kinds = [...new Set(rows.map(r => r.priceSensitivity))];
+      meta.sensitivity = kinds.length === 1 ? kinds[0] : 'balanced';
+      // answers that belong to the previous people must not be written to the new ones (review)
+      meta.ladderStreak = null; meta.pendingSensitivity = null; meta.pendingDismissals = [];
+    }
+    if (sensitivity !== undefined) { meta.sensitivity = sensitivity; meta.ladderStreak = null; } // the chip wins over the person's default
     meta.recipientIds = ids;
 
-    const prompts = [];
+    const prompts = [...extraPrompts];
     const linked = await linkCandidates(store, ownerId, candidates);
     if (linked.length) {
       const r = await writer.propose(ownerId, linked);
@@ -212,7 +252,9 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     async patch(ctx, request) {
       const releases = request.confirmedReleases ?? [];
       if (!Array.isArray(releases) || !releases.every(x => typeof x === 'string')) throw invalid();
-      await recommend(ctx, { utterancePatch: request.patch, confirmedReleases: releases, choice: request.recipientChoice });
+      // 가성비 / 균형 / 품질 우선 chip: this session only (stored for the person only via the sensitivity prompt). B only.
+      if (request.sensitivity !== undefined && (!SENSITIVITIES.includes(request.sensitivity) || ctx.meta.experiment !== 'B')) throw invalid();
+      await recommend(ctx, { utterancePatch: request.patch, confirmedReleases: releases, choice: request.recipientChoice, sensitivity: request.sensitivity });
     },
     async view(ctx) {
       const out = await runTurn({ session: ctx.session, request: { kind: 'view', expectedVersion: ctx.session.version }, products });
@@ -226,6 +268,32 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const ids = realIds(ctx.meta.recipientIds);
       await present(ctx, out, { memory: await loadMemory(store, ctx.ownerId, ids, { now: now() }), provenance: ctx.meta.provenance, ids });
     },
+    /**
+     * AC15: a price option chip. The amount is recomputed here from the saved session (the client sends only the
+     * direction), so it is the same option the explanations showed for this version. Only now does the budget change.
+     */
+    async ladder_pick(ctx, request) {
+      const { session, meta, ownerId } = ctx;
+      if (!['up', 'down'].includes(request.direction) || meta.experiment !== 'B') throw invalid(); // A has no price options (AC12)
+      const view = await runTurn({ session, request: { kind: 'view', expectedVersion: session.version }, products });
+      if (view.kind !== 'recommendation' || !view.result.cards.length) throw invalid();
+      const ids = realIds(meta.recipientIds);
+      const ladder = await planValueLadder({ session, state: view.evaluatedState, products, cards: view.result.cards, sensitivity: meta.sensitivity, budgetCap: await budgetCapOf(ownerId, ids) });
+      const option = ladder[request.direction][0];
+      if (!option) throw invalid();
+      // F4: each pick moves the session sensitivity one step; two picks in a row the same way for the same people ask once
+      meta.sensitivity = shiftSensitivity(meta.sensitivity, request.direction);
+      const who = JSON.stringify(meta.recipientIds);
+      const streak = meta.ladderStreak?.direction === request.direction && meta.ladderStreak.who === who ? meta.ladderStreak.count + 1 : 1;
+      meta.ladderStreak = { direction: request.direction, who, count: streak };
+      const extraPrompts = [];
+      if (streak >= 2 && ids.length) {
+        meta.pendingSensitivity = meta.sensitivity;
+        meta.ladderStreak = null;
+        extraPrompts.push({ type: 'memory_prompt', kind: 'sensitivity', sensitivity: meta.sensitivity, text: SENSITIVITY_TEXT[meta.sensitivity] });
+      }
+      await recommend(ctx, { utterancePatch: { budget: { amount_krw: option.amount_krw } }, extraPrompts });
+    },
     async feedback(ctx, request) {
       const { ownerId, meta, session } = ctx;
       if (!FEEDBACK_ACTIONS.includes(request.action)) throw invalid();
@@ -236,6 +304,27 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       } else {
         const product = products.find(p => p.id === request.productId);
         if (!product || !meta.recipientIds.length) throw invalid();
+        if (request.action === 'dismissed') {
+          // K28: a dismissal is first asked about ("이 상품만 / 이런 종류 모두"); only "이런 종류 모두" becomes a
+          // suggested dislike:category signal. "이 상품만" records nothing (the engine has no per-product exclusion).
+          if (request.scope === undefined) {
+            if (realIds(meta.recipientIds).length) {
+              meta.pendingDismissals = [...meta.pendingDismissals.filter(id => id !== product.id), product.id];
+              prompts.push({ type: 'memory_prompt', kind: 'dismiss_scope', productId: product.id, categoryLabel: CATEGORY_KO[product.category] ?? null, text: DISMISS_TEXT, chips: DISMISS_CHIPS });
+            }
+          } else {
+            if (!DISMISS_SCOPES.includes(request.scope) || !meta.pendingDismissals.includes(product.id)) throw invalid();
+            meta.pendingDismissals = meta.pendingDismissals.filter(id => id !== product.id);
+            if (request.scope === 'category') {
+              for (const recipientId of realIds(meta.recipientIds)) {
+                const r = await writer.recordFeedback(ownerId, { recipientId, key: `dislike:category:${product.category}`, polarity: -1, sessionId: session.id, productId: product.id });
+                if (r.prompt) prompts.push(suggestedPrompt(r.prompt));
+              }
+            }
+          }
+          await refresh(ctx, { prompts });
+          return;
+        }
         for (const recipientId of meta.recipientIds) {
           if (request.action === 'purchased') {
             const gift = { recipientId, productId: product.id, occasion: session.state.occasion, givenAt: now().slice(0, 10) };
@@ -244,12 +333,11 @@ export function createOrchestrator({ store, products, llm = null, explain = null
             continue;
           }
           if (isNewRecipientId(recipientId)) continue; // feedback signals need a person row
-          // 찜 = this category is liked, 제외 = avoided; both only suggested until confirmed (TRD §5.3-3, K28)
-          const chosen = request.action === 'chosen';
-          const r = await writer.recordFeedback(ownerId, { recipientId, key: `${chosen ? 'pref' : 'dislike'}:category:${product.category}`, polarity: chosen ? 1 : -1, sessionId: session.id, productId: product.id });
-          if (r.prompt) prompts.push({ ...r.prompt, kind: 'suggested', candidates: r.prompt.candidates.map(({ memoryId, label }) => ({ memoryId, label })) });
+          // 찜 = this category is liked; only suggested until confirmed (TRD §5.3-3, K28)
+          const r = await writer.recordFeedback(ownerId, { recipientId, key: `pref:category:${product.category}`, polarity: 1, sessionId: session.id, productId: product.id });
+          if (r.prompt) prompts.push(suggestedPrompt(r.prompt));
         }
-        if (request.action !== 'dismissed') { const p = await rememberPrompt(ctx); if (p) prompts.push(p); } // R8: also on selection
+        const p = await rememberPrompt(ctx); if (p) prompts.push(p); // R8: also on selection
       }
       await refresh(ctx, { prompts });
     },
@@ -271,6 +359,11 @@ export function createOrchestrator({ store, products, llm = null, explain = null
           removed.push(request.memoryId);
           if (entry) meta.pendingCandidates = addCandidates(meta.pendingCandidates, [entry.candidate]); // asked again at session end
         }
+      } else if (request.op === 'sensitivity') {
+        // answer to "가성비 위주로 기억할까요?": the value comes from the session, never from the client
+        if (typeof request.accept !== 'boolean' || !meta.pendingSensitivity) throw invalid();
+        if (request.accept) for (const id of realIds(meta.recipientIds)) await store.updateRecipient(ownerId, id, { priceSensitivity: meta.pendingSensitivity });
+        meta.pendingSensitivity = null;
       } else {
         if (!Array.isArray(request.memoryIds)) throw invalid();
         await writer.acceptSuggested(ownerId, request.memoryIds);

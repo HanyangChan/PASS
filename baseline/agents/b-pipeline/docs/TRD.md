@@ -92,12 +92,14 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 **LLM 호출 상한:** 한 턴에 ① 1회 + ③ 임베딩 1회 + ④ 1회(+재생성 1회).
 
 ### 4.1 요청·이벤트 (P3 구현 기준, K24~K31)
-- 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?}` · `view` · `what_if_budget{amount_krw}` · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId}` · `memory_edit{op: delete|update|resolve_conflict|accept_suggested}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
+- 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?, sensitivity?}` · `view` · `what_if_budget{amount_krw}` · `ladder_pick{direction: up|down}`(K38) · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId, scope?: product|category}`(제외는 K28) · `memory_edit{op: delete|update|resolve_conflict|accept_suggested|sensitivity}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
 - 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `memory_saved`, `session_end`, `error{code}`.
 - `cards`에는 baseline `result`를 그대로 넣고, 상품별 `annotations{id, tags, giftHistory}`와 `banner`(반영 한 줄)를 따로 붙인다.
 - `recipientId`는 사용자가 수령인을 고른 요청에만 보낸다. 문장·칩의 수령인이 항상 우선하고, 표시 이름과 기억 id는 같은 사람으로 정해진다(K36).
 - ③은 ② 다음에 한 번 호출한다(K27). 해석이 안 된 메시지는 아무것도 저장하지 않는다.
 - 해석 실패 질문은 하나다: "받는 분과 예산을 조금 더 구체적으로 알려주세요."(K25)
+- 행사 단어는 `parseRules` 전에 떼어 `occasion`으로 넣는다(K33).
+- 상한이 있는 수령인: 예산이 없거나 상한을 넘으면 `question`에 `budgetChips`(상한 금액)를 붙인다. 넘는 경우 카드·설명·비교를 보내지 않는다(K37).
 
 ## 5. 기억 설계
 ### 5.1 SQLite 스키마 (`db/schema.sql`)
@@ -180,6 +182,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
   - **아끼기 후보:** `rankProducts(products, state)`의 전체 순위에서 현재 1위보다 `budgetCost`가 낮고 `score`가 같은 상품 중 가장 싼 것을 찾는다. 그 비용으로 `what_if_budget`을 다시 실행해 1위를 확인한다.
   - **상한 고정:** `recipients.budget_cap_krw`가 있으면 올리기 후보를 만들지 않는다.
   - **성향 조정:** 옵션을 고를 때마다 세션의 `sensitivity`를 한 단계 이동한다. 같은 수령인에서 2회 연속 같은 방향이면 `memory_prompt`를 보낸다.
+- **P4 구현 기준:** 공통 읽기 도구는 `planner/engine-facts.mjs`(`rankProducts` 순서가 카드와 다르면 오류). 대조 우선순위 K41, 옵션 금액은 `costDelta`(새 1위 비용 − 현재 1위 비용, K40), 칩 선택은 `ladder_pick`(K38), 성향 저장 K39. 반사실은 1위를 바꾸는 첫 기억 하나(K42).
 - **Factsheet (`factsheet.mjs`):**
   - 상품별: `{id, name, rank, categoryKo, budgetCost, budget, headroom, ratingCount, sweetness, matchedPreferences, usedMemories:[{id,label,evidence}], giftHistoryHit, allergyNotice}`
   - 조건 B만: `contrast`, `memoryCf`, `valueLadder`

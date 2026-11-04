@@ -26,12 +26,49 @@ function tagsFor(product, state, ranked) {
   return tags.filter(t => t.length <= MAX_TAG).slice(0, 3);
 }
 
+const SWEET_KO = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
+
+/** Contrast chip text; every number and name comes from the factsheet's contrast facts. */
+export function contrastText(c) {
+  switch (c?.kind) {
+    case 'preference': return `2위와 달리 ${c.categoryKo} 선호에 맞아요`;
+    case 'sweetness': return `2위보다 덜 달아요 (${SWEET_KO[c.top]})`;
+    case 'rating_count': return `2위보다 리뷰 ${c.diff.toLocaleString('ko-KR')}개 많아요`;
+    case 'budget_cost': return `2위보다 ${wonShort(c.diff)} 저렴해요`;
+    case 'category': return `2위와 종류가 달라요 (${c.top})`;
+    default: return null;
+  }
+}
+
+export const memoryCfText = cf => (cf ? `'${cf.label}' 기억이 없었다면 1위는 ${cf.newTopName}` : null);
+
+/** "아끼기 -1.5만원 · 같은 적합도" / "올리기 +9천원 · 리뷰 더 많음" — amounts are the factsheet's costDelta. */
+export function ladderChip(o) {
+  const sign = o.direction === 'down' ? '-' : '+';
+  const why = o.direction === 'down' ? '같은 적합도' : o.reason === 'score' ? '선호에 더 맞음' : '리뷰 더 많음';
+  return { direction: o.direction, label: `${o.direction === 'down' ? '아끼기' : '올리기'} ${sign}${wonShort(Math.abs(o.costDelta))} · ${why}`, amount_krw: o.amount_krw };
+}
+
 /**
- * @param {{cards:object[], products:object[], state:object}} p  cards = baseline result.cards, state = evaluatedState
- * @returns {{items:[{id, tags}]}}
+ * @param {{cards:object[], products:object[], state:object, factsheet?:object}} p  cards = baseline result.cards, state = evaluatedState
+ * @returns {{items:[{id, tags, contrastChip?, memoryCfLine?, ladderChips?, ladderNotice?}]}}
+ * The B-only fields go on the rank-1 item and only when the factsheet has them (condition A never does, AC12).
  */
-export function templateExplanations({ cards, products, state }) {
+export function templateExplanations({ cards, products, state, factsheet = null }) {
   const byId = new Map(products.map(p => [p.id, p]));
   const ranked = cards.map(c => byId.get(c.id)).filter(Boolean);
-  return { items: ranked.map(p => ({ id: p.id, tags: tagsFor(p, state, ranked) })) };
+  const items = ranked.map(p => ({ id: p.id, tags: tagsFor(p, state, ranked) }));
+  if (!factsheet || factsheet.experiment !== 'B' || !items.length) return { items };
+  const top = items[0];
+  const contrast = contrastText(factsheet.contrast);
+  if (contrast) top.contrastChip = contrast;
+  const cf = memoryCfText(factsheet.memoryCf);
+  if (cf) top.memoryCfLine = cf;
+  const ladder = factsheet.valueLadder;
+  if (ladder) {
+    const chips = [...ladder.down, ...ladder.up].map(ladderChip);
+    if (chips.length) top.ladderChips = chips;
+    if (ladder.upNotice) top.ladderNotice = ladder.upNotice;
+  }
+  return { items };
 }
