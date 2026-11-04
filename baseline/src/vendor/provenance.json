@@ -1,0 +1,9 @@
+{
+  "source": "PASS-auth/lib (local snapshot, 2026-11-04)",
+  "sha256": {
+    "allergens.mjs": "b04cc6d5ae8fd7f3f03212260a0c9a7d4feea3c63d7e1b6aabc2a0acb561e85c",
+    "catalog.mjs": "629179a699ed10429eb45e0a06add067f83fd16fdec1d4d7ea8defa391daa831",
+    "counterfactual.mjs": "3c6349be60b0e4d6fc0d9da82cc4f6a6f863a2ef0d139320e7613111b01fabfd",
+    "engine.mjs": "0ffaa02671afd6770862f6559455eb185a98e6bd014dfe4f3dd776cbe64a4a01"
+  }
+}
