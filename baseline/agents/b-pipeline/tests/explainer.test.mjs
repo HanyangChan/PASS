@@ -8,6 +8,7 @@ import { createFakeLlm, LlmError } from '../llm/index.mjs';
 import { createExplainer, EXPLAIN_SCHEMA } from '../explainer/agent.mjs';
 import { memoryTag } from '../explainer/template.mjs';
 import { products } from './fixtures/catalog.mjs';
+import { loadCatalog } from '../data/load.mjs';
 import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
 
 const PARENTS = '부모님 한 세트 세트당 예산 5만원 이하 배송비 포함 추천';
@@ -180,4 +181,38 @@ test('the turn log uses the condition stored in the session, even when later req
   const rows = await store.listEvents('s');
   assert.deepEqual(rows.filter(r => r.type === 'turn').map(r => r.payload.experiment), ['A', 'A']);
   assert.ok(rows.filter(r => r.type === 'explanations').every(r => r.payload.experiment === 'A'));
+});
+
+// K52: tags are condition-neutral facts of the card. Judged on condition A (no contrast information may reach A), with the
+// real catalog snapshot; B shows the same tags. One money format everywhere: "N.N만원" or "N,NNN원" (no "N천원").
+test('K52: condition A tags carry no comparison; the review tag is "리뷰 N개"; amounts use one format; B tags are the same', async () => {
+  const real = loadCatalog();
+  const COMPARE = /보다|가장|제일|최다|[1-9]\s*위|더 (?:많|적|싸|저렴|비싸)|다른 상품/;
+  const MONEY = /^\d+(?:\.\d)?만원$|^\d{1,3}(?:,\d{3})*원$/;
+  const tagsOf = {};
+  for (const experiment of ['A', 'B']) for (const seed of [false, true]) {
+    const store = stores.memory();
+    const people = await seedPeople(store);
+    if (seed) await seedS1Memories(store, people);
+    const pipe = createPipeline({ store, products: real, explain: null });
+    const out = await pipe.runPipelineTurn({ ownerId: 'userA', sessionId: 's', experiment, request: { kind: 'message', text: PARENTS } });
+    const cards = ev(out, 'cards'), ex = ev(out, 'explanations');
+    const tags = ex.items.flatMap(i => i.tags);
+    assert.deepEqual(cards.annotations.flatMap(a => a.tags), tags, 'the card event carries the same tags');
+    tagsOf[`${experiment}${seed}`] = ex.items.map(i => i.tags);
+    for (const t of tags) {
+      assert.ok(!COMPARE.test(t), `${experiment}: comparison in tag "${t}"`);
+      for (const m of t.match(/[\d.,]+(?:만|천)?원/g) ?? []) assert.match(m, MONEY, `money format in "${t}"`);
+      assert.ok(!/천원/.test(t), t);
+      if (t.startsWith('리뷰')) assert.match(t, /^리뷰 \d{1,3}(?:,\d{3})*개$/, t);
+    }
+    assert.ok(tags.some(t => t.startsWith('리뷰')), 'the review count shows as a plain number');
+    if (experiment === 'B') {
+      const chips = ex.items[0].ladderChips ?? [];
+      assert.ok(chips.length > 0);
+      for (const c of chips) for (const m of c.label.match(/[\d.,]+(?:만|천)?원/g) ?? []) assert.match(m, MONEY, c.label);
+    }
+  }
+  assert.deepEqual(tagsOf.Afalse, tagsOf.Bfalse);
+  assert.deepEqual(tagsOf.Atrue, tagsOf.Btrue);
 });

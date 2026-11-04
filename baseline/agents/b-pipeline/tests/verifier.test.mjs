@@ -101,10 +101,10 @@ test('AC13/AC14: price chips must be the planner options; no 올리기 for a cap
   assert.deepEqual(factsheet.valueLadder.up, [], 'precondition: capped, no up options');
   const [top, ...rest] = draft.items;
   assert.ok(verify(factsheet, draft.items).ok);
-  const up = { direction: 'up', label: '올리기 +9천원 · 리뷰 더 많음', amount_krw: 39000 };
+  const up = { direction: 'up', label: '올리기 +9,000원 · 평점 4.0 → 4.6', productId: 'nope' };
   assert.ok(codes(verify(factsheet, [{ ...top, ladderChips: [...top.ladderChips, up] }, ...rest])).includes('ladder_unbacked'));
   const d = top.ladderChips[0];
-  assert.ok(codes(verify(factsheet, [{ ...top, ladderChips: [{ ...d, label: '아끼기 -7천원 · 같은 적합도' }] }, ...rest])).includes('ladder_unbacked'));
+  assert.ok(codes(verify(factsheet, [{ ...top, ladderChips: [{ ...d, label: '아끼기 -7,000원 · 같은 적합도' }] }, ...rest])).includes('ladder_unbacked'));
   assert.ok(codes(verify(factsheet, [{ ...top, ladderChips: [{ ...d, amount_krw: d.amount_krw - 1 }] }, ...rest])).includes('ladder_unbacked'));
 });
 

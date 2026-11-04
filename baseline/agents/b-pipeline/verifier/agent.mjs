@@ -2,7 +2,7 @@
 // structure and length, every number backed by a factsheet value or a difference of them, product names, mentioned
 // memories, no condition-A leak (AC12), banned words (R7), allergy notice kept. Returns reasons per item so the
 // orchestrator can ask once more and then replace only the failing items with the template.
-import { MAX_TAG } from '../explainer/template.mjs';
+import { MAX_TAG, ratingText } from '../explainer/template.mjs';
 import { findBanned, claimsAllergySafety, withoutNames } from './banned-words.mjs';
 
 export const B_FIELDS = ['contrastChip', 'memoryCfLine', 'ladderChips', 'ladderNotice'];
@@ -32,7 +32,7 @@ const HANGUL_MONEY = /[일이삼사오육칠팔구십백천만]\s*원/;
 // Internal tokens must never reach the screen (category:fitness, less_sweet, pref:…). A lone capital (단 음식 X) is fine.
 const INTERNAL_TOKEN = /[A-Za-z_]{2,}|[A-Za-z]+\s*:|_/;
 // Comparisons between cards belong to the contrast chip (B only). Tags are condition-neutral (F5), so no tag compares,
-// except the template's own "리뷰 가장 많음" (same in A and B, review decision 4: default).
+// (K50: the template's own "리뷰 가장 많음" exception is gone; the tag is "리뷰 N개").
 const COMPARISON = /보다|[1-9]\s*위|다른 상품|타 상품|더 많|더 적|더 싸|더 저렴|더 비싸/;
 
 const textsOf = item => [...(Array.isArray(item.tags) ? item.tags : []), item.contrastChip, item.memoryCfLine, item.ladderNotice,
@@ -57,6 +57,21 @@ function contrastOk(chip, c) {
     case 'sweetness': return /덜/.test(chip) && only('none', []);
     default: return only('none', []);
   }
+}
+
+/**
+ * A price chip must be one the planner produced (K50). down: same direction and amount_krw, label "아끼기" with the one
+ * number |costDelta|. up: same productId, label "올리기" with exactly |costDelta| and the two ratings (one decimal).
+ */
+function ladderChipOk(ch, options) {
+  if (!ch || typeof ch.label !== 'string' || ch.label.length > MAX_LINE) return false;
+  const o = ch.direction === 'up' ? options.find(x => x.direction === 'up' && x.productId === ch.productId) : options.find(x => x.direction === 'down' && x.amount_krw === ch.amount_krw);
+  if (!o || !ch.label.startsWith(o.direction === 'down' ? '아끼기' : '올리기')) return false;
+  const { numbers } = numbersWithUnits(ch.label);
+  const wons = numbers.filter(n => n.unit === 'won'), plain = numbers.filter(n => n.unit === 'plain');
+  if (wons.length !== 1 || wons[0].value !== Math.abs(o.costDelta) || numbers.length !== wons.length + plain.length) return false;
+  if (o.direction === 'down') return plain.length === 0;
+  return plain.length === 2 && plain[0].value === Number(ratingText(o.rating.from)) && plain[1].value === Number(ratingText(o.rating.to));
 }
 
 /**
@@ -105,13 +120,7 @@ export function verifyExplanations({ output, factsheet, products }) {
       }
       if (item.ladderChips !== undefined) {
         const options = [...(factsheet.valueLadder?.down ?? []), ...(factsheet.valueLadder?.up ?? [])];
-        const ok = Array.isArray(item.ladderChips) && item.ladderChips.every(ch => {
-          const o = options.find(x => x.direction === ch?.direction && x.amount_krw === ch?.amount_krw);
-          if (!o || typeof ch.label !== 'string' || ch.label.length > MAX_LINE) return false;
-          if (!ch.label.startsWith(o.direction === 'down' ? '아끼기' : '올리기')) return false;
-          const nums = numbersIn(ch.label);
-          return nums.length === 1 && nums[0] === Math.abs(o.costDelta);
-        }) && new Set(item.ladderChips.map(c => c.direction)).size === item.ladderChips.length;
+        const ok = Array.isArray(item.ladderChips) && item.ladderChips.every(ch => ladderChipOk(ch, options)) && new Set(item.ladderChips.map(c => c.direction)).size === item.ladderChips.length;
         if (!ok) fail('ladder_unbacked'); // AC13/AC14: no 올리기 that the planner did not produce
       }
       if (item.ladderNotice !== undefined && item.ladderNotice !== factsheet.valueLadder?.upNotice) fail('ladder_unbacked');

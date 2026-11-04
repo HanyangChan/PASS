@@ -3,7 +3,7 @@
 // Ranking, amounts and budget checks come only from the common runTurn; nothing here sorts or scores (K1).
 // The client never sends the session: state and meta are always read from the store.
 import { runTurn, createSession, BaselineError } from '../../../src/index.mjs';
-import { createDialogue, FALLBACK_QUESTION } from '../dialogue/agent.mjs';
+import { createDialogue, FALLBACK_QUESTION, LOWER_BUDGET_QUESTION, UNSUPPORTED_TEXT } from '../dialogue/agent.mjs';
 import { loadMemory, findRecipient } from '../memory/read.mjs';
 import { createMemoryWriter } from '../memory/write.mjs';
 import { MemoryError, keyLabel, parseKey, CATEGORY_KO } from '../memory/keys.mjs';
@@ -18,7 +18,7 @@ import { dropMemories } from './provenance.mjs';
 import { memoryBanner, giftHistoryHit } from './banner.mjs';
 import { resolveRecipients, linkCandidates, materialize, isNewRecipientId } from './recipients.mjs';
 
-export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'ladder_pick', 'feedback', 'memory_edit', 'memory_confirm', 'end_session'];
+export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'ladder_pick', 'ladder_compare', 'feedback', 'memory_edit', 'memory_confirm', 'end_session'];
 export const EXPERIMENTS = ['A', 'B'];
 const FEEDBACK_ACTIONS = ['chosen', 'dismissed', 'purchased', 'satisfaction'];
 const EDIT_OPS = ['delete', 'update', 'resolve_conflict', 'accept_suggested', 'sensitivity'];
@@ -78,7 +78,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     if (factsheet.memoryCf && hidden.includes(factsheet.memoryCf.newTopId)) delete top.memoryCfLine;
     if (top.ladderChips) {
       const options = [...(factsheet.valueLadder?.down ?? []), ...(factsheet.valueLadder?.up ?? [])];
-      top.ladderChips = top.ladderChips.filter(ch => !hidden.includes(options.find(o => o.direction === ch.direction && o.amount_krw === ch.amount_krw)?.newTopId));
+      top.ladderChips = top.ladderChips.filter(ch => !hidden.includes(options.find(o => o.direction === ch.direction && (o.direction === 'up' ? o.productId === ch.productId : o.amount_krw === ch.amount_krw))?.[ch.direction === 'up' ? 'productId' : 'newTopId']));
       if (!top.ladderChips.length) delete top.ladderChips;
     }
     return [top, ...items.slice(1)];
@@ -212,12 +212,16 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const hiddenProductIds = [...(ctx.meta.hiddenProductIds ?? [])];
     ctx.send({
       type: out.kind === 'comparison' ? 'comparison' : 'cards', version: out.session.version, result: out.result, banner, recipientChoices: choices, hiddenProductIds,
+      ...(ctx.notice ? { notice: ctx.notice } : {}),
       annotations: out.result.cards.map(c => ({ id: c.id, tags: tags.items.find(i => i.id === c.id)?.tags ?? [], giftHistory: giftHistoryHit(c.id, memory?.giftHistory, now()) })),
     });
     for (const p of prompts) ctx.send(p);
     if (out.kind === 'comparison') return;
     const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap, hiddenProductIds });
-    ctx.send({ type: 'explanations', version: out.session.version, ...ex });
+    // K51: "더 저렴한" puts the 아끼기 chip first and highlights it (the chips already list down before up)
+    const top = ex.items[0];
+    const emphasize = ctx.emphasizeDown && top?.ladderChips?.[0]?.direction === 'down' ? 'down' : null;
+    ctx.send({ type: 'explanations', version: out.session.version, ...ex, ...(emphasize ? { emphasize } : {}) });
   }
 
   /** ② memory, ③ mapping, merge, runTurn(patch), save, present. Shared by message and chip turns. */
@@ -307,14 +311,18 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const d = await dialogue.interpret({ text: request.text, state: structuredClone(ctx.session.state) });
       // AC2: nothing is saved; exactly one question
       if (d.unresolved) { ctx.send({ type: 'question', question: d.questions[0] || FALLBACK_QUESTION, version: ctx.session.version, banner: null, recipientChoices: null }); return; }
-      // K44: "더 저렴한·실용적인" sets this session's sensitivity like the 가성비 chip (B only; A has no price options).
-      // A sentence that ONLY sets it changes nothing in A, so A asks the one question instead (nothing saved, AC2).
-      const sensitivity = d.sensitivity && ctx.meta.experiment === 'B' ? d.sensitivity : undefined;
-      if (d.sensitivity && !sensitivity && !Object.keys(d.patch).length) {
-        ctx.send({ type: 'question', question: FALLBACK_QUESTION, version: ctx.session.version, banner: null, recipientChoices: null });
-        return;
-      }
-      await recommend(ctx, { utterancePatch: d.patch, candidates: d.memoryCandidates ?? [], choice: request.recipientChoice, said: d.said ?? null, sensitivity });
+      // K51: "더 저렴한·싼" -> B: this session's sensitivity becomes value and the 아끼기 chip is put first and highlighted;
+      // A has no price options, so a sentence that only says it asks "예산을 얼마로 낮출까요?" (nothing saved, AC2).
+      // "실용적인" is never mapped: alone it answers with the guidance, inside a recommendation it adds a notice.
+      const isB = ctx.meta.experiment === 'B';
+      const empty = !Object.keys(d.patch).length;
+      const unsupported = d.unsupported ?? [];
+      const ask = question => ctx.send({ type: 'question', question, version: ctx.session.version, banner: null, recipientChoices: null });
+      if (empty && unsupported.length) return ask(UNSUPPORTED_TEXT);
+      if (empty && d.cheaper && !isB) return ask(LOWER_BUDGET_QUESTION);
+      ctx.notice = unsupported.length ? UNSUPPORTED_TEXT : null;
+      ctx.emphasizeDown = Boolean(d.cheaper && isB);
+      await recommend(ctx, { utterancePatch: d.patch, candidates: d.memoryCandidates ?? [], choice: request.recipientChoice, said: d.said ?? null, sensitivity: d.cheaper && isB ? d.sensitivity : undefined });
     },
     async patch(ctx, request) {
       const releases = request.confirmedReleases ?? [];
@@ -341,7 +349,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
      */
     async ladder_pick(ctx, request) {
       const { session, meta, ownerId } = ctx;
-      if (!['up', 'down'].includes(request.direction) || meta.experiment !== 'B') throw invalid(); // A has no price options (AC12)
+      if (request.direction !== 'down' || meta.experiment !== 'B') throw invalid(); // A has no price options (AC12); "올리기" is ladder_compare (K50)
       const view = await runTurn({ session, request: { kind: 'view', expectedVersion: session.version }, products });
       if (view.kind !== 'recommendation' || !view.result.cards.length) throw invalid();
       const ids = realIds(meta.recipientIds);
@@ -360,6 +368,21 @@ export function createOrchestrator({ store, products, llm = null, explain = null
         extraPrompts.push({ type: 'memory_prompt', kind: 'sensitivity', sensitivity: meta.sensitivity, text: SENSITIVITY_TEXT[meta.sensitivity] });
       }
       await recommend(ctx, { utterancePatch: { budget: { amount_krw: option.amount_krw } }, extraPrompts });
+    },
+    /**
+     * K50: the "올리기" chip. It never changes the budget or the cards: the alternative is recomputed from the saved session
+     * (the client sends only the product id) and, if it is really an offered option, put into the client's compare tray.
+     * Nothing is saved (version unchanged), the sensitivity does not move.
+     */
+    async ladder_compare(ctx, request) {
+      const { session, meta, ownerId } = ctx;
+      if (typeof request.productId !== 'string' || meta.experiment !== 'B') throw invalid(); // A has no price options (AC12)
+      const view = await runTurn({ session, request: { kind: 'view', expectedVersion: session.version }, products });
+      if (view.kind !== 'recommendation' || !view.result.cards.length) throw invalid();
+      const ladder = await planValueLadder({ session, state: view.evaluatedState, products, cards: view.result.cards, sensitivity: meta.sensitivity, budgetCap: await budgetCapOf(ownerId, realIds(meta.recipientIds)) });
+      const option = ladder.up.find(o => o.productId === request.productId);
+      if (!option) throw invalid();
+      ctx.send({ type: 'compare_add', version: session.version, productId: option.productId, productName: option.productName, againstId: view.result.cards[0].id, costDelta: option.costDelta, rating: option.rating });
     },
     async feedback(ctx, request) {
       const { ownerId, meta, session } = ctx;

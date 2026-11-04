@@ -7,12 +7,14 @@ import { parseKey } from '../memory/keys.mjs';
 
 export const MAX_TAG = 12;
 
-/** 15000 -> "1.5만원", 8000 -> "8천원", 8500 -> "8,500원" */
+/** One money format everywhere (K50): 15000 -> "1.5만원", 50000 -> "5만원", 8000 -> "8,000원", 8500 -> "8,500원" */
 export function wonShort(n) {
   if (n >= 10000 && n % 1000 === 0) return `${n / 10000}만원`;
-  if (n >= 1000 && n < 10000 && n % 1000 === 0) return `${n / 1000}천원`;
   return `${n.toLocaleString('ko-KR')}원`;
 }
+
+/** Rating as shown on the up chip: one decimal ("4.5"). */
+export const ratingText = r => Number(r).toFixed(1);
 
 /**
  * The tag of a preference that came from memory: the memory's own words and the person, not the engine category name.
@@ -54,9 +56,11 @@ function tagsFor(product, state, ranked, memoryTags) {
   const soft = state.preferences.includes('less_sweet') || state.preferences.includes('unsweetened');
   if (soft && product.sweetness === 'unsweetened') tags.push('단맛 없음');
   else if (state.preferences.includes('less_sweet') && product.sweetness === 'naturally_sweet') tags.push('자연 단맛');
-  if (ranked.length > 1 && ranked.every(p => p.id === product.id || (p.rating_count ?? 0) < (product.rating_count ?? 0))) tags.push('리뷰 가장 많음');
+  // A review count is a fact of this card only; any comparison ("가장 많음") belongs to the B contrast chip (K50).
+  const reviews = (product.rating_count ?? 0) > 0 ? `리뷰 ${product.rating_count.toLocaleString('ko-KR')}개` : null;
   const headroom = state.budget.amount_krw - budgetCost(product, state);
-  tags.push(headroom > 0 ? `${wonShort(headroom)} 여유` : '예산 딱 맞음');
+  const room = headroom > 0 ? `${wonShort(headroom)} 여유` : '예산 딱 맞음';
+  tags.push(...(reviews && tags.length < 2 ? [reviews, room] : [room])); // the review count only fills a short list (3 max)
   if (tags.length < 2) tags.unshift(CATEGORY_NAMES[product.category] ?? '예산 안');
   return tags.filter(t => t.length <= MAX_TAG).slice(0, 3);
 }
@@ -77,11 +81,14 @@ export function contrastText(c) {
 
 export const memoryCfText = cf => (cf ? `'${cf.label}' 기억이 없었다면 1위는 ${cf.newTopName}` : null);
 
-/** "아끼기 -1.5만원 · 같은 적합도" / "올리기 +9천원 · 리뷰 더 많음" — amounts are the factsheet's costDelta. */
+/**
+ * "아끼기 -1.5만원 · 같은 적합도" (amount_krw = the budget it re-runs at) /
+ * "올리기 +5,000원 · 평점 4.3 → 4.6" (productId = the alternative; picking it only fills the compare tray, K50).
+ * Amounts are the factsheet's costDelta, ratings its rating.from/to.
+ */
 export function ladderChip(o) {
-  const sign = o.direction === 'down' ? '-' : '+';
-  const why = o.direction === 'down' ? '같은 적합도' : o.reason === 'score' ? '선호에 더 맞음' : '리뷰 더 많음';
-  return { direction: o.direction, label: `${o.direction === 'down' ? '아끼기' : '올리기'} ${sign}${wonShort(Math.abs(o.costDelta))} · ${why}`, amount_krw: o.amount_krw };
+  if (o.direction === 'up') return { direction: 'up', label: `올리기 +${wonShort(Math.abs(o.costDelta))} · 평점 ${ratingText(o.rating.from)} → ${ratingText(o.rating.to)}`, productId: o.productId };
+  return { direction: 'down', label: `아끼기 -${wonShort(Math.abs(o.costDelta))} · 같은 적합도`, amount_krw: o.amount_krw };
 }
 
 /**

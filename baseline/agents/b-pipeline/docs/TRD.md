@@ -92,13 +92,13 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 **LLM 호출 상한:** 한 턴에 ① 1회 + ③ 임베딩 1회 + ④ 1회(+재생성 1회).
 
 ### 4.1 요청·이벤트 (P3 구현 기준, K24~K31)
-- 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?, sensitivity?}` · `view` · `what_if_budget{amount_krw}` · `ladder_pick{direction: up|down}`(K38) · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId, scope?: product|category}`(제외는 K28) · `memory_edit{op: delete|update|resolve_conflict|accept_suggested|sensitivity}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
-- 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `memory_saved`, `session_end`, `error{code}`.
+- 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?, sensitivity?}` · `view` · `what_if_budget{amount_krw}` · `ladder_pick{direction: down}`(K38) · `ladder_compare{productId}`(K50) · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId, scope?: product|category}`(제외는 K28) · `memory_edit{op: delete|update|resolve_conflict|accept_suggested|sensitivity}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
+- 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `compare_add`(올리기 칩, K50), `memory_saved`, `session_end`, `error{code}`. `cards`에는 선택적 `notice`, `explanations`에는 선택적 `emphasize`가 붙는다. 서버는 `conditions`를 추가한다(K53).
 - `cards`에는 baseline `result`를 그대로 넣고, 상품별 `annotations{id, tags, giftHistory}`와 `banner`(반영 한 줄)를 따로 붙인다.
 - `recipientId`는 사용자가 수령인을 고른 요청에만 보낸다. 문장·칩의 수령인이 항상 우선하고, 표시 이름과 기억 id는 같은 사람으로 정해진다(K36).
 - ③은 ② 다음에 한 번 호출한다(K27). 해석이 안 된 메시지는 아무것도 저장하지 않는다.
 - 해석 실패 질문은 하나다: "받는 분과 예산을 조금 더 구체적으로 알려주세요."(K25)
-- 행사 단어는 `parseRules` 전에 떼어 `occasion`으로 넣는다(K33). 비평 표현(덜 단·안 단·실용적인·더 저렴한 등)도 그 전에 떼어 `less_sweet`·성향 `value`로 바꾼다. ①은 실제로 말한 목록 값을 `said`로 넘기고, merge는 그 값만 `utterance` 출처로 표시한다(K44).
+- 행사 단어는 `parseRules` 전에 떼어 `occasion`으로 넣는다(K33). 비평 표현도 그 전에 뗀다: 덜 단·안 단 → `less_sweet`, 더 저렴한·싼 → B는 성향 `value` + 아끼기 칩 강조(`explanations.emphasize`), A는 질문 "예산을 얼마로 낮출까요?"; 실용적인은 매핑하지 않고 안내(`cards.notice` 또는 질문)(K51). ①은 실제로 말한 목록 값을 `said`로 넘기고, merge는 그 값만 `utterance` 출처로 표시한다(K44).
 - `cards`·`comparison`에는 `hiddenProductIds`("이 상품만" 제외, 세션·수령인 단위)가 붙는다. 순위는 baseline 그대로이고 앱이 숨긴다(K45, 공통 코어 요청 C1).
 - 상한이 있는 수령인: 예산이 없거나 상한을 넘으면 `question`에 `budgetChips`(상한 금액)를 붙인다. 넘는 경우 카드·설명·비교를 보내지 않는다(K37).
 
@@ -177,12 +177,10 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
   2. 세션 복제본으로 `runTurn({kind:'view'})`을 실행한다.
   3. 1위가 바뀌면 `{memoryId, newTopId}`를 기록한다. 바뀐 것이 여러 개면 하나만 고른다.
 - **가격·만족 옵션 (`value-ladder.mjs`, 설정 `config/value-ladder.v1.json`):**
-  - **올리기 후보:** `budgetAlternatives(products, state)`의 대안 중 `effect`가 `top_changed` 또는 `first_match`인 것만 쓴다. 다음 조건을 만족할 때만 채택한다.
-    - 적합도 상승: 새 1위의 엔진 `score` − 현재 1위 `score` ≥ `minScoreGain[sensitivity]`, 또는
-    - 인기 상승: 1만 원당 `popularity` 상승 ≥ `minPopularityGainPer10k[sensitivity]`
+  - **올리기 대안 (K50):** 예산을 바꾸지 않는다. 같은 상태의 `rankProducts` 목록에서 현재 1위와 `score`가 같고 `rating`이 더 높으며, 비용 증가(`budgetCost` 차, 0 초과)가 `maxUpCostDeltaKrw[sensitivity]` 이하인 상품을 엔진 순서로 `maxUpOptions`개 고른다. 칩은 `올리기 +N원 · 평점 a → b`이고 누르면 `ladder_compare{productId}`로 비교 트레이에 담는다(세션·카드 순위·성향 불변). 없으면 안내 문구.
   - **아끼기 후보:** `rankProducts(products, state)`의 전체 순위에서 현재 1위보다 `budgetCost`가 낮고 `score`가 같은 상품 중 가장 싼 것을 찾는다. 그 비용으로 `what_if_budget`을 다시 실행해 1위를 확인한다.
   - **상한 고정:** `recipients.budget_cap_krw`가 있으면 올리기 후보를 만들지 않는다.
-  - **성향 조정:** 옵션을 고를 때마다 세션의 `sensitivity`를 한 단계 이동한다. 같은 수령인에서 2회 연속 같은 방향이면 `memory_prompt`를 보낸다.
+  - **성향 조정:** 아끼기(`ladder_pick`)를 고를 때마다 세션의 `sensitivity`를 value 쪽으로 한 단계 이동한다. 같은 수령인에서 2회 연속이면 `memory_prompt`를 보낸다. 올리기(`ladder_compare`)는 성향을 바꾸지 않는다.
 - **P4 구현 기준:** 공통 읽기 도구는 `planner/engine-facts.mjs`(`rankProducts` 순서가 카드와 다르면 오류). 대조 우선순위 K41, 옵션 금액은 `costDelta`(새 1위 비용 − 현재 1위 비용, K40), 칩 선택은 `ladder_pick`(K38), 성향 저장 K39. 반사실은 1위를 바꾸는 첫 기억 하나(K42).
 - **Factsheet (`factsheet.mjs`):**
   - 상품별: `{id, name, rank, categoryKo, budgetCost, budget, headroom, ratingCount, sweetness, matchedPreferences, usedMemories:[{id,label,evidence}], giftHistoryHit, allergyNotice}`
@@ -204,6 +202,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
   - 금지어 없음
   - 알레르기 안내 유지
   - 실패하면 ④에 사유를 붙여 1회 재생성하고, 그래도 실패하면 해당 상품만 템플릿으로 바꾼다.
+- **금액·태그 표기 (K52):** 금액은 `N.N만원` 또는 `N,NNN원` 하나만 쓴다. 태그에는 비교 표현이 없고 리뷰는 `리뷰 N개`다.
 - **P5 구현 기준:** 검증 규칙 K46, ④ 호출·재생성·빠진 B 칩 채우기 K47, 기억 출처 선호 태그 `등산 좋아하심(아버지)` K48(Factsheet `memoryTags`, `usedMemories[].recipientName`), 숨긴 상품을 가리키는 B 칩 제거 K45, 실험 로그 K49. `explanations.source`는 `llm | mixed | template`.
 
 ## 8. LLM 어댑터 (`llm/`)
@@ -236,10 +235,13 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
 | `GET /recipients?ownerId=` | — | 수령인 목록 |
 | `GET /memory/:recipientId?ownerId=` | — | 기억·선물 이력 |
 | `PUT/DELETE /memory/:id` | `{ownerId, …}` | 수정·실제 삭제 |
-| `POST /memory/confirm` | `{ownerId, candidates[]}` | 수락한 후보 저장 |
-| `POST /feedback` | `{ownerId, productId, action}` | chosen \| dismissed \| purchased \| satisfaction |
+| `POST /memory/confirm` | `{ownerId, sessionId, accept, indexes?}` | 세션이 들고 있는 후보를 저장(수락)하거나 버림(K53) |
+| `POST /feedback` | `{ownerId, sessionId, productId, action, scope?, giftId?, satisfaction?}` | chosen \| dismissed \| purchased \| satisfaction. 응답은 `{events}` JSON |
+| `GET /health` | — | `{ok:true}` |
 
-- 입력은 전부 검증하고 본문 크기를 제한한다.
+- 입력은 전부 검증하고 본문 크기를 제한한다(16KB, 초과 413). ID는 `[A-Za-z0-9_.:-]{1,64}`.
+- `/chat` 스트림에는 파이프라인 이벤트 외에 서버가 `conditions{conditions, products}`를 첫 `question|cards|comparison` 바로 뒤에 붙인다(K53). `compare_add`에는 `product`가 붙는다.
+- 알 수 없는 오류는 `{error:'internal'}`/`error{code:'internal'}`만 보낸다(메시지에 사용자 문장이 있을 수 있음).
 - 로그·trace·events에 원문 발화를 남기지 않는다.
 - 로컬 실험 전용이다. 공개 배포에는 인증이 필요하다(범위 밖).
 

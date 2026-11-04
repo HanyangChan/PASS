@@ -51,11 +51,11 @@ test('banner and gift labels', () => {
 });
 
 test('template tags: 2..3 tags of <= 12 chars, built only from the card facts', () => {
-  assert.deepEqual([wonShort(15000), wonShort(8000), wonShort(8500), wonShort(20000)], ['1.5만원', '8천원', '8,500원', '2만원']);
+  assert.deepEqual([wonShort(15000), wonShort(8000), wonShort(8500), wonShort(20000)], ['1.5만원', '8,000원', '8,500원', '2만원']);
   const state = { ...initial(), recipients: ['부모님'], quantity: 1, same_product: true, budget: { amount_krw: 50000, scope: 'per_set', shipping_included: true }, preferences: ['less_sweet', 'category:fitness'] };
   const cards = ['hiking-socks', 'green-tea', 'hiking-poles'].map(id => ({ id }));
   const out = templateExplanations({ cards, products: Object.values(byId), state });
-  assert.deepEqual(out.items.find(i => i.id === 'hiking-socks').tags, ['운동용품 선호', '리뷰 가장 많음', '2.8만원 여유']);
-  assert.deepEqual(out.items.find(i => i.id === 'green-tea').tags, ['단맛 없음', '1.8만원 여유']);
-  assert.deepEqual(out.items.find(i => i.id === 'hiking-poles').tags, ['운동용품 선호', '5천원 여유']);
+  assert.deepEqual(out.items.find(i => i.id === 'hiking-socks').tags, ['운동용품 선호', '리뷰 600개', '2.8만원 여유']);
+  assert.deepEqual(out.items.find(i => i.id === 'green-tea').tags, ['단맛 없음', '리뷰 400개', '1.8만원 여유']);
+  assert.deepEqual(out.items.find(i => i.id === 'hiking-poles').tags, ['운동용품 선호', '리뷰 250개', '5,000원 여유']);
 });

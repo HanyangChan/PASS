@@ -9,6 +9,7 @@ import { budgetCost, rankProducts } from '../../../src/vendor/engine.mjs';
 import { createPipeline } from '../pipeline/index.mjs';
 import { buildFactsheet, planContrast, planMemoryCf, planValueLadder, shiftSensitivity, loadLadderConfig, NO_BETTER_UP } from '../planner/index.mjs';
 import { products } from './fixtures/catalog.mjs';
+import { loadCatalog } from '../data/load.mjs';
 import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
 
 const NOW = () => '2027-01-25T03:00:00.000Z';
@@ -32,6 +33,15 @@ const teas = [
   { ...base, id: 'tea-a', name: '찻잎 A 세트', price_krw: 30000, rating_count: 1000 },
   { ...base, id: 'tea-b', name: '찻잎 B 세트', price_krw: 20000, rating_count: 500 },
   { ...base, id: 'tea-c', name: '찻잎 C 세트', price_krw: 10000, rating_count: 100 },
+];
+
+// Test-local catalog with ratings (the shared fixture has none): same engine score, so only popularity, price and rating differ.
+const rated = [
+  { ...base, id: 'r-top', name: '기본 차 세트', price_krw: 20000, rating_count: 1000, rating: 4.0 },
+  { ...base, id: 'r-up', name: '평점 높은 차 세트', price_krw: 26000, rating_count: 500, rating: 4.6 },
+  { ...base, id: 'r-same', name: '같은 평점 차 세트', price_krw: 22000, rating_count: 400, rating: 4.0 },
+  { ...base, id: 'r-far', name: '많이 비싼 차 세트', price_krw: 60000, rating_count: 300, rating: 4.9 },
+  { ...base, id: 'r-low', name: '저렴한 차 세트', price_krw: 15000, rating_count: 200, rating: 3.8 },
 ];
 
 /** The rank-1 product after removing exactly the given state values, by the common runTurn (independent of the planner). */
@@ -86,45 +96,67 @@ for (const [name, make] of Object.entries(stores)) {
     assert.deepEqual(ev(runs.A, 'explanations').items.map(i => i.tags), ev(runs.B, 'explanations').items.map(i => i.tags), 'tags are the same in A and B (F5)');
   });
 
-  test(`[${name}] AC13: "올리기" appears only past the threshold; otherwise the notice is shown`, async () => {
-    const { store, turn } = setup(make);
+  test(`[${name}] AC13 (K50): "올리기" is an alternative with the SAME engine score, a HIGHER rating and a cost rise within the config limit; otherwise the notice`, async () => {
+    const { store, turn } = setup(make, { catalog: rated });
     await seedPeople(store);
-    // health preference with 4만원: 홍삼 (4.7만원) would be rank 1 and scores higher -> an "up" option
-    const out = await turn('h', { kind: 'patch', patch: { recipients: ['부모님'], budget: budget(40000), quantity: 1, preferences: ['category:health'] } });
+    const out = await turn('r', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(70000, false), quantity: 1 } });
+    const state = (await store.getSession('userA', 'r')).session.state;
+    const ranked = rankProducts(rated, state).items;
+    assert.equal(ranked[0].id, 'r-top', 'precondition: rank 1 by the engine');
     const top = ev(out, 'explanations').items[0];
-    const alt = budgetAlternatives(products, (await store.getSession('userA', 'h')).session.state).alternatives.find(a => a.effect === 'top_changed');
-    const cards = ev(out, 'cards').result.cards;
-    assert.deepEqual(top.ladderChips.filter(c => c.direction === 'up'), [{ direction: 'up', label: `올리기 +${(alt.target.total - cards[0].budget_cost_krw) / 10000}만원 · 선호에 더 맞음`, amount_krw: alt.amount }]);
+    // r-up: same score, rating 4.0 -> 4.6, +6,000원 (limit for balanced = 10,000). r-same (same rating), r-far (+40,000), r-low (cheaper) are not offered.
+    assert.deepEqual(top.ladderChips.filter(c => c.direction === 'up'), [{ direction: 'up', label: '올리기 +6,000원 · 평점 4.0 → 4.6', productId: 'r-up' }]);
     assert.equal(top.ladderNotice, undefined);
-    // the same people with no preference: no alternative changes rank 1 -> no up chip, the notice instead
-    const plain = await turn('p', { kind: 'patch', patch: { recipients: ['부모님'], budget: budget(30000), quantity: 1 } });
+    assert.deepEqual(top.ladderChips.find(c => c.direction === 'down'), { direction: 'down', label: '아끼기 -5,000원 · 같은 적합도', amount_krw: 15000 });
+    // the fixture catalog has no ratings at all -> no option, the notice instead
+    const plain = await setup(make).turn('p', { kind: 'patch', patch: { recipients: ['부모님'], budget: budget(30000), quantity: 1 } });
     const ptop = ev(plain, 'explanations').items[0];
     assert.ok(!(ptop.ladderChips ?? []).some(c => c.direction === 'up'));
     assert.equal(ptop.ladderNotice, NO_BETTER_UP);
   });
 
-  test(`[${name}] AC13: the threshold follows the session sensitivity (config/value-ladder.v1.json)`, async () => {
+  test(`[${name}] AC13: the cost limit follows the session sensitivity (config/value-ladder.v1.json)`, async () => {
     const cfg = loadLadderConfig();
-    // parents, coffee/decor excluded, 3만원: rank 1 scores 0; at 3.1만원 a food set scores 1 (gain 1)
-    const state = checkedPatch(createSession('x').state, { recipients: ['부모님'], budget: budget(30000), quantity: 1, excluded_categories: ['coffee_tea', 'decor'] });
+    const state = checkedPatch(createSession('x').state, { recipients: ['친구'], budget: budget(70000, false), quantity: 1 });
     const session = { id: 'x', version: 0, state };
-    const cards = (await runTurn({ session, products, request: { kind: 'view', expectedVersion: 0 } })).result.cards;
-    const ranked = rankProducts(products, state).items;
-    const balanced = await planValueLadder({ session, state, products, cards, sensitivity: 'balanced' });
-    const value = await planValueLadder({ session, state, products, cards, sensitivity: 'value' });
-    const gain = balanced.up[0].scoreGain;
-    assert.ok(gain >= cfg.minScoreGain.balanced && gain < cfg.minScoreGain.value, `gain ${gain} sits between the two thresholds`);
-    assert.equal(balanced.up[0].reason, 'score');
+    const cards = (await runTurn({ session, products: rated, request: { kind: 'view', expectedVersion: 0 } })).result.cards;
+    const plan = sensitivity => planValueLadder({ session, state, products: rated, cards, sensitivity });
+    assert.ok(cfg.maxUpCostDeltaKrw.value < 6000 && 6000 <= cfg.maxUpCostDeltaKrw.balanced, 'precondition: 6,000원 sits between the limits');
+    const value = await plan('value'), balanced = await plan('balanced'), quality = await plan('quality');
     assert.deepEqual([value.up, value.upNotice], [[], NO_BETTER_UP]);
-    assert.equal(ranked[0].id, cards[0].id);
+    assert.deepEqual(balanced.up.map(o => [o.productId, o.costDelta, o.rating]), [['r-up', 6000, { from: 4.0, to: 4.6 }]]);
+    assert.deepEqual(quality.up.map(o => o.productId), ['r-up'], 'r-far (+40,000원) is past every limit');
   });
 
-  test(`[${name}] AC13: popularity path — same score, more reviews per 10,000 KRW past the threshold`, async () => {
-    const state = checkedPatch(createSession('x').state, { recipients: ['친구'], budget: budget(10000, false), quantity: 1 });
-    const session = { id: 'x', version: 0, state };
-    const cards = (await runTurn({ session, products: teas, request: { kind: 'view', expectedVersion: 0 } })).result.cards;
-    const l = await planValueLadder({ session, state, products: teas, cards, sensitivity: 'balanced' });
-    assert.deepEqual(l.up.map(o => [o.newTopId, o.reason, o.scoreGain, o.costDelta, o.amount_krw]), [['tea-b', 'popularity', 0, 10000, 20000]]);
+  test(`[${name}] AC13: a lower or equal rating, another score, or no rating is never offered`, async () => {
+    const mk = extra => [{ ...base, id: 't1', name: '기준', price_krw: 20000, rating_count: 900, rating: 4.2 }, { ...base, ...extra }];
+    const run = async (list, preferences = []) => {
+      const state = checkedPatch(createSession('x').state, { recipients: ['친구'], budget: budget(70000, false), quantity: 1, preferences });
+      const session = { id: 'x', version: 0, state };
+      const cards = (await runTurn({ session, products: list, request: { kind: 'view', expectedVersion: 0 } })).result.cards;
+      return (await planValueLadder({ session, state, products: list, cards })).up;
+    };
+    assert.equal((await run(mk({ id: 't2', name: '높음', price_krw: 23000, rating_count: 800, rating: 4.5 }))).length, 1, 'control');
+    assert.deepEqual(await run(mk({ id: 't2', name: '같음', price_krw: 23000, rating_count: 800, rating: 4.2 })), []);
+    assert.deepEqual(await run(mk({ id: 't2', name: '낮음', price_krw: 23000, rating_count: 800, rating: 3.9 })), []);
+    assert.deepEqual(await run(mk({ id: 't2', name: '평점 없음', price_krw: 23000, rating_count: 800 })), []);
+    assert.deepEqual(await run(mk({ id: 't2', name: '다른 점수', category: 'decor', price_krw: 23000, rating_count: 800, rating: 4.9 }), ['category:coffee_tea']), [], 'rank 1 scores 3, the decor set 0');
+  });
+
+  test(`[${name}] K50: the engine ranking does not change — options are read from rankProducts and nothing is sorted or scored`, async () => {
+    const { store, turn } = setup(make, { catalog: rated });
+    await seedPeople(store);
+    const out = await turn('r', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(70000, false), quantity: 1 } });
+    const row = await store.getSession('userA', 'r');
+    const engine = rankProducts(rated, row.session.state).items.map(p => [p.id, p.score]);
+    const baseline = await runTurn({ session: { id: 'r', version: row.session.version, state: row.session.state }, products: rated, request: { kind: 'view', expectedVersion: row.session.version } });
+    assert.deepEqual(ev(out, 'cards').result.cards.map(c => c.id), baseline.result.cards.map(c => c.id), 'cards are the baseline cards');
+    assert.deepEqual(ev(out, 'cards').result.cards.map(c => c.id), engine.slice(0, 3).map(x => x[0]));
+    assert.equal(ev(out, 'cards').result.cards[0].id, 'r-top', 'the higher-rated r-up does not displace rank 1');
+    const state = structuredClone(row.session.state);
+    await planValueLadder({ session: row.session, state, products: rated, cards: ev(out, 'cards').result.cards });
+    assert.deepEqual(state, row.session.state, 'planning leaves the state untouched');
+    assert.deepEqual(rankProducts(rated, state).items.map(p => [p.id, p.score]), engine, 'and the engine order is the same afterwards');
   });
 
   test(`[${name}] AC14 S4: a capped recipient never sees "올리기", and nothing above the cap appears anywhere`, async () => {
@@ -157,44 +189,62 @@ for (const [name, make] of Object.entries(stores)) {
     for (const n of above) assert.ok(!JSON.stringify(whatIf.events).includes(n));
   });
 
-  test(`[${name}] AC15: a price option re-recommends at its budget and recomputes the options; nothing changes before`, async () => {
-    const { store, turn } = setup(make);
+  test(`[${name}] AC15: "아끼기" re-recommends at its budget and recomputes the options; nothing changes before`, async () => {
+    const { store, turn } = setup(make, { catalog: rated });
     await seedPeople(store);
-    const first = await turn('h', { kind: 'patch', patch: { recipients: ['부모님'], budget: budget(40000), quantity: 1, preferences: ['category:health'] } });
-    const chip = ev(first, 'explanations').items[0].ladderChips.find(c => c.direction === 'up');
+    const first = await turn('h', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(70000, false), quantity: 1 } });
+    const chip = ev(first, 'explanations').items[0].ladderChips.find(c => c.direction === 'down');
     const before = await store.getSession('userA', 'h');
-    assert.equal(before.session.state.budget.amount_krw, 40000, 'showing options does not change the budget');
+    assert.equal(before.session.state.budget.amount_krw, 70000, 'showing options does not change the budget');
     assert.deepEqual(await store.getSession('userA', 'h'), before);
-    const picked = await turn('h', { kind: 'ladder_pick', direction: 'up' });
+    const picked = await turn('h', { kind: 'ladder_pick', direction: 'down' });
     const row = await store.getSession('userA', 'h');
     assert.equal(row.session.state.budget.amount_krw, chip.amount_krw);
-    const expected = await runTurn({ session: before.session, products, request: { kind: 'what_if_budget', amount_krw: chip.amount_krw, expectedVersion: before.session.version } });
+    const expected = await runTurn({ session: before.session, products: rated, request: { kind: 'what_if_budget', amount_krw: chip.amount_krw, expectedVersion: before.session.version } });
     assert.deepEqual(ev(picked, 'cards').result.cards.map(c => c.id), expected.result.cards.map(c => c.id));
     const again = ev(picked, 'explanations').items[0];
-    const recomputed = await planValueLadder({ session: row.session, state: row.session.state, products, cards: ev(picked, 'cards').result.cards, sensitivity: row.meta.sensitivity });
-    assert.deepEqual((again.ladderChips ?? []).map(c => c.amount_krw), [...recomputed.down, ...recomputed.up].map(o => o.amount_krw), 'options recomputed from the new budget');
-    assert.equal(row.meta.sensitivity, 'quality', 'up moves the session sensitivity one step');
-    // a direction with no option is refused, nothing written
-    const none = await turn('h', { kind: 'ladder_pick', direction: 'up' });
+    const recomputed = await planValueLadder({ session: row.session, state: row.session.state, products: rated, cards: ev(picked, 'cards').result.cards, sensitivity: row.meta.sensitivity });
+    assert.deepEqual((again.ladderChips ?? []).length, recomputed.down.length + recomputed.up.length, 'options recomputed from the new budget');
+    assert.equal(row.meta.sensitivity, 'value', 'down moves the session sensitivity one step');
+    // a direction with no option is refused, nothing written; "올리기" is not a ladder_pick any more (K50)
+    const none = await turn('h', { kind: 'ladder_pick', direction: 'down' });
     assert.equal(ev(none, 'error').code, 'invalid_request');
+    assert.equal(ev(await turn('h', { kind: 'ladder_pick', direction: 'up' }), 'error').code, 'invalid_request');
     assert.deepEqual(await store.getSession('userA', 'h'), row);
+  });
+
+  test(`[${name}] K50: ladder_compare puts the alternative in the tray; budget, cards, version and sensitivity stay`, async () => {
+    const { store, turn } = setup(make, { catalog: rated });
+    await seedPeople(store);
+    const first = await turn('c', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(70000, false), quantity: 1 } });
+    const chip = ev(first, 'explanations').items[0].ladderChips.find(c => c.direction === 'up');
+    const before = await store.getSession('userA', 'c');
+    const out = await turn('c', { kind: 'ladder_compare', productId: chip.productId });
+    assert.deepEqual(out.events, [{ type: 'compare_add', version: before.session.version, productId: 'r-up', productName: '평점 높은 차 세트', againstId: 'r-top', costDelta: 6000, rating: { from: 4.0, to: 4.6 } }]);
+    assert.deepEqual(await store.getSession('userA', 'c'), before, 'nothing saved: budget, card order, sensitivity unchanged');
+    // only an offered option can be added: another product, or none, is refused
+    for (const productId of ['r-far', 'r-low', 'nope', undefined]) assert.equal(ev(await turn('c', { kind: 'ladder_compare', productId }), 'error').code, 'invalid_request', String(productId));
+    // condition A has no price options
+    await turn('ca', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(70000, false), quantity: 1 } }, { experiment: 'A' });
+    assert.equal(ev(await turn('ca', { kind: 'ladder_compare', productId: 'r-up' }), 'error').code, 'invalid_request');
   });
 
   test(`[${name}] F4: two picks the same way for the same person ask once; the answer is stored on the person`, async () => {
     const { store, turn } = setup(make, { catalog: teas });
     const { friend } = await seedPeople(store);
-    await turn('f', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(10000, false), quantity: 1 } });
-    const one = await turn('f', { kind: 'ladder_pick', direction: 'up' });
+    await turn('f', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(30000, false), quantity: 1 } });
+    const one = await turn('f', { kind: 'ladder_pick', direction: 'down' });
     assert.equal(ev(one, 'memory_prompt'), undefined);
-    const two = await turn('f', { kind: 'ladder_pick', direction: 'up' });
+    await turn('f', { kind: 'patch', patch: { budget: budget(30000, false) } });
+    const two = await turn('f', { kind: 'ladder_pick', direction: 'down' });
     const p = ev(two, 'memory_prompt');
-    assert.deepEqual([p.kind, p.sensitivity, p.text], ['sensitivity', 'quality', '품질 우선으로 기억할까요?']);
+    assert.deepEqual([p.kind, p.sensitivity, p.text], ['sensitivity', 'value', '가성비 위주로 기억할까요?']);
     assert.equal((await store.getRecipient('userA', friend.id)).priceSensitivity, 'balanced', 'nothing stored before the answer');
     await turn('f', { kind: 'memory_edit', op: 'sensitivity', accept: true });
-    assert.equal((await store.getRecipient('userA', friend.id)).priceSensitivity, 'quality');
+    assert.equal((await store.getRecipient('userA', friend.id)).priceSensitivity, 'value');
     // the next session for this person starts from it
     await turn('f2', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(10000, false), quantity: 1 } });
-    assert.equal((await store.getSession('userA', 'f2')).meta.sensitivity, 'quality');
+    assert.equal((await store.getSession('userA', 'f2')).meta.sensitivity, 'value');
     assert.equal(ev(await turn('f', { kind: 'memory_edit', op: 'sensitivity', accept: true }), 'error').code, 'invalid_request', 'answered once');
   });
 
@@ -259,15 +309,17 @@ test('value ladder: "아끼기" is the cheapest same-score product, re-run as a 
 test('sensitivity moves one step per pick and stops at the ends', () => {
   assert.deepEqual(['value', 'balanced', 'quality'].map(s => [shiftSensitivity(s, 'down'), shiftSensitivity(s, 'up')]),
     [['value', 'balanced'], ['value', 'quality'], ['balanced', 'quality']]);
-  assert.throws(() => loadLadderConfig({ minScoreGain: { value: 1 } }), { code: 'invalid_value_ladder' });
+  assert.throws(() => loadLadderConfig({ maxUpOptions: 1, maxDownOptions: 1 }), { code: 'invalid_value_ladder' });
+  assert.throws(() => loadLadderConfig({ maxUpCostDeltaKrw: { value: 1, balanced: 1 }, maxUpOptions: 1, maxDownOptions: 1 }), { code: 'invalid_value_ladder' });
 });
 
 test('review: a pending sensitivity / dismissal answer is never written to people who replaced the asked ones', async () => {
   const { store, turn } = setup(stores.memory, { catalog: teas });
   const { friend, mom } = await seedPeople(store);
-  await turn('f', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(10000, false), quantity: 1 } });
-  await turn('f', { kind: 'ladder_pick', direction: 'up' });
-  assert.equal(ev(await turn('f', { kind: 'ladder_pick', direction: 'up' }), 'memory_prompt').kind, 'sensitivity');
+  await turn('f', { kind: 'patch', patch: { recipients: ['친구'], budget: budget(30000, false), quantity: 1 } });
+  await turn('f', { kind: 'ladder_pick', direction: 'down' });
+  await turn('f', { kind: 'patch', patch: { budget: budget(30000, false) } });
+  assert.equal(ev(await turn('f', { kind: 'ladder_pick', direction: 'down' }), 'memory_prompt').kind, 'sensitivity');
   await turn('f', { kind: 'feedback', action: 'dismissed', productId: 'tea-a' });
   await turn('f', { kind: 'patch', patch: { recipients: ['어머니'] } });
   assert.equal(ev(await turn('f', { kind: 'memory_edit', op: 'sensitivity', accept: true }), 'error').code, 'invalid_request');
@@ -308,3 +360,29 @@ test('review K37: the cap is per set with shipping — 상품값만 or 총예산
   const q = await t('c', { kind: 'patch', patch: { recipients: ['교수님'], budget: budget(cap) } });
   assert.equal(ev(q, 'question').budgetChips, null);
 });
+
+// K50 on the real snapshot (data/): the "올리기" alternative must exist in the 5만원 parents scenario, with and without memories,
+// and it must be a product the engine itself lists with the same score as rank 1 and a higher rating.
+for (const [name, make] of Object.entries(stores)) {
+  test(`[${name}] K50: real catalog, 부모님 5만원 — "올리기" is offered (S1 without memory, S2 with memory)`, async () => {
+    const real = loadCatalog();
+    for (const seed of [false, true]) {
+      const store = make();
+      const people = await seedPeople(store);
+      if (seed) await seedS1Memories(store, people);
+      const pipe = createPipeline({ store, products: real, explain: null, now: NOW });
+      const out = await pipe.runPipelineTurn({ ownerId: 'userA', sessionId: 's', request: { kind: 'message', text: PARENTS } });
+      const up = ev(out, 'explanations').items[0].ladderChips.find(c => c.direction === 'up');
+      assert.ok(up, `seed=${seed}: an up chip`);
+      const state = (await store.getSession('userA', 's')).session.state;
+      const [top] = rankProducts(real, state).items;
+      const alt = rankProducts(real, state).items.find(p => p.id === up.productId);
+      assert.equal(alt.score, top.score);
+      assert.ok(alt.rating > top.rating);
+      const delta = budgetCost(alt, state) - budgetCost(top, state);
+      assert.ok(delta > 0 && delta <= loadLadderConfig().maxUpCostDeltaKrw.balanced);
+      assert.match(up.label, /^올리기 \+(?:\d+(?:\.\d)?만원|\d{1,3}(?:,\d{3})*원) · 평점 \d\.\d → \d\.\d$/);
+      assert.equal(ev(out, 'cards').result.cards[0].id, top.id, 'rank 1 is still the engine rank 1');
+    }
+  });
+}

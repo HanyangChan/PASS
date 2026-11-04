@@ -10,7 +10,7 @@
 - Claude Code 실행 순서: [docs/KICKOFF.md](docs/KICKOFF.md)
 
 ## 현재 상태
-P4까지 구현: 기억 저장·읽기, 대화 이해, 취향 매핑, 오케스트레이터(`pipeline/index.mjs` `createPipeline`), 설명 계획기(`planner/`: 대조·기억 반사실·가격 옵션·Factsheet). 진행은 [docs/PLAN.md](docs/PLAN.md).
+P6까지 구현: 기억 저장·읽기, 대화 이해, 취향 매핑, 오케스트레이터(`pipeline/index.mjs` `createPipeline`), 설명 계획기, 검증·설명 생성, 서버(`server/`), 앱 복사본(`app/`). 진행은 [docs/PLAN.md](docs/PLAN.md).
 
 ### LLM 키가 없을 때
 - 규칙(`parseRules`)으로 풀리는 문장만 처리된다. 예: "어머니 한 세트 세트당 예산 5만원 이하 배송비 포함 추천".
@@ -30,3 +30,14 @@ npm run demo
 ```
 
 브랜치: `codex/architecture-b-pipeline`. 공통 규칙은 [상위 안내](../README.md)와 [AGENTS.md](../AGENTS.md)를 따른다.
+
+## 서버와 앱 실행 (로컬 실험 전용, 인증 없음)
+```sh
+npm run dev:server                    # http://127.0.0.1:8787 (HOST, PORT, PIPELINE_DB_PATH, CORS_ORIGIN, LLM 키는 환경 변수)
+npm run latency                       # AC16 규칙 경로 측정 (LLM 경로는 --llm, 승인 후)
+cd app && EXPO_PUBLIC_PIPELINE_URL=http://127.0.0.1:8787 npx expo start --web   # 앱 의존성은 app/에서 먼저 npm install
+```
+- `EXPO_PUBLIC_PIPELINE_URL`이 있으면 앱이 파이프라인 모드가 된다(참가자 ID 입력 → 서버와 SSE). 없으면 기존 mobile/과 같은 동작이다.
+- 실험 조건은 진행자가 `EXPO_PUBLIC_PIPELINE_EXPERIMENT=A|B`(기본 B)로 정한다. 화면에는 조건 이름이 나오지 않는다.
+- 폰에서 접속하려면 서버를 `HOST=0.0.0.0`으로 띄우고 같은 네트워크 주소(예: `http://192.168.0.12:8787`)를 쓴다. 앱은 HTTPS가 아니면 사설망 주소만 받는다.
+- 앱 서비스 계층: `app/src/services/pipelineChatService.ts`(전송)와 `pipelineEvents.mjs`(순수 로직, `tests/app-service.test.mjs`). 새 UI: `app/src/PipelineExtras.tsx`.
