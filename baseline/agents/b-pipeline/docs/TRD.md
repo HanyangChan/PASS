@@ -1,5 +1,7 @@
 # TRD — PASS B 역할 파이프라인
 
+> **2026-11-05 변경:** §4(한 턴의 흐름)·§9(앱)·§10(서버 API)은 [PROTO-REBASE.md](PROTO-REBASE.md)가 대체한다(K55). 대화 이해(①)는 main 프로토타입의 `fastRuleTurn → llmTurn → singleTurn`을 `proto/` 복사본으로 쓴다.
+
 무엇을 만들지는 [PRD.md](PRD.md)가 기준이다. 이 문서는 **어떻게** 만들지만 정한다. 구조도: [architecture.png](architecture.png)
 
 ## 1. 전제: baseline 공통 코어와의 관계
