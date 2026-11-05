@@ -1,4 +1,4 @@
-import { fetchCatalog, toEngineProduct, todayKst } from '../../../../../../lib/catalog.mjs';
+import { fetchCatalog, toEngineProduct, todayKst } from '../../../proto/lib/catalog.mjs';
 import type { EngineProduct } from '../domain.ts';
 type Storage = { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> };
 export const catalogKey = 'pass.catalog.v1';

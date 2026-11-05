@@ -1,8 +1,8 @@
-import { normalizeConditions } from '../../../../../../lib/condition-compat.mjs';
-import { CATEGORY_NAMES, CATEGORIES } from '../../../../../../lib/catalog.mjs';
-import { validateState } from '../../../../../../lib/llm.mjs';
+import { normalizeConditions } from '../../../proto/lib/condition-compat.mjs';
+import { CATEGORY_NAMES, CATEGORIES } from '../../../proto/lib/catalog.mjs';
+import { validateState } from '../../../proto/lib/llm.mjs';
 import { decodeGifts } from '../storage.ts';
-import { extract, initial } from '../../../../../../lib/engine.mjs';
+import { extract, initial } from '../../../proto/lib/engine.mjs';
 import type { ChatSession, Conditions, Gift } from '../domain.ts';
 
 export type RecipientMemory = {
@@ -51,7 +51,11 @@ export function rememberConditions(data: Personalization, state: Conditions, now
 }
 const categoryKeys: Record<string, string> = { ...Object.fromEntries(Object.entries(CATEGORY_NAMES).map(([key, label]) => [label, key])), 과일: 'food', 한과: 'snack', 견과류: 'food', 차: 'coffee_tea', 커피: 'coffee_tea', 오일: 'food', 기름: 'food', 전통차: 'coffee_tea', '신선 과일': 'food', fruit: 'food', hangwa: 'snack', nuts: 'food', tea: 'coffee_tea', coffee: 'coffee_tea', oil: 'food' };
 // Current explicit preferences outrank inferred purchase preferences. Never infer allergies from purchases.
+// b-pipeline (A3): the server's database is the one memory. In that mode the device-side recall, allergy guard and recipient check are off
+// (a recipient change in a patch still goes through; the server narrows or switches the people itself).
+export const deviceMemoryOff = !!process.env.EXPO_PUBLIC_PIPELINE_URL;
 export function personalizeSession(session: ChatSession, data: Personalization, text = '', recipientsOverride?: string[]) {
+  if (deviceMemoryOff) return { session: recipientsOverride ? { ...session, state: { ...session.state, recipients: recipientsOverride } } : session, reasons: [] as string[] };
   const mentioned = recipientsInText(text);
   const recipients = canonicalRecipients(recipientsOverride ?? (mentioned.length ? mentioned : session.state.recipients));
   const recall = JSON.stringify(recipients) !== JSON.stringify(canonicalRecipients(session.state.recipients));
@@ -118,6 +122,7 @@ export function createPersonalizationRepository(storage: { getItem(key: string):
 
 // Even an LLM patch or condition editor cannot silently remove a remembered allergy.
 export function protectRememberedAllergies(session: ChatSession, data: Personalization): ChatSession {
+  if (deviceMemoryOff) return session;
   const recipients = canonicalRecipients(session.state.recipients);
   const normalized = { ...session, state: { ...normalizeConditions(session.state).state, recipients } };
   if (recipients.length !== 1) return normalized;
@@ -147,6 +152,7 @@ function memoryConditions(memory: RecipientMemory) {
 
 // A model must not silently change the explicit target, including when asked to change other conditions.
 export function assertSameRecipient(request: ChatSession, response: ChatSession) {
+  if (deviceMemoryOff) return;
   if (request.state.recipients.length && JSON.stringify(canonicalRecipients(request.state.recipients)) !== JSON.stringify(canonicalRecipients(response.state.recipients))) {
     throw new Error('받는 분을 정확히 확인하지 못했어요. 조건 편집에서 받는 분을 지정한 뒤 다시 시도해주세요.');
   }

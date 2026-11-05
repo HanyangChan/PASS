@@ -1,4 +1,4 @@
-import { CATEGORY_NAMES, RECIPIENT_CATEGORIES } from '../../../../../lib/catalog.mjs';
+import { CATEGORY_NAMES, RECIPIENT_CATEGORIES } from '../../proto/lib/catalog.mjs';
 import type { EngineProduct, Gift } from './domain.ts';
 export type { Gift } from './domain.ts';
 export const categoryNames: Record<string, string> = CATEGORY_NAMES;

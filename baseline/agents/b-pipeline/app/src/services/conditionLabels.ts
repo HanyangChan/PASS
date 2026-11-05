@@ -1,6 +1,6 @@
-import { CATEGORY_NAMES } from '../../../../../../lib/catalog.mjs';
-import { normalizeConditions } from '../../../../../../lib/condition-compat.mjs';
-import { validateState } from '../../../../../../lib/llm.mjs';
+import { CATEGORY_NAMES } from '../../../proto/lib/catalog.mjs';
+import { normalizeConditions } from '../../../proto/lib/condition-compat.mjs';
+import { validateState } from '../../../proto/lib/llm.mjs';
 import type { Conditions } from '../domain.ts';
 const categoryNames: Record<string, string> = CATEGORY_NAMES;
 const special: Record<string, string> = { less_sweet: '덜 달게', unsweetened: '단맛 없이', formal: '격식 있는 포장', basic: '기본 포장' };

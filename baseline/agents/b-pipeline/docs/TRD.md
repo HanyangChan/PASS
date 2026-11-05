@@ -226,7 +226,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
    - 원본 `mobile/`은 읽기만 하고 수정하지 않는다.
    - `tests/`는 복사하지 않는다. baseline `npm test`(`node --test`)가 앱 테스트까지 찾아 실패하기 때문이다.
 2. **디자인 유지:** 화면 구성, `src/theme.ts`, `src/components.tsx`, `assets/`는 그대로 둔다. 색·폰트·간격·아이콘을 바꾸지 않는다.
-3. **바꾸는 것:** 서비스 계층만 바꾼다. `app/src/services/pipelineChatService.ts`를 새로 만들어 `EXPO_PUBLIC_PIPELINE_URL`의 `server/`에 연결하고, SSE `cards` → `explanations` 순서로 화면을 갱신한다.
+3. **바꾸는 것:** 서비스 계층만 바꾼다(P10, PROTO-REBASE §4가 이 항목을 대체한다). main `serverChatService`를 `EXPO_PUBLIC_PIPELINE_URL`의 `server/`에 연결하고(참가자 ID 스텁, `usePipeline`), 카드와 템플릿 태그는 한 응답으로 받고 LLM 설명은 후속 `operation=explain`으로 태그만 교체한다. SSE·`pipelineChatService.ts`는 없다.
 4. **새 UI 요소:** 기존 컴포넌트를 재사용해 만든다. 이유 태그, 칩, 반영 한 줄, "기억할까요?", [수정].
 5. **로그인:** 실험용 참가자 ID 입력으로 대체한다(정식 인증은 범위 밖).
 

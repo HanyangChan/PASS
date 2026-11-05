@@ -1,5 +1,5 @@
-import { normalizeConditions } from '../../../../../../lib/condition-compat.mjs';
-import { validateState } from '../../../../../../lib/llm.mjs';
+import { normalizeConditions } from '../../../proto/lib/condition-compat.mjs';
+import { validateState } from '../../../proto/lib/llm.mjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decodeGifts } from '../storage.ts';
 import type { ChatMessage, ChatSession, Gift, GiftRecords } from '../domain';

@@ -1,6 +1,6 @@
-import { singleInitial, singleQuestion, singleTurn, engineState, finishSingle } from '../../../../../../lib/single-gift.mjs';
-import { recommend, apply } from '../../../../../../lib/engine.mjs';
-import { budgetAlternatives } from '../../../../../../lib/counterfactual.mjs';
+import { singleInitial, singleQuestion, singleTurn, engineState, finishSingle } from '../../../proto/lib/single-gift.mjs';
+import { recommend, apply } from '../../../proto/lib/engine.mjs';
+import { budgetAlternatives } from '../../../proto/lib/counterfactual.mjs';
 import type { ChatSession, Conditions, ConditionPatch, Gift, EngineProduct } from '../domain';
 import { giftFromProduct } from '../catalog.ts';
 

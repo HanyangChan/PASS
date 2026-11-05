@@ -54,7 +54,7 @@ npm run dev:server                    # http://127.0.0.1:8787 (HOST, PORT, PIPEL
 npm run latency                       # AC16 규칙 경로 측정 (LLM 경로는 --llm, 승인 후)
 cd app && EXPO_PUBLIC_PIPELINE_URL=http://127.0.0.1:8787 npx expo start --web   # 앱 의존성은 app/에서 먼저 npm install
 ```
-- `EXPO_PUBLIC_PIPELINE_URL`이 있으면 앱이 파이프라인 모드가 된다(참가자 ID 입력 → 서버 `POST /api/chat`, P9부터 JSON 한 번에 응답하고 SSE는 없다. 앱 쪽 교체는 P10). 없으면 기존 mobile/과 같은 동작이다.
+- `EXPO_PUBLIC_PIPELINE_URL`이 있으면 앱이 파이프라인 모드가 된다(참가자 ID 입력 → main의 `serverChatService` 경로로 서버 `POST /api/chat`, JSON 한 번에 응답하고 SSE는 없다. 카드가 먼저 나오고 LLM 설명 태그는 뒤따르는 `operation=explain`으로 바뀐다). 없으면 기존 mobile/과 같은 동작이다.
 - 실험 조건은 진행자가 `EXPO_PUBLIC_PIPELINE_EXPERIMENT=A|B`(기본 B)로 정한다. 화면에는 조건 이름이 나오지 않는다.
 - 폰에서 접속하려면 서버를 `HOST=0.0.0.0`으로 띄우고 같은 네트워크 주소(예: `http://192.168.0.12:8787`)를 쓴다. 앱은 HTTPS가 아니면 사설망 주소만 받는다.
-- 앱 서비스 계층: `app/src/services/pipelineChatService.ts`(전송)와 `pipelineEvents.mjs`(순수 로직, `tests/app-service.test.mjs`). 새 UI: `app/src/PipelineExtras.tsx`.
+- 앱 서비스 계층(P10): main `serverChatService.ts`(패치 A2: 본문에 참가자·대화 필드, `post`), `usePipeline.ts`(참가자 ID·대화 id·훅), `pipelineEvents.mjs`(순수 로직, `tests/app-service.test.mjs`가 실제 서버 핸들러로 검증). 새 UI: `app/src/PipelineExtras.tsx`(반영 한 줄, 태그, 칩, 기억할까요?, 비교 트레이, 기억 패널, 참가자 ID). 기기 안 기억은 이 모드에서 꺼지고 서버 DB가 단일 출처다. main 대비 App.tsx 차이는 18줄이다.

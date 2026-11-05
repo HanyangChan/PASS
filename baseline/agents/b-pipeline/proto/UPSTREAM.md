@@ -98,27 +98,27 @@
 | `proto/lib/single-gift.mjs` | f7f92a8b3bcd128c7935b512dade9b46689ba3ae94bacd29318da96c97c77f8c |
 
 ## 패치된 파일
-P7 시점의 현재 상태다. P8~P10에서 PROTO-REBASE §4의 L1~L3·A1~A4만 남기고 줄인다.
+P10 이후 상태다. 허용 패치는 PROTO-REBASE §4의 L1~L5·A1~A4뿐이다.
 
 | 파일 | 패치 | 이후 |
 |---|---|---|
-| `app/App.tsx` | R1 import 경로 + P6 파이프라인 모드 병렬(SSE) 경로 약 97줄 | P10에서 A4 + 30줄 이내로 축소 |
-| `app/metro.config.js` | R1 watchFolders | P10까지 유지 (A1로 대체 예정) |
+| `app/App.tsx` | A4(+A2·A3 연결) main 대비 18줄: import 2줄, `usePipeline` 호출과 `serverChat = pipeline.chat ?? main`, `resetChat`이 `pipeline.end(clearChat)`, 컨텍스트에 `pipeline`, 기억 패널 교체(`PipelineMemoryPanel`), 카드 아래 `PipelineExtras`·`PipelineTags`, `ParticipantGate` | 30줄 이내 유지 |
+| `app/metro.config.js` | A1 watchFolders → `proto/lib` | — |
 | `app/package.json` | R1 `test:db` 제거 | — |
-| `app/src/catalog.ts` | R1 lib import 경로 | A1 |
-| `app/src/PrototypeFlows.tsx` | P6 pipeline 컨텍스트 사용 | P10 A4 |
-| `app/src/services/chatService.ts` | R1 lib import 경로 | A1 |
-| `app/src/services/cloudRecords.ts` | R1 lib import 경로 | A1 |
-| `app/src/services/conditionLabels.ts` | R1 lib import 경로 | A1 |
-| `app/src/services/personalization.ts` | R1 lib import 경로 + 파이프라인 모드 분기 | A1, A3 |
-| `app/src/services/productRepository.ts` | R1 lib import 경로 | A1 |
-| `app/src/services/serverChatService.ts` | R1 lib import 경로 | A1, A2 |
-| `proto/lib/llm.mjs` | L1 `extractionSchema`에 선택 필드 `memory[{recipient,key,polarity,evidence}]` + 지시문 한 줄, `llmTurn`이 `memory`를 상태와 분리해 반환 · L2 `timeoutMs`(기본 18000)·선택 `thinkingBudget`(400이면 빼고 1회 재시도) · L4 선택 옵션 `generate`(있으면 Gemini 호출 대신 공용 OpenAI 호환 클라이언트에 같은 지시문·`extractionSchema`를 넘김, Gemini 호출은 `geminiCall`로 옮김, 검증·알레르기 합집합·`finishSingle`은 그대로, K72) · L5 `RECIPIENT_ALIASES`·`canonicalRecipient(s)` 추가, LLM 응답 `validateState` 직후 `state.recipients`를 main 규칙(엄마→어머니, 아빠→아버지 + 어머님·아버님)으로 정규화(K73) | P8 · K72 · K73 |
+| `app/src/catalog.ts` | A1 lib import 경로 | — |
+| `app/src/PrototypeFlows.tsx` | A4 선물하기 완료 시 `pipeline.feedback('purchased', …)` 한 줄 | — |
+| `app/src/services/chatService.ts` | A1 lib import 경로 | — |
+| `app/src/services/cloudRecords.ts` | A1 lib import 경로 | — |
+| `app/src/services/conditionLabels.ts` | A1 lib import 경로 | — |
+| `app/src/services/personalization.ts` | A1 + A3 `deviceMemoryOff`(파이프라인 모드에서 기기 안 기억 반영·알레르기 보호·수령인 확인을 끔; patch의 수령인 변경은 통과) | — |
+| `app/src/services/productRepository.ts` | A1 lib import 경로 | — |
+| `app/src/services/serverChatService.ts` | A1 + A2 `resolveChatUrl(value, privateNetwork)`, `createServerChatService(…, extra)`(본문에 참가자·대화 필드), `post(body)`(explain·feedback·memory·end_session), `assertTurn`에 `pipeline` 블록 검사, 409 문구 | — |
+| `proto/lib/llm.mjs` | L1 `extractionSchema`에 선택 필드 `memory[{recipient,key,polarity,evidence}]` + 지시문 한 줄, `llmTurn`이 `memory`를 상태와 분리해 반환 · L2 `timeoutMs`(기본 18000)·선택 `thinkingBudget`(400이면 빼고 1회 재시도) · L4 선택 옵션 `generate`(있으면 Gemini 호출 대신 공용 OpenAI 호환 클라이언트에 같은 지시문·`extractionSchema`를 넘김, Gemini 호출은 `geminiCall`로 옮김, 검증·알레르기 합집합·`finishSingle`은 그대로, K72) · L5 `RECIPIENT_ALIASES`·`canonicalRecipient(s)` 추가, LLM 응답 `validateState` 직후 `state.recipients`를 main 규칙(엄마→어머니, 아빠→아버지 + 어머님·아버님)으로 정규화(K73) | — |
 
 ## 추가된 파일
 
 | 파일 | 내용 | 이후 |
 |---|---|---|
-| `app/src/PipelineExtras.tsx` | P6 반영 한 줄·칩 UI | A4 |
-| `app/src/services/pipelineChatService.ts` | P6 SSE 서비스 | P10에서 삭제 |
-| `app/src/services/pipelineEvents.mjs` | P6 응답 검증 | A2에서 유지 |
+| `app/src/PipelineExtras.tsx` | A4 반영 한 줄·이유 태그·칩·기억할까요? 시트·비교 트레이·기억 패널(A3)·참가자 ID 입력. 모두 `usePassContext().pipeline`에서 읽음 | — |
+| `app/src/usePipeline.ts` | A2 참가자 ID, 대화 id, pipeline 클라이언트를 `serverChat`으로 넘기는 훅 | — |
+| `app/src/services/pipelineEvents.mjs` | A2 순수 로직: `pipeline` 블록 검사·접기, 요청→operation 매핑, `createPipelineClient`(버전·숨김 카드·explain 후속·비교 트레이). `tests/app-service.test.mjs`가 실제 서버 핸들러로 검증 | — |

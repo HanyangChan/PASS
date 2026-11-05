@@ -62,10 +62,8 @@ import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
-import { createPipelineChatService, resolvePipelineUrl, type PipelineRequest, type PipelineTurn } from './src/services/pipelineChatService';
-import { emptyTurn, viewOf, errorText } from './src/services/pipelineEvents.mjs';
-import { PipelineExtras, PipelineTags, ParticipantGate } from './src/PipelineExtras';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PipelineExtras, PipelineTags, PipelineMemoryPanel, ParticipantGate } from './src/PipelineExtras';
+import { usePipeline } from './src/usePipeline';
 import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
 import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
 import { calendarEventKinds } from './src/domain';
@@ -82,14 +80,6 @@ const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
-// b-pipeline mode (TRD §9): on when EXPO_PUBLIC_PIPELINE_URL is set. The experiment condition is a hidden build setting.
-let pipelineConfigurationError = '';
-const pipelineBase = (() => {
-  try { return resolvePipelineUrl(process.env.EXPO_PUBLIC_PIPELINE_URL); }
-  catch (error) { pipelineConfigurationError = (error as Error).message; return null; }
-})();
-const pipelineExperiment: 'A' | 'B' = process.env.EXPO_PUBLIC_PIPELINE_EXPERIMENT === 'A' ? 'A' : 'B';
-const participantKey = 'pass.pipeline.participant.v1';
 type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
@@ -152,6 +142,7 @@ export function AppContent({
     chatError,
     sendChat,
     personalization,
+    pipeline,
     appliedMemory,
     changeChatConditions,
     resetChat,
@@ -181,7 +172,6 @@ export function AppContent({
     allRecent,
     setAllRecent,
     chatService,
-    pipeline,
     catalogProducts,
     rankingByRecipient,
     popularGifts,
@@ -257,20 +247,18 @@ export function AppContent({
     setRecent((old) => [g, ...old.filter((p) => p.id !== g.id)].slice(0, 20));
   };
   const liked = (g: Gift) => saved.some((p) => p.id === g.id);
-  const save = (g: Gift) => {
-    if (!liked(g)) pipeline.feedback('chosen', g.id); // b-pipeline: a like is a suggested memory (no-op outside the mode)
+  const save = (g: Gift) =>
     setSaved((old) =>
       old.some((p) => p.id === g.id)
         ? old.filter((p) => p.id !== g.id)
         : [...old, g],
     );
-  };
   const addEvent = (title: string, date: string, kind: CalendarEventKind) =>
     setEvents((old) => [...old, { id: randomUUID(), title: title.trim(), date, kind }]);
   const removeEvent = (id: string) =>
     setEvents((old) => old.filter((e) => e.id !== id));
   const upcomingEvents = upcomingWithin(events, 7);
-  const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : pipeline.enabled ? (viewOf(emptyTurn()) as unknown as ReturnType<typeof chatService.view>) : chatService.view(session);
+  const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
   const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
     chatService.toGift(product, session.state);
   const send = (text: string, source: 'typed' | 'quick_reply' = 'typed') => {
@@ -775,7 +763,7 @@ export function AppContent({
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
-                  <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
+                  {pipeline.enabled ? <PipelineMemoryPanel/> : <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />}
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
@@ -785,7 +773,7 @@ export function AppContent({
                       {m.text}
                     </Text>
                   ))}
-                  {pipeline.enabled && (!!question.key || result.items.length === 0) && <PipelineExtras turn={pipeline.turn} act={pipeline.act} busy={chatPending}/>}
+                  {pipeline.enabled && (!!question.key || result.items.length === 0) && <PipelineExtras/>}
                   {!question.key && result.items.length === 0 && <View style={s.noMatches}>
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
                     <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
@@ -803,13 +791,13 @@ export function AppContent({
                               <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} ${liked(g) ? '찜 해제' : '찜하기'}`} onPress={() => save(g)} style={s.cardHeart}><Heart size={22} color={liked(g) ? c.primary : c.muted}/></Pressable>
                             </View>
                             <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
-                              {pipeline.enabled && <PipelineTags turn={pipeline.turn} id={g.id}/>}
+                              {pipeline.enabled && <PipelineTags id={g.id}/>}
                               <Button label="자세히 보기" onPress={() => open(g)}/>
                             </View>
                           </View>;
                         })}
                       </ScrollView>
-                      {pipeline.enabled && <PipelineExtras turn={pipeline.turn} act={pipeline.act} busy={chatPending}/>}
+                      {pipeline.enabled && <PipelineExtras/>}
                       <View style={s.resultButton}>
                         <Pressable accessibilityRole="button" accessibilityLabel="조건을 바꾸면 추천이 어떻게 달라지는지 비교해보기" onPress={() => setResultsOpen(true)} style={s.compareButton}>
                           <View style={s.compareIcon}><ArrowLeftRight size={18} color={c.white}/></View>
@@ -1070,7 +1058,6 @@ export function AppContent({
           </View>
         </View>
       </Modal>
-      {pipeline.enabled && <ParticipantGate visible={pipeline.needsId} error={pipeline.configError} onSubmit={pipeline.setParticipant}/>}
     </SafeAreaView>
   );
 }
@@ -1128,63 +1115,15 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
+  // b-pipeline mode (A2~A4): the participant id replaces the account, the server's DB is the one memory, `pipeline.chat` is the serverChat
+  const pipeline = usePipeline(turn => { setSession(turn.session); setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode }); }, message => setChatError(message), ready ? saved : null);
+  const serverChat = useMemo(() => pipeline.chat ?? (owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null), [owner, pipeline.chat]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
-  // b-pipeline mode: participant id (instead of an account), the one pipeline session of this conversation, the folded turn
-  const [participantId, setParticipantId] = useState<string | null>(null);
-  const [participantLoaded, setParticipantLoaded] = useState(!pipelineBase);
-  useEffect(() => {
-    if (!pipelineBase) return;
-    AsyncStorage.getItem(participantKey).then(v => { if (v) setParticipantId(v); }).catch(() => {}).finally(() => setParticipantLoaded(true));
-  }, []);
-  const pipelineChat = useMemo(() => {
-    if (!pipelineBase || !participantId) return null;
-    try { return createPipelineChatService(pipelineBase, participantId, pipelineExperiment); } catch { return null; }
-  }, [participantId]);
-  const pipelineSession = useRef(randomUUID());
-  const [pipelineTurn, setPipelineTurn] = useState<PipelineTurn>(emptyTurn());
   const [chatPending, setChatPending] = useState(false);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  /** Shows the folded turn through the screens' existing view: session = the server's conditions, view = cards + question. */
-  const showPipeline = (turn: PipelineTurn) => {
-    const base = turn.conditions ? { state: turn.conditions as ChatSession['state'], issues: [] as string[] } : session;
-    if (turn.conditions) setSession(base);
-    setRecommendation({ key: JSON.stringify(base), view: viewOf(turn) as unknown as NonNullable<typeof recommendation>['view'], mode: 'pipeline' });
-  };
-  /** One pipeline request with the same single-flight rules as runChat. Text (if any) becomes a chat message pair. */
-  const pipelineAction = async (request: PipelineRequest, text = ''): Promise<boolean | null> => {
-    if (!pipelineChat || chatFlight.current.controller) return false;
-    const controller = new AbortController();
-    const revision = ++chatFlight.current.revision;
-    chatFlight.current.controller = controller; setChatPending(true); setChatError('');
-    try {
-      const final = await pipelineChat.turn(pipelineSession.current, request, pipelineTurn, turn => {
-        if (chatFlight.current.revision !== revision) return;
-        latestTurn.current = turn; setPipelineTurn(turn); showPipeline(turn);
-      }, { signal: controller.signal });
-      if (chatFlight.current.revision !== revision) return null;
-      latestTurn.current = final; setPipelineTurn(final); showPipeline(final);
-      if (text.trim()) setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: final.question ?? (final.cards.length ? '추천을 찾았어요.' : final.message ?? '') }]);
-      return true;
-    } catch (error) {
-      if (chatFlight.current.revision !== revision) return null;
-      setChatError((error as Error).message || errorText('internal'));
-      return false;
-    } finally {
-      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
-    }
-  };
   const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
-    if (pipelineBase) {
-      // b-pipeline mode: memory, allergies and ranking live on the server; the screens only show what it streams
-      if (operation === 'view') return true;
-      // a "두 분 함께 / 어머니만" chip is sent as recipientChoice (this request only, K36), never as a sentence
-      const choice = operation === 'turn' ? pipelineTurn.recipientChoices?.find((c: { label: string }) => c.label === text.trim()) : undefined;
-      if (choice) return pipelineAction({ kind: 'patch', patch: {}, recipientChoice: choice.choice }, text);
-      return pipelineAction(operation === 'turn' ? { kind: 'message', text } : { kind: 'patch', patch: patch ?? {} }, text);
-    }
     if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
     if (!ready || personalization.busy || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
@@ -1236,20 +1175,8 @@ function usePassState() {
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, serverChat, personalization.ready]);
-  /** b-pipeline: "새 대화" ends the server session first so "다음에도 기억할까요?" can be asked; the screen clears once answered. */
-  const pipelineEnding = useRef(false);
-  const latestTurn = useRef<PipelineTurn>(emptyTurn());
-  const finishPipelineReset = () => {
-    pipelineEnding.current = false; pipelineSession.current = randomUUID(); latestTurn.current = emptyTurn();
-    setPipelineTurn(emptyTurn()); setRecommendation(null); setSession(chatService.createSession()); setMessages([]); setAppliedMemory([]);
-  };
-  const resetChat = () => {
-    if (pipelineBase) {
-      if (!pipelineChat || !latestTurn.current.cards.length) return finishPipelineReset();
-      pipelineEnding.current = true;
-      void pipelineAction({ kind: 'end_session' }).then(ok => { if (ok === true && !latestTurn.current.prompts.some((p: { kind: string }) => p.kind === 'remember')) finishPipelineReset(); });
-      return;
-    }
+  const resetChat = () => (pipeline.enabled ? pipeline.end(clearChat) : clearChat());
+  const clearChat = () => {
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
     setSession(chatService.createSession()); setMessages([]); setAppliedMemory([]);
@@ -1335,6 +1262,7 @@ function usePassState() {
     chatPending,
     chatError,
     personalization,
+    pipeline,
     appliedMemory,
     sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
@@ -1342,17 +1270,6 @@ function usePassState() {
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,
-    pipeline: {
-      enabled: !!pipelineBase,
-      needsId: !!pipelineBase && participantLoaded && !participantId,
-      configError: pipelineConfigurationError,
-      turn: pipelineTurn,
-      participantId,
-      setParticipant: (id: string) => { setParticipantId(id); AsyncStorage.setItem(participantKey, id).catch(() => {}); },
-      act: (request: PipelineRequest) => { void pipelineAction(request).then(ok => { if (ok === true && pipelineEnding.current && request.kind === 'memory_confirm') finishPipelineReset(); }); },
-      // 찜 / 선물하기 tell the server so it can remember (suggested memories, gift history). Display state is unchanged.
-      feedback: (action: 'chosen' | 'purchased', productId: string) => { if (pipelineChat) void pipelineChat.turn(pipelineSession.current, { kind: 'feedback', action, productId }, pipelineTurn, () => {}).catch(() => {}); },
-    },
     rankingByRecipient,
     catalogProducts: catalog.products,
     popularGifts: rankingByRecipient['전체'].slice(0, 10),
@@ -1409,7 +1326,7 @@ function AccountPassProvider({ children }: { children: React.ReactNode }) {
   if (value.loadError) return <View style={s.loading}><Text accessibilityRole="alert" style={s.note}>{value.loadError}</Text><Pressable accessibilityRole="button" onPress={value.retryLoad}><Text style={s.note}>기록 다시 불러오기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => { void service.signOut().catch(() => value.retryLoad()); }}><Text style={s.note}>로그아웃</Text></Pressable></View>;
   return (
     <SafeAreaProvider>
-      <PassContext.Provider value={value}>{children}</PassContext.Provider>
+      <PassContext.Provider value={value}>{children}<ParticipantGate/></PassContext.Provider>
     </SafeAreaProvider>
   );
 }

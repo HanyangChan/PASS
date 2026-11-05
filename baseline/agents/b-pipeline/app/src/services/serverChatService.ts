@@ -1,17 +1,29 @@
-import { validateState } from '../../../../../../lib/llm.mjs';
+import { validateState } from '../../../proto/lib/llm.mjs';
+import { isPrivateHost, validPipelineBlock } from './pipelineEvents.mjs';
 import type { ChatSession, ChatMessage, ConditionPatch } from '../domain';
 import type { createLocalChatService } from './chatService';
 type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
-export function resolveChatUrl(value?: string) {
+export function resolveChatUrl(value?: string, privateNetwork = false) {
   if (!value) return null;
   const url = new URL(value);
   if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) throw new Error('추천 API에는 서버 기본 주소를 설정해주세요.');
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))) throw new Error('추천 API는 HTTPS 주소여야 합니다.');
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && (privateNetwork ? isPrivateHost(url.hostname) : ['127.0.0.1', 'localhost'].includes(url.hostname)))) throw new Error('추천 API는 HTTPS 주소여야 합니다.');
   return `${url.origin}/api/chat`;
 }
-export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch) {
-  async function request(body: object, signal?: AbortSignal) {
+/** main's checks of a /api/chat answer (+ b-pipeline: the optional `pipeline` block must have its shape). */
+export function assertTurn(turn: any) {
+  try { validateState(turn.session?.state); } catch { throw new Error('추천 서버 응답 형식을 확인해주세요.'); }
+  if (!Array.isArray(turn.session.issues) || turn.session.issues.some((v: unknown) => typeof v !== 'string') || typeof turn.message !== 'string' ||
+    !['rules', 'rules_fast', 'llm'].includes(turn.mode) || !turn.view || !Array.isArray(turn.view.result?.items) ||
+    !Array.isArray(turn.view.comparison?.alternatives) || !Array.isArray(turn.view.question?.choices) ||
+    typeof turn.view.question?.text !== 'string' || typeof turn.view.result?.message !== 'string' ||
+    turn.view.result.items.some((p: { id: unknown; name: unknown; total: unknown }) => typeof p.id !== 'string' || typeof p.name !== 'string' || !Number.isFinite(p.total)) ||
+    (turn.pipeline !== undefined && !validPipelineBlock(turn.pipeline))) throw new Error('추천 서버 응답 형식을 확인해주세요.');
+}
+// `extra` (b-pipeline, A2): body fields of this participant's conversation (participant_id, session_id, experiment, one-shot options).
+export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, extra: (body: any) => object = () => ({})) {
+  async function request(body: object, signal?: AbortSignal, check = true) {
     const { data, error } = await auth.getSession();
     if (error || data.session?.user.id !== owner) throw new Error('다시 로그인해주세요.');
     const controller = new AbortController(); let timedOut = false;
@@ -20,18 +32,13 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     if (signal?.aborted) controller.abort();
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 25000);
     try {
-      const response = await fetcher(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify(body), signal: controller.signal });
+      const response = await fetcher(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ ...body, ...extra(body) }), signal: controller.signal });
       if (!response.ok) {
-        const messages: Record<number, string> = { 400: '입력 조건을 확인해주세요.', 401: '다시 로그인해주세요.', 403: '앱의 서버 연결 설정을 확인해주세요.', 413: '입력이 너무 길어요.', 429: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.', 503: '추천 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.' };
+        const messages: Record<number, string> = { 400: '입력 조건을 확인해주세요.', 401: '다시 로그인해주세요.', 403: '앱의 서버 연결 설정을 확인해주세요.', 409: '다른 화면에서 내용이 바뀌었어요. 다시 시도해주세요.', 413: '입력이 너무 길어요.', 429: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.', 503: '추천 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.' };
         throw new Error(messages[response.status] ?? '추천 요청에 실패했어요.');
       }
       const turn = await response.json();
-      try { validateState(turn.session?.state); } catch { throw new Error('추천 서버 응답 형식을 확인해주세요.'); }
-      if (!Array.isArray(turn.session.issues) || turn.session.issues.some((v: unknown) => typeof v !== 'string') || typeof turn.message !== 'string' ||
-        !['rules', 'rules_fast', 'llm'].includes(turn.mode) || !turn.view || !Array.isArray(turn.view.result?.items) ||
-        !Array.isArray(turn.view.comparison?.alternatives) || !Array.isArray(turn.view.question?.choices) ||
-        typeof turn.view.question?.text !== 'string' || typeof turn.view.result?.message !== 'string' ||
-        turn.view.result.items.some((p: { id: unknown; name: unknown; total: unknown }) => typeof p.id !== 'string' || typeof p.name !== 'string' || !Number.isFinite(p.total))) throw new Error('추천 서버 응답 형식을 확인해주세요.');
+      if (check) assertTurn(turn);
       const latest = await auth.getSession();
       if (latest.data.session?.user.id !== owner || controller.signal.aborted) throw new Error('계정이 변경되거나 요청이 취소되었어요.');
       return turn as { session: ChatSession; message: string; view: View; mode: 'rules' | 'rules_fast' | 'llm' };
@@ -49,5 +56,11 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
       return request({ operation: 'conditions', session, patch, clearIssues }, signal);
     },
     view(session: ChatSession, signal?: AbortSignal) { return request({ operation: 'view', session }, signal); },
+    /** b-pipeline: operations main does not have (explain, feedback, memory, end_session). An answer with cards passes main's checks. */
+    async post(body: object, signal?: AbortSignal) {
+      const res = await request(body, signal, false) as any;
+      if (res?.view) assertTurn(res);
+      return res;
+    },
   };
 }
