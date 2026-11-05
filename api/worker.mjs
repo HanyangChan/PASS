@@ -7,6 +7,7 @@ import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { CATEGORIES } from '../lib/catalog.mjs';
 import { ALLERGEN_NAMES } from '../lib/allergens.mjs';
 import { createGeminiAttributor, DEFAULT_MODEL } from '../baseline/agents/c-attribution/gemini.mjs';
+import { createDeepSeekAttributor, DEEPSEEK_MODEL } from '../baseline/agents/c-attribution/deepseek.mjs';
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 async function readJson(request) {
@@ -127,7 +128,11 @@ export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaul
           const session = { id: 'app', version: 0, state: engineState(input.state) };
           const request = input.operation === 'turn' ? { kind: 'message', text: input.text, expectedVersion: 0 }
             : input.operation === 'conditions' ? { kind: 'patch', patch: engineState(input.patch), expectedVersion: 0 } : { kind: 'view', expectedVersion: 0 };
-          const llm = env.GEMINI_API_KEY ? createGeminiAttributor({ apiKey: env.GEMINI_API_KEY, model: env.AGENTS_MODEL || DEFAULT_MODEL, fetcher }) : undefined;
+          // AGENTS_LLM picks the attribution model; by default DeepSeek when its key is set, else Gemini.
+          const provider = env.AGENTS_LLM || (env.DEEPSEEK_API_KEY ? 'deepseek' : 'gemini');
+          const llm = provider === 'deepseek' && env.DEEPSEEK_API_KEY
+            ? createDeepSeekAttributor({ apiKey: env.DEEPSEEK_API_KEY, model: env.DEEPSEEK_MODEL || DEEPSEEK_MODEL, ...(env.DEEPSEEK_BASE_URL ? { baseUrl: env.DEEPSEEK_BASE_URL.replace(/\/$/, '') } : {}), fetcher })
+            : provider === 'gemini' && env.GEMINI_API_KEY ? createGeminiAttributor({ apiKey: env.GEMINI_API_KEY, model: env.AGENTS_MODEL || DEFAULT_MODEL, fetcher }) : undefined;
           const out = await agentTurn({ session, request, products, llm, disabled: agents.disabled, context: { today: todayKst(), memory: agents.memory, purchases: agents.purchases, calendar: agents.calendar } });
           // An attribution question ends the turn before the advisors run; keep it as the open issue.
           const issues = out.agents ? [] : [out.question];

@@ -83,3 +83,24 @@ test('the C agent applies the recipient patch through the common core', async ()
   assert.deepEqual(out.session.state.preferences, []);
   assert.ok(out.result.cards.every(c => c.id !== 'snack'));
 });
+
+test('the DeepSeek attributor sends the schema prompt and maps its JSON like Gemini', async () => {
+  const { createDeepSeekAttributor } = await import('../deepseek.mjs');
+  let sent;
+  const fetcher = async (url, options) => {
+    sent = { url, auth: options.headers.Authorization, body: JSON.parse(options.body) };
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ items: [
+      { holder: 'recipient', person: '어머니', field: 'preference_category', category: 'beauty', ingredient: null, amount_krw: null, date: null },
+      { holder: 'giver', person: null, field: 'preference_category', category: 'snack', ingredient: null, amount_krw: null, date: null },
+    ], question: null }) } }] });
+  };
+  const llm = createDeepSeekAttributor({ apiKey: 'k', baseUrl: 'https://proxy.example/v1', fetcher });
+  const out = await attribute({ text: '어머니는 피부 관리에 관심이 많으셔', state: mother(), llm });
+  assert.equal(sent.url, 'https://proxy.example/v1/chat/completions');
+  assert.equal(sent.auth, 'Bearer k');
+  assert.equal(sent.body.response_format.type, 'json_object');
+  assert.deepEqual(out.patch.preferences, ['category:beauty']);
+  const failing = createDeepSeekAttributor({ apiKey: 'k', fetcher: async () => new Response('{"error":"bad key k"}', { status: 401 }) });
+  const failed = await attribute({ text: '센스 있는 선물로 골라줘', state: mother(), llm: failing });
+  assert.equal(failed.provider, 'llm_failed');
+});

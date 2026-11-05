@@ -13,7 +13,8 @@ const api = createApi({
     : fetch(url, options),
 });
 const unlimited = { limit: async () => ({ success: true }) };
-const env = { SUPABASE_URL: 'https://pass-mock.test', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_demo', APP_ORIGINS: 'http://127.0.0.1:8767', AGENTS_MODE: 'on', GEMINI_API_KEY: process.env.GEMINI_API_KEY, IP_LIMITER: unlimited, USER_LIMITER: unlimited };
+const env = { SUPABASE_URL: 'https://pass-mock.test', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_demo', APP_ORIGINS: 'http://127.0.0.1:8767', AGENTS_MODE: 'on', GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  AGENTS_LLM: process.env.AGENTS_LLM, DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL, DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL, IP_LIMITER: unlimited, USER_LIMITER: unlimited };
 http.createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c);
   const request = new Request(`http://127.0.0.1:8788${req.url}`, { method: req.method, headers: req.headers, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
@@ -22,4 +23,4 @@ http.createServer(async (req, res) => {
   const body = Buffer.from(await response.arrayBuffer());
   if (req.method === 'POST') { try { const j = JSON.parse(body); console.log(`${response.status} ${j.mode ?? j.code} llm=${j.agents?.trace?.llmCalls ?? '-'} ${Date.now() - started}ms`); } catch {} }
   res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(body);
-}).listen(8788, '127.0.0.1', () => console.log(`local API http://127.0.0.1:8788 (agents on, ${env.GEMINI_API_KEY ? 'Gemini' : 'rules only'})`));
+}).listen(8788, '127.0.0.1', () => console.log(`local API http://127.0.0.1:8788 (agents on, ${env.DEEPSEEK_API_KEY ? 'DeepSeek' : env.GEMINI_API_KEY ? 'Gemini' : 'rules only'})`));

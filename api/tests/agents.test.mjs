@@ -88,3 +88,19 @@ test('malformed agent context is rejected before any agent work', async () => {
     assert.equal(response.status, 400);
   }
 });
+
+agentTest('AGENTS_LLM=deepseek sends attribution to the configured OpenAI-compatible endpoint', async () => {
+  let seen;
+  const fetcher = async (url, options) => {
+    if (!String(url).includes('/chat/completions')) return verified();
+    seen = { url: String(url), auth: options.headers.Authorization, model: JSON.parse(options.body).model };
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ items: [{ holder: 'recipient', person: '어머니', field: 'preference_category', category: 'beauty', ingredient: null, amount_krw: null, date: null }], question: null }) } }] });
+  };
+  const response = await createApi({ catalog, fetcher }).fetch(request(body({ text: '어머니는 피부 관리에 관심이 많으셔' })), env({ AGENTS_LLM: 'deepseek', DEEPSEEK_API_KEY: 'ds-secret', DEEPSEEK_BASE_URL: 'https://proxy.example/v1/', GEMINI_API_KEY: 'g' }));
+  const text = await response.text();
+  assert.equal(seen.url, 'https://proxy.example/v1/chat/completions');
+  assert.equal(seen.auth, 'Bearer ds-secret');
+  assert.equal(seen.model, 'deepseek-chat');
+  assert.ok(!text.includes('ds-secret'));
+  assert.deepEqual(JSON.parse(text).session.state.preferences, ['category:beauty']);
+});
