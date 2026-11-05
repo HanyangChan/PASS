@@ -20,7 +20,14 @@ P6까지 구현: 기억 저장·읽기, 대화 이해, 취향 매핑, 오케스�
 - S2의 "부모님 설 선물 추천해줘"는 키 없이 풀린다. 행사 단어(설·추석·생일·스승의 날 등)를 먼저 떼어 `occasion`으로 넣고 나머지를 규칙으로 처리한다(K33).
 - 테스트(`node --test`) 중에는 키가 환경에 있어도 LLM을 만들지 않는다(K23).
 
-### 실제 LLM(Gemini) 설정
+### 실제 LLM 설정 (기본: 학교 DeepSeek, OpenAI 호환 · K72)
+- `.env`: `LLM_BASE_URL=https://llm.ai.hy.miwork.ai/v1`, `LLM_API_KEY=`(키는 `.env`·서버 secret에만), `LLM_MODEL=deepseek-v4-flash`, `LLM_REASONING=off`(기본, 본문에 `reasoning:{enabled:false}`; `on`이면 필드를 뺌). `LLM_PROVIDER`는 비워 두면 `LLM_API_KEY`로 openai-compatible이 된다.
+- ① 대화 이해(`llmTurn`, 기억 후보 포함)·④ 설명이 같은 클라이언트(`llm/openai-compatible.mjs`)를 쓴다. `response_format: json_object` + 프롬프트 속 스키마, 받은 값은 검증 후 실패하면 규칙·템플릿으로 폴백. `reasoning_content`는 읽지 않는다.
+- 서버가 `reasoning` 필드를 거부하면 재시도하지 않고 `[llm] role=dialogue code=llm_config detail="reasoning"`이 찍힌다 → `LLM_REASONING=on`으로 바꾼다.
+- Gemini로 되돌리기: `LLM_PROVIDER=gemini` + `GEMINI_API_KEY`·`GEMINI_MODEL`(아래).
+- 3턴 실측: `node --env-file=.env scripts/llm-turns.mjs` (실제 호출, reasoning off/on 각각).
+
+### Gemini 설정 (`LLM_PROVIDER=gemini`일 때)
 - `GEMINI_MODEL`은 `-latest` 별칭 대신 **버전 이름**을 쓴다(별칭은 모델이 바뀌어 지연·응답 형식이 달라질 수 있다). 예: `gemini-3.5-flash-lite`.
 - 대화 이해 호출의 타임아웃은 `DIALOGUE_LLM_TIMEOUT_MS`(기본 8000). 시간 초과면 사용자에게 "잠시 후 다시 보내 주세요."가 나가고, 그 밖의 실패는 위 질문으로 끝난다.
 - 요청에는 응답 스키마(`responseJsonSchema`)가 들어가고 생각(thinking)은 끈다. 끌 수 없는 모델이 HTTP 400을 돌려주면 그 설정 없이 한 번 다시 보낸다.

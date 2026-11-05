@@ -211,7 +211,7 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
 - **인터페이스:** `createLlm({provider}) → { json({system, input, schema, timeoutMs}), embed(texts) } | null`
 - **공급자:**
   - `gemini`: `generateContent`, `embedContent`(건당 호출)
-  - `openai-compatible`: VibeHub `https://llm.ai.hy.miwork.ai`, `deepseek-v4-flash` 등. chat만 쓰고, 임베딩이 없으면 키워드 검색으로 대체한다.
+  - `openai-compatible`(기본, K72): 학교 DeepSeek `https://llm.ai.hy.miwork.ai/v1`, `deepseek-v4-flash`. chat만 쓰고(`response_format: json_object` + 프롬프트 속 스키마, `content`만 파싱), 임베딩이 없으면 키워드 검색으로 대체한다. ① `llmTurn`도 이 클라이언트를 쓴다.
   - `fake`: 테스트용. 미리 정한 응답을 돌려주고 호출 기록을 남긴다.
 - **키 없음:** `createLlm`은 `null`을 반환하고 모든 역할이 규칙·템플릿 경로로 동작한다.
 - **빈 문자열 처리:** 환경 변수가 빈 문자열이면 미설정으로 처리한다(`??` 대신 `||`, 이전에 발견한 버그).
@@ -262,13 +262,14 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
 
 ## 12. 환경 변수 (`.env.example`)
 ```
-LLM_PROVIDER=          # gemini | openai-compatible | (비우면 LLM 없음)
+LLM_PROVIDER=          # gemini | openai-compatible | (비우면 LLM_API_KEY → openai-compatible, GEMINI_API_KEY만 → gemini, 둘 다 없으면 LLM 없음)
 GEMINI_API_KEY=
 GEMINI_MODEL=
 GEMINI_EMBED_MODEL=
-OPENAI_COMPAT_BASE_URL=https://llm.ai.hy.miwork.ai
-OPENAI_COMPAT_API_KEY=
-OPENAI_COMPAT_MODEL=
+LLM_BASE_URL=https://llm.ai.hy.miwork.ai/v1   # openai-compatible (K72)
+LLM_API_KEY=
+LLM_MODEL=deepseek-v4-flash
+LLM_REASONING=off      # off: reasoning:{enabled:false} | on: 필드 없음
 PIPELINE_DB_PATH=.data/pipeline.sqlite
 PORT=8787
 ```

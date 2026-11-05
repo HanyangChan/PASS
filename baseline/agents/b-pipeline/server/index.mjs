@@ -10,6 +10,7 @@ import { createPipeline, EXPERIMENTS } from '../pipeline/index.mjs';
 import { createMemoryWriter } from '../memory/write.mjs';
 import { keyLabel, MemoryError } from '../memory/keys.mjs';
 import { StoreError } from '../db/contract.mjs';
+import { createLlm, llmProvider } from '../llm/index.mjs';
 
 export const MAX_BODY_BYTES = 16 * 1024;
 const ID = /^[A-Za-z0-9_.:-]{1,64}$/;
@@ -230,29 +231,40 @@ export function createListener(handlers, { origin = '*', maxBody = MAX_BODY_BYTE
 }
 
 /**
- * ① proto llmTurn options from the environment, as main's worker reads them: GEMINI_API_KEY turns it on, GEMINI_MODEL
- * names the model (L3: passed by the caller; proto's default otherwise), DIALOGUE_LLM_TIMEOUT_MS (L2; default 18000 as
- * main). thinkingBudget 0 for latency (AC16), dropped by proto if the model rejects it. No key -> null (main's rules).
+ * ① proto llmTurn options from the environment. The provider is the one every role uses (llmProvider, K72):
+ *  - openai-compatible (LLM_API_KEY, default): {generate} through the shared client `llm` (the same one the explainer
+ *    uses; one is made from env when not given), role 'dialogue'. LLM_BASE_URL, LLM_MODEL, LLM_REASONING (off default).
+ *  - gemini (LLM_PROVIDER=gemini, or only GEMINI_API_KEY as main's worker, K71): GEMINI_API_KEY, GEMINI_MODEL (L3;
+ *    proto's default otherwise), thinkingBudget 0 for latency (AC16), dropped by proto if the model rejects it.
+ * DIALOGUE_LLM_TIMEOUT_MS for both (L2; default 18000 as main). No key -> null (main's rules).
  */
-export function dialogueLlmFrom(env = process.env) {
+export function dialogueLlmFrom(env = process.env, { llm = null } = {}) {
+  const provider = llmProvider(env);
+  const ms = Number(String(env.DIALOGUE_LLM_TIMEOUT_MS ?? '').trim());
+  const timeout = Number.isSafeInteger(ms) && ms > 0 ? { timeoutMs: ms } : {};
+  if (provider === 'openai-compatible') {
+    const client = llm?.provider === 'openai-compatible' ? llm : createLlm({ env, provider });
+    return client ? { generate: opts => client.json({ ...opts, role: 'dialogue' }), ...timeout } : null;
+  }
+  if (provider !== 'gemini') return null;
   const apiKey = (env.GEMINI_API_KEY || '').trim();
   if (!apiKey) return null;
-  const timeoutMs = Number(String(env.DIALOGUE_LLM_TIMEOUT_MS ?? '').trim());
-  return { apiKey, ...((env.GEMINI_MODEL || '').trim() ? { model: env.GEMINI_MODEL.trim() } : {}), ...(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}), thinkingBudget: 0 };
+  return { apiKey, ...((env.GEMINI_MODEL || '').trim() ? { model: env.GEMINI_MODEL.trim() } : {}), ...timeout, thinkingBudget: 0 };
 }
 
 /** Starts the server from the environment (npm run dev:server). Keys are read from the environment only. */
 export async function main(env = process.env) {
-  const [{ createSqliteStore }, { loadCatalog }, { createLlm, logLlmError }] = await Promise.all([import('../db/store.mjs'), import('../data/load.mjs'), import('../llm/index.mjs')]);
+  const [{ createSqliteStore }, { loadCatalog }, { logLlmError }] = await Promise.all([import('../db/store.mjs'), import('../data/load.mjs'), import('../llm/index.mjs')]);
   const store = createSqliteStore({ path: env.PIPELINE_DB_PATH || '.data/pipeline.sqlite' });
   const products = loadCatalog();
   // token/latency per call goes to events: provider, role, model, counts, latency, ok. Never the prompt or the answer.
-  const llm = createLlm({ env, onError: logLlmError, onUsage: u => { store.logEvent({ sessionId: null, type: 'llm_usage', payload: { provider: u.provider, role: u.role ?? null, model: u.model ?? null, inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, latencyMs: u.latencyMs ?? null, ok: u.ok === true } }); } });
-  const pipeline = createPipeline({ store, products, llm, dialogueLlm: dialogueLlmFrom(env) });
+  const llm = createLlm({ env, onError: logLlmError, onUsage: u => { store.logEvent({ sessionId: null, type: 'llm_usage', payload: { provider: u.provider, role: u.role ?? null, model: u.model ?? null, inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, reasoningTokens: u.reasoningTokens ?? null, latencyMs: u.latencyMs ?? null, ok: u.ok === true } }); } });
+  const dialogueLlm = dialogueLlmFrom(env, { llm });
+  const pipeline = createPipeline({ store, products, llm, dialogueLlm });
   const server = createServer(createListener(createHandlers({ store, products, pipeline }), { origin: env.CORS_ORIGIN || '*' }));
   const port = Number(env.PORT) || 8787, host = env.HOST || '127.0.0.1';
   await new Promise(resolve => server.listen(port, host, resolve));
-  console.log(`b-pipeline server http://${host}:${port} (llm: ${llm ? llm.provider : 'none'}, dialogue: ${dialogueLlmFrom(env) ? 'llm' : 'rules'}, products: ${products.length})`);
+  console.log(`b-pipeline server http://${host}:${port} (llm: ${llm ? llm.provider : 'none'}, dialogue: ${dialogueLlm ? 'llm' : 'rules'}, products: ${products.length})`);
   return server;
 }
 

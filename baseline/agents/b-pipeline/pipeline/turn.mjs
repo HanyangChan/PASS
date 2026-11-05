@@ -3,7 +3,9 @@
 // The answer is turned into a baseline utterance patch; ② memory, ③ mapping, merge, runTurn, planner and template tags
 // stay in the orchestrator (recommend()), which this module feeds. Nothing here ranks, scores or prices (K1).
 import { fastRuleTurn, singleTurn, publicState, engineState, singleQuestion } from '../proto/lib/single-gift.mjs';
-import { llmTurn, geminiFailure, validateRequest } from '../proto/lib/llm.mjs';
+import { llmTurn, geminiFailure, validateRequest, GeminiError } from '../proto/lib/llm.mjs';
+import { LlmError } from '../llm/errors.mjs';
+import { failureCode } from '../llm/openai-compatible.mjs';
 import { extract, initial as protoInitial, differences } from '../proto/lib/engine.mjs';
 import { mentionedAllergens } from '../proto/lib/allergens.mjs';
 import { checkKey, parseKey } from '../memory/keys.mjs';
@@ -49,9 +51,13 @@ function memoryCandidates(raw, text) {
   return out;
 }
 
+/** K72: an OpenAI-compatible client error (HTTP status / timeout) becomes main's failure code, so the trace keeps its names. */
+const asProtoError = e => (e instanceof LlmError ? new GeminiError(failureCode(e), Number(e.detail) || 0) : e);
+
 /**
  * createProtoDialogue({llm}) -> {understand}
- * llm: null (rules, like main without GEMINI_API_KEY) or {apiKey, model?, fetcher?, timeoutMs?, thinkingBudget?} for llmTurn.
+ * llm: null (rules, like main without a key) or llmTurn options: {apiKey, model?, fetcher?, timeoutMs?, thinkingBudget?}
+ * (Gemini) or {generate, timeoutMs?} (the shared OpenAI-compatible client, K72).
  * The key is only passed through to proto llmTurn; it is never logged or returned.
  */
 export function createProtoDialogue({ llm = null } = {}) {
@@ -72,7 +78,7 @@ export function createProtoDialogue({ llm = null } = {}) {
     let turn = fastRuleTurn(input, products), mode = 'rules_fast';
     if (!turn && llm) {
       try { turn = await llmTurn(input, products, llm); mode = 'llm'; }
-      catch (e) { return { failure: geminiFailure(e) }; }
+      catch (e) { return { failure: geminiFailure(asProtoError(e)) }; }
     } else if (!turn) { turn = singleTurn({ state: input.state, issues: input.issues }, input.text, products); mode = 'rules'; }
 
     let after = turn.session.state;

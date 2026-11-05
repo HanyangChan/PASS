@@ -113,7 +113,7 @@ P7 시점의 현재 상태다. P8~P10에서 PROTO-REBASE §4의 L1~L3·A1~A4만 
 | `app/src/services/personalization.ts` | R1 lib import 경로 + 파이프라인 모드 분기 | A1, A3 |
 | `app/src/services/productRepository.ts` | R1 lib import 경로 | A1 |
 | `app/src/services/serverChatService.ts` | R1 lib import 경로 | A1, A2 |
-| `proto/lib/llm.mjs` | L1 `extractionSchema`에 선택 필드 `memory[{recipient,key,polarity,evidence}]` + 지시문 한 줄, `llmTurn`이 `memory`를 상태와 분리해 반환 · L2 `timeoutMs`(기본 18000)·선택 `thinkingBudget`(400이면 빼고 1회 재시도) | P8 |
+| `proto/lib/llm.mjs` | L1 `extractionSchema`에 선택 필드 `memory[{recipient,key,polarity,evidence}]` + 지시문 한 줄, `llmTurn`이 `memory`를 상태와 분리해 반환 · L2 `timeoutMs`(기본 18000)·선택 `thinkingBudget`(400이면 빼고 1회 재시도) · L4 선택 옵션 `generate`(있으면 Gemini 호출 대신 공용 OpenAI 호환 클라이언트에 같은 지시문·`extractionSchema`를 넘김, Gemini 호출은 `geminiCall`로 옮김, 검증·알레르기 합집합·`finishSingle`은 그대로, K72) | P8 · K72 |
 
 ## 추가된 파일
 

@@ -11,7 +11,7 @@ const usage = [];
 let llm;
 try { llm = createLlm({ env: process.env, onError: logLlmError, onUsage: u => usage.push(u) }); }
 catch { llm = null; }
-if (!llm) { console.error('LLM이 설정되지 않았어요: LLM_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL을 확인하세요 (.env).'); process.exit(2); }
+if (!llm) { console.error('LLM이 설정되지 않았어요: LLM_BASE_URL·LLM_API_KEY·LLM_MODEL(또는 LLM_PROVIDER=gemini + GEMINI_API_KEY·GEMINI_MODEL)을 확인하세요 (.env).'); process.exit(2); }
 
 const timeoutMs = dialogueTimeoutMs(process.env);
 const started = Date.now();

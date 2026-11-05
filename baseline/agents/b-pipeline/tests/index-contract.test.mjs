@@ -8,7 +8,7 @@ import { createFakeLlm } from '../llm/index.mjs';
 import { createDialogue, toPort } from '../dialogue/agent.mjs';
 import { products } from './fixtures/catalog.mjs';
 
-const KEYS = ['LLM_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL', 'OPENAI_COMPAT_API_KEY', 'OPENAI_COMPAT_MODEL'];
+const KEYS = ['LLM_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL', 'LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'];
 const withoutKeys = async fn => {
   const saved = Object.fromEntries(KEYS.map(k => [k, process.env[k]]));
   for (const k of KEYS) delete process.env[k];
@@ -48,6 +48,9 @@ test('outside tests (no NODE_TEST_CONTEXT) llmFromEnv builds from the given env;
   assert.equal(llmFromEnv({}), null);
   assert.equal(llmFromEnv({ LLM_PROVIDER: 'gemini', GEMINI_API_KEY: '' }), null);
   assert.equal(llmFromEnv({ LLM_PROVIDER: 'nope' }), null);
+  const compat = { LLM_BASE_URL: 'https://llm.example/v1', LLM_API_KEY: 'test-not-a-key', LLM_MODEL: 'm' };
+  assert.equal(llmFromEnv(compat).provider, 'openai-compatible', 'K72: LLM_API_KEY alone picks the OpenAI-compatible client');
+  assert.equal(llmFromEnv({ ...compat, NODE_TEST_CONTEXT: 'child-v8' }), null);
 });
 
 test('no key: createAgent() asks for clarification on free text and leaves the session unchanged', () => withoutKeys(async () => {

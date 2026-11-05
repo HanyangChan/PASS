@@ -18,7 +18,7 @@ test('no provider, empty strings or missing key/model -> null (rules/templates o
   assert.equal(createLlm({ env: { LLM_PROVIDER: '  ' } }), null);
   assert.equal(createLlm({ env: { LLM_PROVIDER: 'gemini', GEMINI_API_KEY: '', GEMINI_MODEL: 'm' } }), null);
   assert.equal(createLlm({ env: { LLM_PROVIDER: 'gemini', GEMINI_API_KEY: KEY, GEMINI_MODEL: '' } }), null);
-  assert.equal(createLlm({ env: { LLM_PROVIDER: 'openai-compatible', OPENAI_COMPAT_BASE_URL: 'https://x', OPENAI_COMPAT_API_KEY: KEY, OPENAI_COMPAT_MODEL: '' } }), null);
+  assert.equal(createLlm({ env: { LLM_PROVIDER: 'openai-compatible', LLM_BASE_URL: 'https://x', LLM_API_KEY: KEY, LLM_MODEL: '' } }), null);
   assert.throws(() => createLlm({ env: { LLM_PROVIDER: 'other' } }), RangeError);
 });
 
@@ -68,7 +68,7 @@ test('gemini embed: one call per text; null without embed model', async () => {
 test('openai-compatible adapter: bearer auth, chat URL, no embeddings', async () => {
   const record = [];
   const llm = createLlm({
-    env: { LLM_PROVIDER: 'openai-compatible', OPENAI_COMPAT_BASE_URL: 'https://llm.example/', OPENAI_COMPAT_API_KEY: KEY, OPENAI_COMPAT_MODEL: 'chat-a' },
+    env: { LLM_PROVIDER: 'openai-compatible', LLM_BASE_URL: 'https://llm.example/', LLM_API_KEY: KEY, LLM_MODEL: 'chat-a' },
     fetcher: fakeFetch({ body: { choices: [{ message: { content: '```json\n{"ok":false}\n```' } }], usage: { prompt_tokens: 3, completion_tokens: 1 } } }, record),
   });
   assert.deepEqual(await llm.json({ system: 'sys', input: {}, schema }), { ok: false });
