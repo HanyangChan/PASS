@@ -14,7 +14,7 @@ npm run dev:api
 
 로컬 API는 기본적으로 `a-router`를 선택한다. 기존 로그인 사용자의 채팅 요청은 같은 `/api/chat` 경로로 처리하며, 채팅 화면 코드를 바꿀 필요가 없다. 게스트·API 미설정 상태는 이전 기기 엔진을 계속 사용한다. 음성·카메라·앨범·파일 선택 UI는 변경하지 않았다. 첨부 서버 업로드·이미지 분석은 구현 범위 밖이다.
 
-서버 `api/.dev.vars`에 `GEMINI_API_KEY`와 필요하면 `GEMINI_MODEL`을 설정하면 자유 발화를 보완한다. 키가 없으면 모호한 조건을 질문하고 원래 조건을 유지한다. 로컬에서 `CHAT_AGENT=legacy npm run dev:api`로 기존 처리 경로를 선택할 수 있다. `wrangler.jsonc`에도 `CHAT_AGENT=a-router`를 설정했으나, 코드 변경만으로 운영 API가 배포되는 것은 아니다.
+서버 `api/.dev.vars`의 `LLM_PROVIDER`로 OpenAI 호환 플랫폼 또는 Gemini를 선택한다. 현재 설정은 `deepseek-v4-flash`이며 `LLM_API_KEY`를 사용한다. Gemini를 선택할 때는 `GEMINI_API_KEY`와 `GEMINI_MODEL`을 사용한다. [플랫폼 설정·실제 시험](../../../docs/llm-platform.md). 키가 없으면 모호한 조건을 질문하고 원래 조건을 유지한다. 로컬에서 `CHAT_AGENT=legacy npm run dev:api`로 기존 처리 경로를 선택할 수 있다. `wrangler.jsonc`에도 `CHAT_AGENT=a-router`를 설정했으나, 코드 변경만으로 운영 API가 배포되는 것은 아니다.
 
 ## 처리 경로
 
@@ -43,7 +43,7 @@ npm run dev:api
 ```js
 import { createAgent } from './index.mjs';
 const agent = createAgent({
-  // 생략하면 규칙+질문으로 동작. 서버에서는 기존 Gemini 추출기를 연결한다.
+  // 생략하면 규칙+질문으로 동작. 서버에서는 설정으로 선택한 플랫폼 또는 Gemini 추출기를 연결한다.
   interpret: async ({text, state, pendingQuestion, history, signal}) => ({
     patch: {}, questions: ['받는 사람의 조건을 확인해 주세요.'], unresolved: true,
   }),
@@ -53,7 +53,7 @@ const output = await agent.runTurn({session, request, products, pendingQuestion,
 
 기본 `request`, `session`, `products` 계약은 공통 베이스라인과 같다. `interpret`는 조건 후보 `{patch, questions, unresolved}`를 반환한다. `pendingQuestion`은 호스트가 보관한 직전 미해결 질문, `history`는 최대 6개의 `{role,text}`다. 명확한 요청은 LLM을 거치지 않는다. 출력 `routing`에 `agent`, `intent`, `route`, `llmCalls`를 제공하며 원문·키·모델 내부 추론은 기록하지 않는다.
 
-LLM 해석 상한은 논리 호출 1회, 기본 18초다. 프로토타입 Gemini 전송기는 같은 제한 안에서 기존 5xx 재시도 1회를 유지하므로 HTTP 요청은 최대 2회다. 오류·타임아웃 때 기본 에이전트는 상태를 보존한 질문을 반환하고, 앱 API는 503으로 바꿔 기존 입력·재시도 UI를 사용한다. 실제 공급자 호출·기기 동작은 모의 테스트로 입증되지 않는다.
+LLM 해석 상한은 논리 호출 1회, 기본 18초다. 프로토타입 전송기는 같은 제한 안에서 기존 5xx 재시도 1회를 유지하므로 HTTP 요청은 최대 2회다. 오류·타임아웃 때 기본 에이전트는 상태를 보존한 질문을 반환하고, 앱 API는 503으로 바꿔 기존 입력·재시도 UI를 사용한다. 실제 공급자 호출·기기 동작은 모의 테스트로 입증되지 않는다.
 
 `singleGift:true`는 기존 앱의 고정된 수량 1·개별 예산 구조에 맞추는 옵션이다. 실제 앱은 여러 선물을 지원하지 않아 그런 입력은 확인한다. 처음 수령인을 정할 때는 앞서 입력한 조건을 유지하고, 이미 정한 수령인이 바뀌면 이전 조건을 초기화한다. 모델은 현재 수령인의 알레르겐 제외를 묵시적으로 삭제할 수 없다. 성분 미확정 질문은 호스트가 보관하고, 해결 전 추천·가상 비교를 막는다.
 

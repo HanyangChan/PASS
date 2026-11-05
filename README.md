@@ -106,3 +106,7 @@ npm --prefix baseline run demo
 [다섯 설계의 공통 범위와 확장 경계](baseline/docs/common-scope.md) · [현재 프로토타입 PRD](PRD.md)
 
 이전 버전·연구 자료·과거 평가 산출물은 정리했다. 음성인식, 카메라·앨범·파일 선택, 로그인과 개인화 구현은 유지한다. 첨부 기능은 파일명 표시까지이며 실제 서버 업로드·내용 분석은 아직 제공하지 않는다.
+
+## 플랫폼 LLM 시험
+
+A안 Router는 OpenAI 호환 플랫폼의 `deepseek-v4-flash`를 지원한다. 서버 `api/.dev.vars`에 플랫폼 키를 설정하고 `npm run smoke:llm`으로 실제 연결을 시험한다. 명확한 조건은 규칙으로 처리하고 모호한 발화에만 모델을 호출한다. [설정 및 실제 시험 결과](docs/llm-platform.md).

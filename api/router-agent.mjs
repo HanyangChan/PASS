@@ -16,14 +16,14 @@ function changedPatch(before, after) {
   }
   return patch;
 }
-export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher}) {
+export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, ...providerOptions}) {
   const before=input.state;
   // Existing app intentionally exposes a ONE-gift state, not the multi-set core contract.
   const session={...createSession('prototype-request'),state:engineState(before)};
   const catalog=products.map(p=>({...p,rating_count:p.rating_count??0}));
   const interpret=apiKey ? async ({text,state,history}) => {
     const stateBefore=publicState(state);
-    const turn=await extract({text,state:stateBefore,issues:input.issues,history,source:input.source??'typed'},products,{apiKey,model,fetcher,retainAllergens:false,additionalInstructions:'Only recipient-attributed facts may update gift conditions. Never apply giver preferences to the recipient. If ownership is unclear, ask a clarification question. When a recipient changes, do not copy prior recipient tastes or restrictions. Do not remove a hard exclusion from an unmentioned condition. Return no invented product or explanation.'});
+    const turn=await extract({text,state:stateBefore,issues:input.issues,history,source:input.source??'typed'},products,{...providerOptions,apiKey,model,fetcher,retainAllergens:false,additionalInstructions:'Only recipient-attributed facts may update gift conditions. Never apply giver preferences to the recipient. If ownership is unclear, ask a clarification question. When a recipient changes, do not copy prior recipient tastes or restrictions. Do not remove a hard exclusion from an unmentioned condition. Return no invented product or explanation.'});
     validateState(turn.session?.state);
     if (!Array.isArray(turn.session.issues)||turn.session.issues.some(q=>typeof q!=='string'||q.length>400)) throw Error('invalid_extraction');
     return {patch:changedPatch(stateBefore,turn.session.state),questions:turn.session.issues,unresolved:turn.session.issues.length>0};

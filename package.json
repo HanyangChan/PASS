@@ -19,6 +19,7 @@
     "test": "npm run test:core && npm --prefix mobile test && npm --prefix mobile run test:db && node --test api/tests/*.test.mjs && npm --prefix baseline test",
     "dev:api": "npm --prefix api run dev",
     "deploy:api": "npm --prefix api run deploy",
-    "test:router": "node --test baseline/agents/a-router/tests/*.test.mjs api/tests/router-agent.test.mjs"
+    "test:router": "node --test baseline/agents/a-router/tests/*.test.mjs api/tests/router-agent.test.mjs",
+    "smoke:llm": "node api/smoke-llm.mjs"
   }
 }

@@ -7,7 +7,12 @@
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XlhsG0VhBso-EFxXF8ZfFg_lR3DBUok",
     "APP_ORIGINS": "https://temporary-prompt-sable-s15js3l.vercel.app",
-    "GEMINI_MODEL": "gemini-3.6-flash"
+    "GEMINI_MODEL": "gemini-3.6-flash",
+    "LLM_PROVIDER": "openai-compatible",
+    "LLM_BASE_URL": "https://llm.ai.hy.miwork.ai",
+    "LLM_MODEL": "deepseek-v4-flash",
+    "LLM_CHAT_PATH": "chat/completions",
+    "LLM_RESPONSE_FORMAT": "json_object"
   },
   "ratelimits": [
     {

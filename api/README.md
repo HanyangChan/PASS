@@ -1,6 +1,6 @@
 # PASS 추천 API
 
-공통 엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 상품은 Supabase `products`의 활성 상품을 공개 키로 읽어 Worker 인스턴스마다 10분 캐시합니다. 갱신에 실패하면 이전 캐시를 쓰고, 캐시도 없으면 503 `catalog_unavailable`을 반환합니다.
+공통 엔진과 선택한 LLM의 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 상품은 Supabase `products`의 활성 상품을 공개 키로 읽어 Worker 인스턴스마다 10분 캐시합니다. 갱신에 실패하면 이전 캐시를 쓰고, 캐시도 없으면 503 `catalog_unavailable`을 반환합니다.
 
 ## 로컬 시험
 
@@ -46,3 +46,9 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규칙으로 처리하고, 미해석 문장만 기존 Gemini 추출기로 넘긴다. 키가 없으면 질문하며, 공급자 실패는 상태를 바꾸지 않고 503으로 반환한다. 기존 `session/message/view/mode` 응답을 유지하고 `agent/routing` 진단 정보를 추가했다. 서버가 선택하므로 클라이언트가 임의로 에이전트나 모델을 고르지 않는다. 게스트 기기 엔진과 음성·첨부 UI는 그대로다.
 
 `npm run test:router`(저장소 루트)로 에이전트·API 통합 검사를 실행한다. 모델 키는 서버 `.dev.vars` 또는 Cloudflare secret에만 둔다. [처리 경로·한계·버전 관리 범위](../baseline/agents/a-router/README.md)를 참고한다.
+
+## 플랫폼 LLM / DeepSeek
+
+`LLM_PROVIDER=openai-compatible`, `LLM_BASE_URL=https://llm.ai.hy.miwork.ai`, `LLM_MODEL=deepseek-v4-flash`를 지원한다. 서버 `LLM_API_KEY`를 사용하며 기존 Gemini 키와 혼용하지 않는다. `npm run smoke:llm`(저장소 루트)으로 합성 조건의 실제 추출을 시험한다. 2026-11-05 `/chat/completions` + JSON 모드로 실제 호출을 확인했다. [설정·재시험·오류 안내](../docs/llm-platform.md).
+
+앞의 Gemini 운영 기록은 과거 배포 기준이다. 이번 플랫폼 연결은 개발 브랜치의 코드·로컬 설정이며 운영 배포는 수행하지 않았다.
