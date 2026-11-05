@@ -21,6 +21,8 @@
     "deploy:api": "npm --prefix api run deploy",
     "test:router": "node --test baseline/agents/a-router/tests/*.test.mjs api/tests/router-agent.test.mjs",
     "smoke:llm": "node api/smoke-llm.mjs",
-    "audit:router": "node api/audit-router.mjs"
+    "audit:router": "node api/audit-router.mjs",
+    "smoke:subagents": "node api/smoke-subagents.mjs",
+    "test:subagents": "node --test baseline/agents/a-router/tests/subagents.test.mjs api/tests/subagents.test.mjs"
   }
 }

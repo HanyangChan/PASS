@@ -4,6 +4,7 @@ import { createSession } from '../baseline/src/index.mjs';
 import { runTurn as coreTurn } from '../baseline/src/index.mjs';
 import { engineState, publicState, finishSingle } from '../lib/single-gift.mjs';
 import { validateState } from '../lib/llm.mjs';
+import { createSubagentInterpreter } from '../baseline/agents/a-router/subagents/interpreter.mjs';
 
 function changedPatch(before, after) {
   const patch={};
@@ -16,12 +17,15 @@ function changedPatch(before, after) {
   }
   return patch;
 }
-export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, ...providerOptions}) {
+export class RouterInterpretationError extends Error {
+  constructor(routing) {super('router_interpretation_unavailable');this.routing=routing;}
+}
+export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, llmMode='single', signal, ...providerOptions}) {
   const before=input.state;
   // Existing app intentionally exposes a ONE-gift state, not the multi-set core contract.
   const session={...createSession('prototype-request'),state:engineState(before)};
   const catalog=products.map(p=>({...p,rating_count:p.rating_count??0}));
-  const interpret=apiKey ? async ({text,state,history}) => {
+  const interpret=apiKey ? llmMode==='subagents' ? createSubagentInterpreter({llmOptions:{...providerOptions,apiKey,model,fetcher}}) : async ({text,state,history}) => {
     const stateBefore=publicState(state);
     const turn=await extract({text,state:stateBefore,issues:input.issues,history,source:input.source??'typed'},products,{...providerOptions,apiKey,model,fetcher,retainAllergens:false,additionalInstructions:'Only recipient-attributed facts may update gift conditions. Never apply giver preferences to the recipient. If ownership is unclear, ask a clarification question. When a recipient changes, do not copy prior recipient tastes or restrictions. Do not remove a hard exclusion from an unmentioned condition. Return no invented product or explanation.'});
     validateState(turn.session?.state);
@@ -30,8 +34,8 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
   } : undefined;
   const agent=createAgent({interpret,singleGift:true});
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
-  const output=await agent.runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??'',history:input.history??[]});
-  if (output.routing.route==='llm_error') throw Error('router_interpretation_unavailable');
+  const output=await agent.runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??'',history:input.history??[],signal});
+  if (output.routing.route==='llm_error') throw new RouterInterpretationError(output.routing);
   // The prototype does not support multi-gift output or changing its budget scope.
   if (output.session.state.quantity!==1||output.session.state.same_product!==true||output.session.state.budget.scope!=='per_set') {
     const turn=finishSingle(before,before,['현재 앱은 선물 하나 기준입니다. 선물 하나의 예산과 조건을 알려주세요.'],products);

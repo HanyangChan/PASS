@@ -13,3 +13,6 @@ LLM_MODEL=deepseek-v4-flash
 LLM_CHAT_PATH=chat/completions
 LLM_RESPONSE_FORMAT=json_object
 LLM_API_KEY=
+
+# single (default) or supervised multi-agent interpretation
+A_ROUTER_LLM_MODE=single

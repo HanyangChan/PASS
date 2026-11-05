@@ -52,3 +52,9 @@ Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규�
 `LLM_PROVIDER=openai-compatible`, `LLM_BASE_URL=https://llm.ai.hy.miwork.ai`, `LLM_MODEL=deepseek-v4-flash`를 지원한다. 서버 `LLM_API_KEY`를 사용하며 기존 Gemini 키와 혼용하지 않는다. `npm run smoke:llm`(저장소 루트)으로 합성 조건의 실제 추출을 시험한다. 2026-11-05 `/chat/completions` + JSON 모드로 실제 호출을 확인했다. [설정·재시험·오류 안내](../docs/llm-platform.md).
 
 앞의 Gemini 운영 기록은 과거 배포 기준이다. 이번 플랫폼 연결은 개발 브랜치의 코드·로컬 설정이며 운영 배포는 수행하지 않았다.
+
+## Supervisor·서브 에이전트 모드
+
+`A_ROUTER_LLM_MODE=single|subagents`로 A안 해석기를 선택한다. 기본값은 `single`이다. `subagents`는 OpenAI 호환 공급자에서 Supervisor → 필요한 역할 병렬 실행 → 종합 판단을 수행한다. 규칙 경로는 모델을 호출하지 않는다. 현재 앱 응답 계약은 유지하며 `routing.subagents`에 안전한 단계 진단을 추가한다. `GET /health`의 `llmMode`로 선택을 확인한다. 상세 실행·제한은 [A안 안내](../baseline/agents/a-router/README.md)를 따른다.
+
+`LLM_REASONING_ENABLED=false`를 명시하면 호환 전송에 `reasoning.enabled=false`를 전달한다. 단일 모드는 생략 시 공급자 기본값을 유지하고, 서브 모드의 DeepSeek 단계는 짧은 JSON 분석을 위해 기본적으로 비사고 설정을 사용한다. 공급자 지원이 필요하며 다른 모델로 자동 전환하지 않는다.

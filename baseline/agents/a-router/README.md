@@ -60,6 +60,33 @@ LLM 해석 상한은 논리 호출 1회, 기본 18초다. 프로토타입 전송
 
 공통 코어는 버전 검사를 유지하지만 현재 프로토타입 API는 기존처럼 요청이 전달한 조건 상태를 처리하는 무상태 구조다. 서버 영속 세션·원자적 CAS·동시 기기 충돌 해결은 이번에 추가하지 않았다. 장기 기억은 기존 앱의 명시적 개인화 기능을 사용하며 새 자동 기억 저장은 하지 않는다.
 
+## 서브 에이전트 모드
+
+Supervisor, 수령인 분석, 상황·명절, 소비 성향, 취향 분석, 종합 판단을 `subagents/`에 구현했다. 전문 역할은 필요한 것만 병렬 실행하며 추천·금액 계산은 기존 엔진을 사용한다. 기본 서버 모드는 `single`이고 로컬에서 다음처럼 선택한다.
+
+```sh
+# 저장소 루트에서 서버 실행
+A_ROUTER_LLM_MODE=subagents npm run dev:api
+
+# 기존 단일 조건 추출로 복귀
+A_ROUTER_LLM_MODE=single npm run dev:api
+
+# 모의 계약·실패·취소 검증 / 실제 네 전문 역할 검증
+npm run test:subagents
+npm run smoke:subagents
+
+# 합성 시나리오 10개, 자유 발화 한 건만 실제 모델 사용
+A_ROUTER_LLM_MODE=subagents npm run audit:router
+```
+
+서버 `api/.dev.vars`에 `A_ROUTER_LLM_MODE=subagents`를 저장해 선택할 수도 있다. 키는 기존 `LLM_API_KEY`를 사용하며 현재 서브 모드는 OpenAI 호환 공급자의 `json_object` 또는 `text` JSON 출력을 지원한다. Gemini 전용 호출은 기존 `single` 모드를 사용한다. `GET /health`의 `llmMode`로 현재 선택을 확인한다.
+
+규칙 경로는 LLM 0회를 유지한다. 미해석 발화에서는 Supervisor 1회 + 선택 역할 1~4회 + 종합 1회로 최대 6회이며 5xx 재시도를 포함한 HTTP 시도 상한은 12회다. 역할이 없으면 Supervisor의 질문으로 종료한다. `routing.llmCalls`는 실제 논리 호출 수, `routing.subagents`는 역할·단계 상태·지연·토큰·HTTP 시도 수를 제공한다. 원문·키·내부 추론은 진단에 넣지 않는다.
+
+전체 분석은 16초, 외부 Router 제한은 18초다. 단계 상한은 Supervisor 6.5초, 병렬 전문 분석 6.5초, 종합 5초이며 모두 전체 남은 시간으로 다시 제한한다. 출력 토큰 설정 상한은 700/각 500/700이다. DeepSeek 단계별 JSON 분석은 이 플랫폼에서 지원되는 `reasoning.enabled=false`로 실행한다. 단일 추출 모드와 다른 모델의 기본값은 변경하지 않는다. [OpenRouter reasoning 문서](https://openrouter.ai/docs/client-sdks/python/api-reference/chat)의 선택적 설정을 공통 전송기로 전달한다.
+
+각 분석은 담당 필드와 원문 인용을 검사하고, 종합 결과는 서버가 계산한 승인 후보와 일치해야 한다. 불명확한 귀속·추론·누락된 명시 성분 회피는 한 개의 질문으로 반환한다. 어느 단계든 공급자·형식·근거 검증에 실패하면 부분 상태를 적용하지 않는다. 요청 취소는 하위 요청으로 전파한다. 현재 API는 여전히 무상태이며 영속 세션 CAS나 새 장기 기억 저장은 추가하지 않았다.
+
 작업 브랜치: `codex/architecture-a-router`.
 
 ## 동작 검증
@@ -68,4 +95,6 @@ LLM 해석 상한은 논리 호출 1회, 기본 18초다. 프로토타입 전송
 
 ## 서브 에이전트 확장 계획
 
-[Supervisor·전문 에이전트·종합 판단 구현 계획](SUBAGENT-PLAN.md)을 작성했다. 현재는 계획이며 해당 서브 에이전트들은 구현되지 않았다. 기존 규칙 Router와 단일 조건 추출 경로를 그대로 사용한다.
+[Supervisor·전문 에이전트·종합 판단 구현 계획](SUBAGENT-PLAN.md)을 작성했다. 현재는 계획에 따른 초기 구현을 완료했다. `single`과 `subagents`를 서버 설정으로 선택하며 운영 기본값은 `single`로 유지한다. 실제 검증 범위와 비교 결과는 별도 보고서를 따른다.
+
+구현 후 검증: [전체 6단계 실제 호출·단일 모드 비교·검증 범위](../../../docs/verification/a-router-subagents-2026-11-05.md). 현재 로컬만 시험 모드이며 화면 자동 수용 검증은 미완료다.

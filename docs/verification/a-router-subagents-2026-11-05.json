@@ -1,0 +1,235 @@
+{
+  "generatedAt": "2026-11-05T06:16:10.191Z",
+  "timezone": "Asia/Seoul",
+  "implementationBaseCommit": "0eb2761b0127d53d84b427ff48e8da348ac3b074",
+  "fullPipeline": {
+    "ok": true,
+    "model": "deepseek-v4-flash",
+    "latencyMs": 5080,
+    "routing": {
+      "agent": "a-router",
+      "intent": "conditions",
+      "route": "llm",
+      "llmCalls": 6,
+      "subagents": {
+        "mode": "subagents",
+        "runId": "327b20f4-dddf-48c0-9fb3-ab8b18da6b3d",
+        "stateVersion": 0,
+        "selectedAgents": [
+          "recipient",
+          "occasion",
+          "spending",
+          "taste"
+        ],
+        "logicalCalls": 6,
+        "httpAttempts": 6,
+        "stages": [
+          {
+            "agentId": "supervisor",
+            "status": "passed",
+            "latencyMs": 2600,
+            "usage": {
+              "prompt_tokens": 593,
+              "completion_tokens": 167,
+              "total_tokens": 760
+            }
+          },
+          {
+            "agentId": "recipient",
+            "status": "passed",
+            "latencyMs": 583,
+            "usage": {
+              "prompt_tokens": 850,
+              "completion_tokens": 76,
+              "total_tokens": 926
+            }
+          },
+          {
+            "agentId": "occasion",
+            "status": "passed",
+            "latencyMs": 713,
+            "usage": {
+              "prompt_tokens": 862,
+              "completion_tokens": 108,
+              "total_tokens": 970
+            }
+          },
+          {
+            "agentId": "spending",
+            "status": "passed",
+            "latencyMs": 1839,
+            "usage": {
+              "prompt_tokens": 918,
+              "completion_tokens": 122,
+              "total_tokens": 1040
+            }
+          },
+          {
+            "agentId": "taste",
+            "status": "passed",
+            "latencyMs": 727,
+            "usage": {
+              "prompt_tokens": 952,
+              "completion_tokens": 125,
+              "total_tokens": 1077
+            }
+          },
+          {
+            "agentId": "synthesizer",
+            "status": "passed",
+            "latencyMs": 612,
+            "usage": {
+              "prompt_tokens": 747,
+              "completion_tokens": 75,
+              "total_tokens": 822
+            }
+          }
+        ]
+      }
+    },
+    "conditions": {
+      "occasion": "생신",
+      "recipients": [
+        "은사님"
+      ],
+      "preferences": [
+        "category:coffee_tea"
+      ],
+      "excluded_categories": [],
+      "excluded_ingredients": [
+        "우유"
+      ],
+      "brand": null,
+      "delivery_by": null,
+      "packaging": "formal",
+      "budget": {
+        "amount_krw": 50000,
+        "shipping_included": true
+      }
+    }
+  },
+  "fullPipelineUsage": {
+    "prompt_tokens": 4922,
+    "completion_tokens": 673,
+    "total_tokens": 5595
+  },
+  "comparison": {
+    "scope": "Same synthetic input/session/catalog/model, both with reasoning disabled; one measured request each, not a statistical benchmark.",
+    "single": {
+      "passed": 10,
+      "total": 10,
+      "realCase": {
+        "id": "real_llm",
+        "label": "미해석 자유 발화를 실제 선택한 LLM으로 보완",
+        "ok": true,
+        "latencyMs": 958,
+        "httpLlmCalls": 1,
+        "routing": {
+          "agent": "a-router",
+          "intent": "conditions",
+          "route": "llm",
+          "llmCalls": 1
+        },
+        "model": "deepseek-v4-flash",
+        "usage": {
+          "prompt_tokens": 1170,
+          "completion_tokens": 89,
+          "total_tokens": 1259
+        },
+        "budget": 50000
+      }
+    },
+    "subagents": {
+      "passed": 10,
+      "total": 10,
+      "realCase": {
+        "id": "real_llm",
+        "label": "미해석 자유 발화를 실제 선택한 LLM으로 보완",
+        "ok": true,
+        "latencyMs": 3039,
+        "httpLlmCalls": 3,
+        "routing": {
+          "agent": "a-router",
+          "intent": "conditions",
+          "route": "llm",
+          "llmCalls": 3,
+          "subagents": {
+            "mode": "subagents",
+            "runId": "c8fb530b-432b-4a20-8a12-21ebc01e68eb",
+            "stateVersion": 0,
+            "selectedAgents": [
+              "taste"
+            ],
+            "logicalCalls": 3,
+            "httpAttempts": 3,
+            "stages": [
+              {
+                "agentId": "supervisor",
+                "status": "passed",
+                "latencyMs": 841,
+                "usage": {
+                  "prompt_tokens": 565,
+                  "completion_tokens": 66,
+                  "total_tokens": 631
+                }
+              },
+              {
+                "agentId": "taste",
+                "status": "passed",
+                "latencyMs": 802,
+                "usage": {
+                  "prompt_tokens": 937,
+                  "completion_tokens": 130,
+                  "total_tokens": 1067
+                }
+              },
+              {
+                "agentId": "synthesizer",
+                "status": "passed",
+                "latencyMs": 1390,
+                "usage": {
+                  "prompt_tokens": 419,
+                  "completion_tokens": 42,
+                  "total_tokens": 461
+                }
+              }
+            ]
+          }
+        },
+        "model": "deepseek-v4-flash",
+        "usage": {
+          "prompt_tokens": 1921,
+          "completion_tokens": 238,
+          "total_tokens": 2159
+        },
+        "budget": 50000
+      }
+    }
+  },
+  "automated": {
+    "total": 266,
+    "failed": 0,
+    "suites": {
+      "core": 99,
+      "mobile": 76,
+      "database": 5,
+      "api": 27,
+      "baseline": 59
+    },
+    "lint": "passed",
+    "typecheck": "passed",
+    "workerDryRun": "passed"
+  },
+  "localServer": {
+    "status": 200,
+    "llmMode": "subagents",
+    "provider": "openai-compatible",
+    "model": "deepseek-v4-flash",
+    "products": 3376
+  },
+  "limitations": [
+    "Synthetic fixtures and mocked auth in the audit; no real account mutation.",
+    "Browser automation was unavailable or disallowed, so UI acceptance remains unverified.",
+    "Single default and production deployment are unchanged."
+  ]
+}

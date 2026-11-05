@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-const allowed=/^(?:LLM_|GEMINI_|SUPABASE_|EXPO_PUBLIC_)|^(?:CHAT_AGENT|APP_ORIGINS)$/;
+const allowed=/^(?:LLM_|GEMINI_|SUPABASE_|EXPO_PUBLIC_)|^(?:CHAT_AGENT|APP_ORIGINS|A_ROUTER_LLM_MODE)$/;
 export async function loadLocalEnv({processEnv=process.env}={}) {
   const values={};
   for (const path of [new URL('../mobile/.env.local',import.meta.url),new URL('./.dev.vars',import.meta.url)]) {

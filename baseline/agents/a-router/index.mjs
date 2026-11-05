@@ -3,6 +3,7 @@ import { BaselineError, checkedPatch, validateSession, validateCatalog } from '.
 import { CATEGORIES } from '../../src/vendor/catalog.mjs';
 import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 import { parseConditions, classifyIntent } from './parser.mjs';
+import { safeDiagnostics } from './subagents/contracts.mjs';
 
 export async function interpretMessage({ text, state, pendingQuestion }) {
   return parseConditions(text, state, { pendingQuestion });
@@ -14,13 +15,20 @@ function validateInterpretation(value, state) {
   if (next.preferences.some(p=>!preferences.has(p)) || next.excluded_categories.some(c=>!CATEGORIES.includes(c)) || next.excluded_ingredients.some(a=>!ALLERGEN_NAMES.includes(a)) || ![null,'basic','formal'].includes(next.packaging)) throw new BaselineError('invalid_interpretation');
   return value;
 }
-function deadlineCall(interpret, input, timeoutMs) {
-  const controller=new AbortController(); let timer;
-  const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('interpreter_timeout'));},timeoutMs);});
-  return Promise.race([Promise.resolve().then(()=>interpret({...input,signal:controller.signal})),timeout]).finally(()=>{clearTimeout(timer);controller.abort();});
+function deadlineCall(interpret,input,timeoutMs,signal) {
+  const controller=new AbortController();let timer,abort;
+  const stop=new Promise((_,reject)=>{
+    abort=()=>{controller.abort();reject(Error('aborted'));};
+    signal?.addEventListener('abort',abort,{once:true});
+    if(signal?.aborted)abort();
+    timer=setTimeout(()=>{controller.abort();reject(Error('interpreter_timeout'));},timeoutMs);
+  });
+  return Promise.race([Promise.resolve().then(()=>interpret({...input,signal:controller.signal})),stop]).finally(()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.abort();});
 }
-function annotate(out, {intent,route,llmCalls=0}) {
-  return {...out, routing:{agent:'a-router',intent,route,llmCalls}};
+
+function annotate(out, {intent,route,llmCalls=0,diagnostics}) {
+  const analysis=diagnostics?safeDiagnostics(diagnostics):null;
+  return {...out, routing:{agent:'a-router',intent,route,llmCalls:analysis?.logicalCalls??llmCalls,...(analysis?{subagents:analysis}:{})}};
 }
 
 /** Server-controlled routing; only unresolved language may invoke interpret once. */
@@ -36,8 +44,10 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
   if (!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>18000) throw new TypeError('timeoutMs must be between 1 and 18000');
   return {
     id:'a-router',
-    async runTurn({session,request,products,pendingQuestion='',history=[]}) {
+    async runTurn({session,request,products,pendingQuestion='',history=[],signal}) {
       validateSession(session);validateCatalog(products);
+      if(signal!==undefined&&!(signal instanceof AbortSignal))throw new BaselineError('invalid_request');
+      if(signal?.aborted)throw new BaselineError('aborted');
       if (!request || !['message','patch','view','what_if_budget'].includes(request.kind) || !Number.isSafeInteger(request.expectedVersion)) throw new BaselineError('invalid_request');
       if (request.expectedVersion!==session.version) throw new BaselineError('version_conflict');
       if (typeof pendingQuestion!=='string'||pendingQuestion.length>400 || !Array.isArray(history)||history.length>6||history.some(m=>!['user','assistant'].includes(m?.role)||typeof m.text!=='string'||m.text.length>1200)) throw new BaselineError('invalid_request');
@@ -49,7 +59,7 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       }
       if (typeof request.text!=='string'||!request.text.trim()||request.text.length>4000) throw new BaselineError('invalid_request');
       const intent=classifyIntent(request.text,session.state);
-      const ask=(question,route='clarification',llmCalls=0)=>annotate({session:structuredClone(session),kind:'question',question,trace:[]},{intent:intent.intent??'conditions',route,llmCalls});
+      const ask=(question,route='clarification',llmCalls=0,diagnostics)=>annotate({session:structuredClone(session),kind:'question',question,trace:[]},{intent:intent.intent??'conditions',route,llmCalls,diagnostics});
       if (intent.kind==='clarify') return ask(intent.question);
       if (intent.kind!=='message') {
         if (/성분/.test(pendingQuestion)) return ask(pendingQuestion);
@@ -65,19 +75,20 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       if (parsed.unresolved && parsed.route==='unresolved' && interpret) {
         llmCalls=1; route='llm';
         try {
-          parsed=await deadlineCall(interpret,{text:request.text,state:structuredClone(session.state),pendingQuestion,history:structuredClone(history)},timeoutMs);
-        } catch {
-          return ask('조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도하거나 조건 편집을 이용해 주세요.','llm_error',1);
+          parsed=await deadlineCall(interpret,{text:request.text,state:structuredClone(session.state),pendingQuestion,history:structuredClone(history),stateVersion:session.version},timeoutMs,signal);
+        } catch(error) {
+          return ask('조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도하거나 조건 편집을 이용해 주세요.','llm_error',1,error?.diagnostics);
         }
       }
       validateInterpretation(parsed,session.state);
-      if (parsed.unresolved) return ask(parsed.questions[0]||'조건을 확인해 주세요.',route==='unresolved'?'clarification':route,llmCalls);
+      const diagnostics=parsed.diagnostics?safeDiagnostics(parsed.diagnostics):undefined;
+      if (parsed.unresolved) return ask(parsed.questions[0]||'조건을 확인해 주세요.',route==='unresolved'?'clarification':route,llmCalls,diagnostics);
       // Removing a prior allergen requires an explicit rule-recognized cancellation.
       if (route==='llm' && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients)) && parsed.patch.excluded_ingredients) parsed.patch.excluded_ingredients=[...new Set([...session.state.excluded_ingredients,...parsed.patch.excluded_ingredients])];
       const out=await runCoreTurn({session,products,request:{kind:'patch',expectedVersion:request.expectedVersion,patch:preparePatch(session.state,parsed.patch)}});
-      if (/성분/.test(pendingQuestion) && !Object.hasOwn(parsed.patch,'excluded_ingredients') && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients))) return annotate({session:out.session,kind:'question',question:pendingQuestion,trace:out.trace},{intent:intent.intent,route:'clarification',llmCalls});
-      if (parsed.questions.length) return annotate({session:out.session,kind:'question',question:parsed.questions[0],trace:out.trace},{intent:intent.intent,route,llmCalls});
-      return annotate(out,{intent:intent.intent,route,llmCalls});
+      if (/성분/.test(pendingQuestion) && !Object.hasOwn(parsed.patch,'excluded_ingredients') && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients))) return annotate({session:out.session,kind:'question',question:pendingQuestion,trace:out.trace},{intent:intent.intent,route:'clarification',llmCalls,diagnostics});
+      if (parsed.questions.length) return annotate({session:out.session,kind:'question',question:parsed.questions[0],trace:out.trace},{intent:intent.intent,route,llmCalls,diagnostics});
+      return annotate(out,{intent:intent.intent,route,llmCalls,diagnostics});
     },
   };
 }

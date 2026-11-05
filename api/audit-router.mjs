@@ -1,4 +1,4 @@
-// Isolated Router audit: synthetic catalog/session and in-memory auth; one real LLM request.
+// Isolated Router audit: synthetic catalog/session and in-memory auth; one real LLM interpretation (multiple subagent calls when enabled).
 // No user login tokens, real account records or real catalog are used or modified.
 import assert from 'node:assert/strict';
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -17,7 +17,7 @@ const fetcher=async(url,options)=>{
   const response=await fetch(url,options);
   if(response.ok) {
     const data=await response.clone().json().catch(()=>null);
-    for(const key of ['prompt_tokens','completion_tokens','total_tokens']) if(Number.isSafeInteger(data?.usage?.[key]))usage[key]=data.usage[key];
+    for(const key of ['prompt_tokens','completion_tokens','total_tokens']) if(Number.isSafeInteger(data?.usage?.[key]))usage[key]=(usage[key]??0)+data.usage[key];
   }
   return response;
 };
@@ -84,7 +84,7 @@ await check('allergy_question','미확정 알레르기는 비교·추천보다 �
 await check('real_llm','미해석 자유 발화를 실제 선택한 LLM으로 보완',async()=>{
   assert.ok(local.LLM_API_KEY||local.GEMINI_API_KEY);
   const {status,data}=await send('받는 분은 커피보다 차를 즐기고, 우유가 들어간 음식은 피하고 싶대요. 지금 정한 예산과 배송비 조건은 그대로 해주세요.',ready);
-  assert.equal(status,200);assert.equal(data.mode,'llm');assert.equal(data.routing.llmCalls,1);assert.equal(data.llmModel,local.LLM_MODEL||local.GEMINI_MODEL);assert.ok(data.session.state.preferences.includes('category:coffee_tea'));assert.ok(data.session.state.excluded_ingredients.includes('우유'));assert.ok(data.session.state.excluded_ingredients.includes('견과류'));assert.equal(data.session.state.budget.amount_krw,50000);assert.equal(data.session.state.budget.shipping_included,true);assert.equal(data.question.key,null);
+  assert.equal(status,200);assert.equal(data.mode,'llm');if(env.A_ROUTER_LLM_MODE==='subagents'){assert.ok(data.routing.llmCalls>=3&&data.routing.llmCalls<=6);assert.ok(data.routing.subagents);}else assert.equal(data.routing.llmCalls,1);assert.equal(data.llmModel,local.LLM_MODEL||local.GEMINI_MODEL);assert.ok(data.session.state.preferences.includes('category:coffee_tea'));assert.ok(data.session.state.excluded_ingredients.includes('우유'));assert.ok(data.session.state.excluded_ingredients.includes('견과류'));assert.equal(data.session.state.budget.amount_krw,50000);assert.equal(data.session.state.budget.shipping_included,true);assert.equal(data.question.key,null);
   return {routing:data.routing,model:data.llmModel,usage:{...usage},budget:50000};
 });
 await check('provider_failure','모의 공급자 오류가 503이며 변경 상태를 반환하지 않음',async()=>{
@@ -92,7 +92,7 @@ await check('provider_failure','모의 공급자 오류가 503이며 변경 상�
   const {status,data}=await send('센스 있는 선물',ready,failing);assert.equal(status,503);assert.ok(!('session' in data));
   return {simulated:true,status};
 });
-const report={generatedAt:new Date().toISOString(),timezone:'Asia/Seoul',agent:'a-router',model:local.LLM_MODEL||local.GEMINI_MODEL,scope:'Synthetic sessions/catalog and mocked auth through the actual Worker handler; real configured LLM for one case; no browser UI or real Supabase auth exercised.',passed:results.filter(r=>r.ok).length,total:results.length,ok:results.every(r=>r.ok),realLlmHttpCalls:httpCalls,results};
+const report={generatedAt:new Date().toISOString(),timezone:'Asia/Seoul',agent:'a-router',model:local.LLM_MODEL||local.GEMINI_MODEL,llmMode:env.A_ROUTER_LLM_MODE||'single',reasoningEnabled:env.LLM_REASONING_ENABLED??'provider_default',scope:'Synthetic sessions/catalog and mocked auth through the actual Worker handler; real configured LLM for one case; no browser UI or real Supabase auth exercised.',passed:results.filter(r=>r.ok).length,total:results.length,ok:results.every(r=>r.ok),realLlmHttpCalls:httpCalls,results};
 console.log(JSON.stringify(report,null,2));
 const outputArg=process.argv.find(arg=>arg.startsWith('--output='));
 if(outputArg) {const path=outputArg.slice(9);await mkdir(dirname(path),{recursive:true});await writeFile(path,JSON.stringify(report,null,2)+'\n');}

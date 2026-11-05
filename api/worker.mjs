@@ -4,7 +4,7 @@ import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
 import { apply, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
-import { prototypeRouterTurn } from './router-agent.mjs';
+import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
 import { resolveLlm } from '../lib/llm-provider.mjs';
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
@@ -76,7 +76,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         try { count = (await catalog(env)).length; } catch {}
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
-        return json({ agent: env.CHAT_AGENT || 'legacy', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, catalog: CATALOG_ID, products: count ?? 0 });
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, catalog: CATALOG_ID, products: count ?? 0 });
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -101,12 +101,14 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         if (!(await env.USER_LIMITER.limit({ key: user.id })).success) throw new ApiError(429, 'rate_limit', '요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { throw new ApiError(503,'configuration','LLM 연결 설정을 확인해주세요.'); }
+        if (env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
+        if (env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
         const input = inputOf(await readJson(request));
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
         let turn, mode = 'rules';
         if (env.CHAT_AGENT === 'a-router') {
-          turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options });
+          turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options, llmMode: env.A_ROUTER_LLM_MODE || 'single', signal: request.signal });
           mode = turn.mode;
         } else if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
         else if (input.operation === 'conditions') turn = finishSingle(input.state, apply(input.state, input.patch), input.clearIssues === false ? input.issues : [], products);
@@ -120,6 +122,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         }
         return json({ ...turn, view: recommendationView(turn.session, products), mode, llmProvider: mode === 'llm' ? llm.provider : null, llmModel: mode === 'llm' ? llm.options.model : null, catalog: CATALOG_ID });
       } catch (error) {
+        if (error instanceof RouterInterpretationError) return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503);
         if (error instanceof ApiError) { if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
         // Keep tokens, input and upstream response bodies out of logs and errors.
         return json({ error: '서버 응답을 처리하지 못했어요. 다시 시도해주세요.', code: 'unavailable' }, 503);

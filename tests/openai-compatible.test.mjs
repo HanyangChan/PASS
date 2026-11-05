@@ -84,3 +84,9 @@ test('unmentioned allergen exclusions remain unless caller delegates protection 
  const standard=await compatibleTurn(before,products,opts(async()=>Response.json(envelope())));assert.deepEqual(standard.session.state.excluded_ingredients,['우유']);
  const delegated=await compatibleTurn(before,products,opts(async()=>Response.json(envelope()),{retainAllergens:false}));assert.deepEqual(delegated.session.state.excluded_ingredients,[]);
 });
+
+test('explicit reasoning toggle reaches transport without changing the provider default',async()=>{
+ await compatibleTurn(input(),products,opts(async(_,options)=>{assert.deepEqual(JSON.parse(options.body).reasoning,{enabled:false});return Response.json(envelope());},{reasoningEnabled:false}));
+ assert.equal(resolveLlm({LLM_PROVIDER:'openai-compatible',LLM_REASONING_ENABLED:'false'}).options.reasoningEnabled,false);
+ assert.throws(()=>resolveLlm({LLM_PROVIDER:'openai-compatible',LLM_REASONING_ENABLED:'invalid'}),{code:'configuration'});
+});

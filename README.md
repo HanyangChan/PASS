@@ -112,3 +112,5 @@ npm --prefix baseline run demo
 A안 Router는 OpenAI 호환 플랫폼의 `deepseek-v4-flash`를 지원한다. 서버 `api/.dev.vars`에 플랫폼 키를 설정하고 `npm run smoke:llm`으로 실제 연결을 시험한다. 명확한 조건은 규칙으로 처리하고 모호한 발화에만 모델을 호출한다. [설정 및 실제 시험 결과](docs/llm-platform.md).
 
 LLM 연결부만 공통으로 사용할 때는 [`baseline/llm/`](baseline/llm/README.md)를 가져오면 됩니다. 공통 main에는 이 독립 모듈만 추가했으며 Router·조건 추출 프롬프트는 각 에이전트에서 구성합니다.
+
+A안의 Supervisor·전문 서브 에이전트·종합 판단 초기 구현을 추가했습니다. `A_ROUTER_LLM_MODE=subagents`로 시험하고, 설정을 생략하면 기존 `single`을 유지합니다. [실행·진단 안내](baseline/agents/a-router/README.md).
