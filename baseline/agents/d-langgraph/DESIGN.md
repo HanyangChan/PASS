@@ -31,12 +31,11 @@ HCI 관점의 질문은 두 가지다. "시스템이 누구의 조건인지 제�
 | 노드 | 파일 | 역할 |
 |---|---|---|
 | attribute | `../c-attribution/attribute.mjs` | 공통 규칙 파서 → 절 단위 귀속 규칙(공통 `extract` 재사용) → 필요할 때만 Gemini 1회 |
-| occasion | `advisors/occasion.mjs` | 고정 기념일 + 설·추석 표 + 사용자 캘린더. 마감일·격식 포장 제안 |
-| spending | `advisors/spending.mjs` | 같은 받는 사람의 구매 금액 범위. 예산 미정이면 예산 제안 |
-| taste | `advisors/taste.mjs` | 확정 기억 + 만족한 구매 카테고리. 선호 카테고리는 자동 반영 |
-| relationship | `advisors/relationship.mjs` | 관계 그룹별 무난한 품목(엔진의 +1 근거 설명), 사적인 품목 제외 제안 |
-| merge | `merge.mjs` | 의견 → 자동 반영 / 제안 칩 / 질문 |
-| engine | `orchestrator.mjs` | 사용자 조건은 세션에 저장하고, 자동 반영은 평가용 복제본에만 적용 |
+| occasion | `advisors.mjs` | 고정 기념일 + 설·추석 표 + 사용자 캘린더. 마감일·격식 포장 제안 |
+| spending | `advisors.mjs` | 같은 받는 사람의 구매 금액 범위. 예산 미정이면 예산 제안 |
+| taste | `advisors.mjs` | 확정 기억 + 만족한 구매 카테고리. 선호 카테고리는 자동 반영 |
+| relationship | `advisors.mjs` | 관계 그룹별 무난한 품목(엔진의 +1 근거 설명), 사적인 품목 제외 제안 |
+| merge | `orchestrator.mjs` | 의견 → 자동 반영 / 제안 칩 / 질문. 자동 반영은 평가용 복제본에만 적용 |
 
 ### 자동 반영은 세션에 저장하지 않는다
 
