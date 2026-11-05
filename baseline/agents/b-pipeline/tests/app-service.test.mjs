@@ -4,7 +4,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRules } from '../../../src/parser.mjs';
 import { createSseParser, emptyTurn, reduceEvent, viewOf, quickRepliesFor, toBaselinePatch, resolvePipelineUrl, validParticipantId, errorText } from '../app/src/services/pipelineEvents.mjs';
-import { createHandlers } from '../server/index.mjs';
 import { createPipeline } from '../pipeline/index.mjs';
 import { products } from './fixtures/catalog.mjs';
 import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
@@ -21,13 +20,17 @@ test('SSE parser: frames split anywhere in the byte stream come out whole and in
   assert.deepEqual(createSseParser().feed('event: a\r\ndata: {"n":1}\r\n\r\n'), [{ type: 'a', data: { n: 1 } }], 'CRLF');
 });
 
-test('the same turn, read from a real /chat stream, folds into one view: cards before explanations, conditions, products', async () => {
+test('the same turn, replayed as an SSE stream (P6 app client until P10 removes it), folds into one view: cards before explanations, conditions, products', async () => {
   const store = stores.memory();
   const people = await seedPeople(store);
   await seedS1Memories(store, people);
-  const h = createHandlers({ store, products, pipeline: createPipeline({ store, products, explain: null, now: () => '2027-01-25T03:00:00.000Z' }) });
+  const pipeline = createPipeline({ store, products, explain: null, now: () => '2027-01-25T03:00:00.000Z' });
   const wire = [];
-  await h.chat({ ownerId: 'userA', sessionId: 's', experiment: 'B', request: { kind: 'message', text: '부모님 설 선물 한 세트 세트당 예산 5만원 이하 배송비 포함 추천' } }, e => wire.push(frame(e.type, e)));
+  // P9: the server no longer streams; the pipeline events are framed here the way the P6 server did (conditions right after the cards)
+  await pipeline.runPipelineTurn({ ownerId: 'userA', sessionId: 's', experiment: 'B', request: { kind: 'message', text: '부모님 설 선물 한 세트 세트당 예산 5만원 이하 배송비 포함 추천' }, emit: e => {
+    wire.push(frame(e.type, e));
+    if (e.type === 'cards') wire.push(frame('conditions', { type: 'conditions', version: e.version, conditions: { recipients: ['부모님'], budget: { amount_krw: 50000 } }, products: e.result.cards.map(c => products.find(p => p.id === c.id)) }));
+  } });
   const parser = createSseParser();
   const steps = [];
   let turn = emptyTurn();

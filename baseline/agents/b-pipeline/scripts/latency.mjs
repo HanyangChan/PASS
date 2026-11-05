@@ -1,5 +1,5 @@
-// AC16 local measurement (R10): time from sending a /chat request to the first `cards` SSE frame, over a real
-// 127.0.0.1 socket, with the real catalog snapshot and an in-memory sqlite store. Run: node scripts/latency.mjs [--runs=20]
+// AC16 local measurement (R10): time from sending a POST /api/chat turn to the whole JSON answer (cards and template tags
+// are in it, P9; there is no stream), over a real 127.0.0.1 socket, with the real catalog snapshot and an in-memory sqlite store. Run: node scripts/latency.mjs [--runs=20]
 //   rules path (sentence solved by parseRules, no LLM call): must be <= 1000 ms
 //   LLM path: only with --llm AND a provider configured in the environment (costs real calls, ask first); otherwise skipped.
 // No user sentence is printed or stored: only timings.
@@ -7,8 +7,9 @@ import { createServer } from 'node:http';
 import { createSqliteStore } from '../db/store.mjs';
 import { loadCatalog } from '../data/load.mjs';
 import { createPipeline } from '../pipeline/index.mjs';
-import { createHandlers, createListener } from '../server/index.mjs';
+import { createHandlers, createListener, dialogueLlmFrom } from '../server/index.mjs';
 import { createLlm } from '../llm/index.mjs';
+import { singleInitial } from '../proto/lib/single-gift.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v = 'true'] = a.replace(/^--/, '').split('='); return [k, v]; }));
 const RUNS = Number(args.runs) || 20;
@@ -18,24 +19,20 @@ const LLM_TEXT = '어머니께 센스 있는 선물 5만원 정도로 골라줘'
 
 const pct = (xs, p) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.ceil(xs.length * p) - 1)];
 
-async function firstCardsMs(base, body) {
+const SESSION0 = { state: singleInitial(), issues: [] };
+
+/** One turn: ms until the whole answer is read, or null when it is not a 200 with cards. */
+async function turnMs(base, body) {
   const started = performance.now();
-  const res = await fetch(`${base}/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  const reader = res.body.getReader(), decoder = new TextDecoder();
-  let buf = '', cards = null;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    if (cards === null && !buf.includes('event: error') && /^event: cards$/m.test(buf)) cards = performance.now() - started;
-  }
-  return cards;
+  const res = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ operation: 'turn', experiment: 'B', session: SESSION0, history: [], source: 'typed', ...body }) });
+  const json = await res.json();
+  return res.ok && json.view?.result?.items?.length ? performance.now() - started : null;
 }
 
 async function measure(base, label, text, runs, limit) {
   const times = [];
   for (let i = 0; i < runs; i++) {
-    const t = await firstCardsMs(base, { ownerId: `lat-${label}`, sessionId: `${label}-${i}`, experiment: 'B', request: { kind: 'message', text } });
+    const t = await turnMs(base, { participant_id: `lat-${label}`, session_id: `${label}-${i}`, text });
     if (t !== null) times.push(t);
   }
   const worst = Math.max(...times), p50 = pct(times, 0.5), p95 = pct(times, 0.95);
@@ -48,13 +45,13 @@ const products = loadCatalog();
 const store = createSqliteStore();
 const llm = args.llm ? createLlm({ env: process.env }) : null;
 if (args.llm && !llm) console.log('llm: no provider configured in the environment -> LLM path skipped');
-const pipeline = createPipeline({ store, products, llm });
+const pipeline = createPipeline({ store, products, llm, dialogueLlm: llm ? dialogueLlmFrom(process.env, { llm }) : null });
 const server = createServer(createListener(createHandlers({ store, products, pipeline })));
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 let ok = true;
 try {
-  await firstCardsMs(base, { ownerId: 'warmup', sessionId: 'w', request: { kind: 'message', text: RULES_TEXT } }); // JIT / first-query warm-up
+  await turnMs(base, { participant_id: 'warmup', session_id: 'w', text: RULES_TEXT }); // JIT / first-query warm-up
   ok = (await measure(base, 'rules', RULES_TEXT, RUNS, RULES_LIMIT_MS)) && ok;
   if (llm) ok = (await measure(base, 'llm', LLM_TEXT, Math.min(RUNS, 5), LLM_LIMIT_MS)) && ok;
   else console.log('llm: not measured (R10: the LLM path is measured only after approval, with --llm)');

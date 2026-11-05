@@ -19,7 +19,7 @@ import { dropMemories } from './provenance.mjs';
 import { memoryBanner, giftHistoryHit } from './banner.mjs';
 import { resolveRecipients, linkCandidates, materialize, isNewRecipientId } from './recipients.mjs';
 
-export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'ladder_pick', 'ladder_compare', 'feedback', 'memory_edit', 'memory_confirm', 'end_session'];
+export const REQUEST_KINDS = ['message', 'patch', 'view', 'what_if_budget', 'ladder_pick', 'ladder_compare', 'feedback', 'memory_edit', 'memory_confirm', 'end_session', 'explain'];
 export const EXPERIMENTS = ['A', 'B'];
 const FEEDBACK_ACTIONS = ['chosen', 'dismissed', 'purchased', 'satisfaction'];
 const EDIT_OPS = ['delete', 'update', 'resolve_conflict', 'accept_suggested', 'sensitivity'];
@@ -92,7 +92,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
    * (AC12). A verified LLM item keeps the template's B chips it left out, so condition B always shows its facts.
    * @returns {{items, source:'llm'|'mixed'|'template'}}
    */
-  async function explainCards({ session, cards, state, provenance, memory, experiment, sensitivity = 'balanced', budgetCap = null, hiddenProductIds = [] }) {
+  async function explainCards({ session, cards, state, provenance, memory, experiment, sensitivity = 'balanced', budgetCap = null, hiddenProductIds = [], useLlm = true }) {
     let factsheet = null;
     try { factsheet = await buildFactsheet({ session, cards, products, state, provenance, memory, experiment, sensitivity, budgetCap, now: now() }); } catch { factsheet = null; }
     const draft = templateExplanations({ cards, products, state, factsheet, memoryTags: factsheet?.memoryTags ?? memoryPreferenceTags(memory, provenance) });
@@ -104,6 +104,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const key = JSON.stringify(factsheet);
     const hit = explained.get(session.id);
     if (hit?.key === key) return done(hit.items, hit.source, { cached: true });
+    if (!useLlm) return done(draft.items, 'template'); // P9: a turn answers with template tags; the LLM wording is the later operation=explain (AC3)
     let check = null, retryReasons = null, attempts = 0;
     const failures = [], passed = new Map(); // an item that passed once is kept even if the retry breaks it
     while (attempts < 2) {
@@ -198,8 +199,9 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const choices = await recipientChoices(ctx.ownerId, out.session.state, ids);
     const cap = await budgetCapOf(ctx.ownerId, ids);
     const capChips = cap ? [{ label: wonShort(cap), amount_krw: cap }] : null;
-    const ask = (question, budgetQuestion, quickReplies = []) => {
-      ctx.send({ type: 'question', question, choices: quickReplies, version: out.session.version, banner, recipientChoices: choices, budgetChips: budgetQuestion ? capChips : null });
+    const ask = (question, budgetQuestion, quickReplies = [], gated = false) => {
+      // gated: the cards of this state are not shown (budget above the person's cap, R3); the server answers with no items
+      ctx.send({ type: 'question', question, choices: quickReplies, version: out.session.version, banner, recipientChoices: choices, budgetChips: budgetQuestion ? capChips : null, ...(gated ? { gated: true } : {}) });
       for (const p of prompts) ctx.send(p);
     };
     // AC2 (P8): the one question is main's nextQuestion for this state and the open issues, with its quick replies
@@ -210,7 +212,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     // K37: the cap is per set with shipping. A per-set budget above it, or a card above it (shipping excluded), is asked.
     const perSet = state.budget.scope === 'total' ? Math.floor(state.budget.amount_krw / (state.quantity || 1)) : state.budget.amount_krw;
     if (cap && (perSet > cap || out.result.cards.some(c => setCost(c.id) > cap))) {
-      return ask(`이 분께는 예산 상한 ${wonShort(cap)}(세트당, 배송비 포함)을 정해 두셨어요. 그 안으로 다시 알려주세요.`, true);
+      return ask(`이 분께는 예산 상한 ${wonShort(cap)}(세트당, 배송비 포함)을 정해 두셨어요. 그 안으로 다시 알려주세요.`, true, [], true);
     }
     const tags = templateExplanations({ cards: out.result.cards, products, state, memoryTags: memoryPreferenceTags(memory, provenance) });
     // K28 "이 상품만": the ranking is untouched (baseline result as is); the app hides these ids (common-core request filed)
@@ -222,7 +224,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     });
     for (const p of prompts) ctx.send(p);
     if (out.kind === 'comparison') return;
-    const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap, hiddenProductIds });
+    const ex = await explainCards({ session: out.session, cards: out.result.cards, state, provenance, memory, experiment: ctx.meta.experiment, sensitivity: ctx.meta.sensitivity, budgetCap: cap, hiddenProductIds, useLlm: ctx.llmExplain !== false });
     // K51: "더 저렴한" puts the 아끼기 chip first and highlights it (the chips already list down before up)
     const top = ex.items[0];
     const emphasize = ctx.emphasizeDown && top?.ladderChips?.[0]?.direction === 'down' ? 'down' : null;
@@ -321,6 +323,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       // ① main's chatbot: fastRuleTurn -> llmTurn (key) -> singleTurn. history (<= 6) and source come from the client as in main.
       const u = await dialogue.understand({ text: request.text, state: ctx.session.state, issues: meta.issues, history: request.history ?? [], source: request.source ?? 'typed', products });
       // LLM failure: main's message ("조건은 바뀌지 않았어요"), nothing saved
+      ctx.mode = u.failure ? 'rules' : u.mode;
       if (u.failure) return ask(u.failure.error, [], { code: u.failure.code });
       // K51: "더 저렴한·싼" -> B: this session's sensitivity becomes value and the 아끼기 chip is put first and highlighted
       // (proto's "새 예산 상한" question is dropped: the chip is B's answer); A has no price options, so a sentence that only
@@ -360,6 +363,11 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       const ids = realIds(ctx.meta.recipientIds);
       const memory = await loadMemory(store, ctx.ownerId, ids, { now: now() });
       await present(ctx, out, { memory, provenance: ctx.meta.provenance, ids });
+    },
+    /** operation=explain: the same facts again, now with the LLM wording (verified, template per failing item). Nothing is saved. */
+    async explain(ctx) {
+      ctx.llmExplain = true;
+      await handlers.view(ctx);
     },
     async what_if_budget(ctx, request) {
       // Session never changes (AC15); P4 puts the planner here.
@@ -518,18 +526,20 @@ export function createOrchestrator({ store, products, llm = null, explain = null
   };
 
   /**
-   * runPipelineTurn({ownerId, sessionId, recipientId?, request, experiment?, emit?}) -> {events}
+   * runPipelineTurn({ownerId, sessionId, recipientId?, request, experiment?, emit?, llmExplain?}) -> {events, mode}
+   * mode: how ① understood a message (rules | rules_fast | llm), 'rules' for every other request. llmExplain false = template tags only (P9).
    * Events: question | cards -> memory_prompt* -> explanations | comparison | memory_saved | session_end | error
    */
-  async function runPipelineTurn({ ownerId, sessionId, recipientId, request, experiment, emit }) {
+  async function runPipelineTurn({ ownerId, sessionId, recipientId, request, experiment, emit, llmExplain = true }) {
     const events = [];
+    let ctx = null;
     const send = e => { events.push(e); emit?.(e); };
     let loggedExperiment = EXPERIMENTS.includes(experiment) ? experiment : null;
     try {
       if (!object(request) || !REQUEST_KINDS.includes(request.kind)) throw invalid();
       if (experiment !== undefined && !EXPERIMENTS.includes(experiment)) throw invalid();
       const row = await store.getSession(ownerId, sessionId) ?? { session: createSession(sessionId), meta: defaultMeta(), isNew: true };
-      const ctx = { ownerId, recipientId, session: row.session, meta: { ...defaultMeta(), ...row.meta }, send, isNew: row.isNew === true };
+      ctx = { ownerId, recipientId, session: row.session, meta: { ...defaultMeta(), ...row.meta }, send, isNew: row.isNew === true, llmExplain: request.kind === 'explain' || llmExplain, mode: 'rules' };
       if (request.expectedVersion !== undefined && request.expectedVersion !== ctx.session.version) throw new BaselineError('version_conflict');
       if (experiment !== undefined) ctx.meta.experiment = experiment;
       loggedExperiment = ctx.meta.experiment; // the condition the turn actually ran under (stored in meta)
@@ -544,7 +554,7 @@ export function createOrchestrator({ store, products, llm = null, explain = null
       experiment: loggedExperiment,
       events: events.map(e => e.type), errorCode: events.find(e => e.type === 'error')?.code ?? null,
     });
-    return { events };
+    return { events, mode: ctx?.mode ?? 'rules' };
   }
 
   return { runPipelineTurn, explainCards };

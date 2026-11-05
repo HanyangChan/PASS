@@ -51,7 +51,7 @@ indexer/agent.mjs         # ⑥ 카탈로그 색인 (오프라인)
 llm/                      # index.mjs, gemini.mjs, openai-compatible.mjs, fake.mjs
 db/                       # schema.sql, store.mjs (node:sqlite), memory-store.mjs (테스트용)
 data/                     # 카탈로그 스냅샷 + SHA-256
-server/index.mjs          # node:http, SSE
+server/index.mjs          # node:http, POST /api/chat (JSON)
 app/                      # 기존 mobile/ UI 복사본 (§9)
 eval/                     # simulator.mjs, personas/, metrics.mjs
 tests/*.test.mjs          # node:test, 네트워크 금지
@@ -95,7 +95,7 @@ tests/*.test.mjs          # node:test, 네트워크 금지
 
 ### 4.1 요청·이벤트 (P3 구현 기준, K24~K31)
 - 요청 `kind`: `message{text}` · `patch{patch, confirmedReleases?, sensitivity?}` · `view` · `what_if_budget{amount_krw}` · `ladder_pick{direction: down}`(K38) · `ladder_compare{productId}`(K50) · `feedback{action: chosen|dismissed|purchased|satisfaction, productId|giftId, scope?: product|category}`(제외는 K28) · `memory_edit{op: delete|update|resolve_conflict|accept_suggested|sensitivity}` · `memory_confirm{accept, indexes?}` · `end_session`. `expectedVersion`을 보내면 DB 버전과 비교한다.
-- 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `compare_add`(올리기 칩, K50), `memory_saved`, `session_end`, `error{code}`. `cards`에는 선택적 `notice`, `explanations`에는 선택적 `emphasize`가 붙는다. 서버는 `conditions`를 추가한다(K53).
+- 이벤트 순서: `question` 또는 `cards` → `memory_prompt`(0개 이상) → `explanations`. 그 밖에 `comparison`, `compare_add`(올리기 칩, K50), `memory_saved`, `session_end`, `error{code}`. `cards`에는 선택적 `notice`, `explanations`에는 선택적 `emphasize`가 붙는다. (P9: 서버의 `conditions` 이벤트는 없어졌다. 조건은 응답의 `session.state`, K74).
 - `cards`에는 baseline `result`를 그대로 넣고, 상품별 `annotations{id, tags, giftHistory}`와 `banner`(반영 한 줄)를 따로 붙인다.
 - `recipientId`는 사용자가 수령인을 고른 요청에만 보낸다. 문장·칩의 수령인이 항상 우선하고, 표시 이름과 기억 id는 같은 사람으로 정해진다(K36).
 - ③은 ② 다음에 한 번 호출한다(K27). 해석이 안 된 메시지는 아무것도 저장하지 않는다.
@@ -230,20 +230,23 @@ create table events(  -- 실험 로그 (원문 발화 저장 안 함)
 4. **새 UI 요소:** 기존 컴포넌트를 재사용해 만든다. 이유 태그, 칩, 반영 한 줄, "기억할까요?", [수정].
 5. **로그인:** 실험용 참가자 ID 입력으로 대체한다(정식 인증은 범위 밖).
 
-## 10. 서버 API (`server/index.mjs`)
-| 메서드·경로 | 본문 | 응답 |
-|---|---|---|
-| `POST /chat` | `{ownerId, sessionId, recipientId?, request, experiment}` | SSE `question` \| `cards` → `explanations` \| `memory_prompt` \| `error` |
-| `GET /recipients?ownerId=` | — | 수령인 목록 |
-| `GET /memory/:recipientId?ownerId=` | — | 기억·선물 이력 |
-| `PUT/DELETE /memory/:id` | `{ownerId, …}` | 수정·실제 삭제 |
-| `POST /memory/confirm` | `{ownerId, sessionId, accept, indexes?}` | 세션이 들고 있는 후보를 저장(수락)하거나 버림(K53) |
-| `POST /feedback` | `{ownerId, sessionId, productId, action, scope?, giftId?, satisfaction?}` | chosen \| dismissed \| purchased \| satisfaction. 응답은 `{events}` JSON |
-| `GET /health` | — | `{ok:true}` |
+## 10. 서버 API (`server/index.mjs`) — P9에서 교체(K74, PROTO-REBASE §2)
+`POST /api/chat` 하나(+ `GET /health`). JSON 한 번에 응답하고 스트리밍은 없다.
 
-- 입력은 전부 검증하고 본문 크기를 제한한다(16KB, 초과 413). ID는 `[A-Za-z0-9_.:-]{1,64}`.
-- `/chat` 스트림에는 파이프라인 이벤트 외에 서버가 `conditions{conditions, products}`를 첫 `question|cards|comparison` 바로 뒤에 붙인다(K53). `compare_add`에는 `product`가 붙는다.
-- 알 수 없는 오류는 `{error:'internal'}`/`error{code:'internal'}`만 보낸다(메시지에 사용자 문장이 있을 수 있음).
+| operation | 주요 본문 (공통: `participant_id`, `session_id`, `experiment?`, `session:{state,issues}`) | 응답 |
+|---|---|---|
+| `turn` | `text`, `history(≤6)`, `source`, `recipient_choice?` | main 응답 + `pipeline` |
+| `conditions` | `patch`, `clearIssues?`, `sensitivity?`, `confirmed_releases?` | main 응답 + `pipeline` |
+| `view` | `what_if_amount_krw?` | main 응답 + `pipeline` |
+| `explain` | `item_ids?` | `{session:{version}, catalog, pipeline:{version, tags, contrast?, memory_cf?, ladder?, explanation_source}}` (LLM 설명, 후속 요청) |
+| `feedback` | `kind`(chosen·purchased·satisfaction·dismissed·dismiss_one·dismiss_kind·ladder_save·ladder_compare), `product_id?`, `gift_id?`, `scope?`, `satisfaction?` | main 응답 + `pipeline` |
+| `end_session` | `accept?`, `indexes?` | accept 없음: "기억할까요?" 질문 / 있음: 저장·거절 결과 (`pipeline.memory_prompts`·`memory_saved`) |
+| `memory` | `action`(list·edit·delete·resolve_conflict·accept_suggested·sensitivity), `recipient_id?`, `memory_id?`, `patch?`, `in_session?` | 목록·수정·삭제. `in_session`이면 조건까지 갱신한 main 응답 |
+
+- main 응답 = `{session:{state,issues,version}, message, mode, view:{question,result,comparison}, catalog}` (`proto/api/worker.mjs`와 같은 모양). `pipeline` 블록은 K74 ② 참고.
+- 세션 상태는 DB가 단일 출처다. 클라이언트의 `session.state`는 main의 검증만 하고 쓰지 않는다.
+- 입력은 전부 검증하고 본문 크기를 제한한다(32KB, 초과 413). ID는 `[A-Za-z0-9_.:-]{1,64}`. 오류는 `{error, code}`.
+- 알 수 없는 오류는 `{code:'internal'}`만 보낸다(메시지에 사용자 문장이 있을 수 있음).
 - 로그·trace·events에 원문 발화를 남기지 않는다.
 - 로컬 실험 전용이다. 공개 배포에는 인증이 필요하다(범위 밖).
 
