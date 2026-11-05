@@ -54,7 +54,7 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
     const summary=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.name} (${p.budget_cost_krw.toLocaleString('ko-KR')}원)`).join(', '):'조건에 맞는 상품이 없습니다.';
     message=`예산을 ${amount.toLocaleString('ko-KR')}원으로 가정해 다시 계산했어요. ${summary}\n현재 예산은 그대로입니다. 적용하려면 조건에서 예산을 변경해 주세요.`;
   } else if (output.routing.intent==='explain' && output.result && !issues.length) {
-    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호 점수가 같으면 상품군 안의 리뷰 비중, 리뷰 수, 낮은 상품값, 상품 ID 순서로 정렬합니다.':output.result.message;
+    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 예산대 적합도와 리뷰 수를 함께 보고 유사 상품이 겹치지 않도록 선택합니다.':output.result.message;
   }
   if ((output.kind==='comparison'||output.routing.intent==='explain') && output.result?.notice) message+=`\n${output.result.notice}`;
   return {...turn,message,mode:output.routing.llmCalls?'llm':input.source==='quick_reply'?'rules_fast':'rules',agent:'a-router',routing:output.routing};

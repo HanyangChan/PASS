@@ -12,19 +12,19 @@ test('empty results and allergen exclusion with notice',()=>{
 test('new category words map to the catalog vocabulary',()=>{
  assert.deepEqual(extract('과자는 빼줘',initial()).patch.excluded_categories,['snack']);
  assert.deepEqual(extract('견과류는 빼줘',initial()).patch.excluded_ingredients,['견과류']);
- assert.deepEqual(extract('차로 할게',initial()).patch.preferences,['category:coffee_tea']);
+ assert.deepEqual(extract('차로 할게',initial()).patch.preferences,['category:coffee_tea','type:tea']);
 });
 test('exact date, category and formal packaging filters',()=>{const s=apply(initial(),{delivery_by:'2026-09-21',packaging:'formal',excluded_categories:['nuts'],budget:{amount_krw:60000,scope:'per_set'}});const r=recommend(products,s);assert.ok(r.items.length);for(const p of r.items){assert.ok(p.arrival_date<=s.delivery_by);assert.equal(p.packaging,'formal');assert.notEqual(p.category,'nuts');assert.ok(p.price_krw<=60000)}});
 test('diff includes nested changes without mutating previous state',()=>{const a=initial(),b=apply(a,{budget:{amount_krw:50000}});assert.equal(a.budget.amount_krw,null);assert.deepEqual(differences(a,b),[{field:'budget.amount_krw',before:null,after:50000}])});
-test('equal preference ranks by review count before price',()=>{
+test('equal preference balances budget fit and review confidence',()=>{
  const p=(id,price,rating_count)=>({...products[0],id,price_krw:price,shipping_fee_per_set_krw:0,rating_count,allergens_declared:[]});
  const r=recommend([p('cheap',5000,10),p('popular',28000,9000),p('mid',15000,500)],apply(initial(),{budget:{amount_krw:30000}}));
  assert.deepEqual(r.items.map(x=>x.id),['popular','mid','cheap']);
 });
-test('review counts compare within each category so one loud category cannot take every slot',()=>{
+test('budget fit and diversity prevent cheap review leaders taking every slot',()=>{
  const p=(id,category,price,rating_count)=>({...products[0],id,category,price_krw:price,shipping_fee_per_set_krw:0,rating_count,allergens_declared:[]});
  const data=[p('ear1','audio',12000,300000),p('ear2','audio',20000,200000),p('ear3','audio',22000,190000),p('tea1','coffee_tea',25000,800),p('tea2','coffee_tea',9000,90)];
- assert.deepEqual(recommend(data,apply(initial(),{budget:{amount_krw:30000}})).items.map(x=>x.id),['ear1','tea1','ear2']);
+ assert.deepEqual(recommend(data,apply(initial(),{budget:{amount_krw:30000}})).items.map(x=>x.id),['ear3','tea1','ear2']);
 });
 test('recipient categories add a small boost that explicit tastes still outrank',()=>{
  const p=(id,category,price,rating_count)=>({...products[0],id,category,price_krw:price,shipping_fee_per_set_krw:0,rating_count,allergens_declared:[]});
@@ -34,7 +34,7 @@ test('recipient categories add a small boost that explicit tastes still outrank'
  assert.deepEqual(recommend(data,apply(initial(),{...base,recipients:['어머니'],preferences:['category:audio']})).items[0].id,'ear');
  assert.deepEqual(recommend(data,apply(initial(),{...base,recipients:['동창']})).items[0].id,'ear');
 });
-test('category leaders tie-break by absolute reviews, not price',()=>{
+test('budget fit and review confidence rank a near-budget category leader first',()=>{
  const p=(id,category,price,rating_count)=>({...products[0],id,category,price_krw:price,shipping_fee_per_set_krw:0,rating_count,allergens_declared:[]});
  assert.deepEqual(recommend([p('box','decor',12000,900),p('tea','coffee_tea',28000,20000)],apply(initial(),{budget:{amount_krw:30000}})).items.map(x=>x.id),['tea','box']);
 });

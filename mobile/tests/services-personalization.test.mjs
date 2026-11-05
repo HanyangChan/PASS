@@ -48,7 +48,7 @@ test('only positive purchase feedback influences ranking; current requests overr
     { id: '2', recipient: '어머니', gift: { id: 'nuts', name: '견과', category: '견과류' }, feedback: 'liked', source: 'user_reported', recordedAt: 'now' },
   ] };
   assert.deepEqual(personalizeSession(session(), data, '친구 선물').session.state.preferences, ['category:food']);
-  assert.deepEqual(personalizeSession(session(), data, '친구 차로 추천').session.state.preferences, ['category:coffee_tea']);
+  assert.deepEqual(personalizeSession(session(), data, '친구 차로 추천').session.state.preferences, ['category:coffee_tea','type:tea']);
   assert.deepEqual(personalizeSession(session(), { ...data, purchases: data.purchases.map(p => ({ ...p, feedback: 'disliked' })) }, '친구 선물').session.state.preferences, []);
 });
 test('accounts and guest have separate storage and failed loads cannot overwrite data', async () => {

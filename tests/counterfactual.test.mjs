@@ -24,7 +24,7 @@ test('higher preference match really becomes the first recommendation',()=>{
 test('second position can change without claiming a first-position change',()=>{
  const data=[product('A',20000,{sweetness:'unsweetened'}),product('B',24000),product('C',26000),product('D',40000,{sweetness:'naturally_sweet'})];
  const a=budgetAlternatives(data,state({preferences:['less_sweet']})).alternatives[0];
- assert.equal(a.effect,'top_three_changed');assert.equal(a.targetRank,2);assert.deepEqual(a.topIds,['A','D','B']);
+ assert.equal(a.effect,'top_three_changed');assert.equal(a.targetRank,2);assert.deepEqual(a.topIds,['A','D','C']);
 });
 test('total budget includes quantity and every shipping fee',()=>{
  const data=[product('A',39000,{shipping_fee_per_set_krw:3000})];
@@ -69,7 +69,7 @@ test('each offered threshold is sufficient, minimal for target, and reproduces d
 test('shipping can make a cheaper product exceed the cap; contrast stays truthful',()=>{
  const data=[product('A',25000),product('B',24000,{shipping_fee_per_set_krw:4000})];
  const a=budgetAlternatives(data,state({budget:{amount_krw:25000,shipping_included:true}})).alternatives[0];
- assert.equal(a.effect,'top_changed');assert.equal(a.amount,28000);assert.match(a.rankingReason,/상품값은 더 낮지만 배송비/);
+ assert.equal(a.effect,'top_three_changed');assert.equal(a.targetRank,2);assert.deepEqual(a.topIds,['A','B']);assert.equal(a.amount,28000);assert.match(a.rankingReason,/상품값은 더 낮지만 배송비/);
 });
 test('raising 150k to 200k cannot admit a 320k item',()=>{
  const data=[product('A',120000),product('B',320000)];const s=state({budget:{amount_krw:150000}});
@@ -79,9 +79,9 @@ test('raising 150k to 200k cannot admit a 320k item',()=>{
 test('a more-reviewed product just above the cap becomes first and the reason says why',()=>{
  const data=[product('A',24000,{rating_count:10}),product('B',33000,{rating_count:500})];
  const a=budgetAlternatives(data,state()).alternatives[0];
- assert.equal(a.effect,'top_changed');assert.equal(a.target.id,'B');assert.match(a.rankingReason,/리뷰가 많은/);
+ assert.equal(a.effect,'top_changed');assert.equal(a.target.id,'B');assert.match(a.rankingReason,/예산대와의 적합도, 리뷰 수/);
  const b=budgetAlternatives([product('A',24000,{rating_count:500}),product('B',33000,{rating_count:10})],state()).alternatives[0];
- assert.equal(b.effect,'top_three_changed');assert.match(b.rankingReason,/현재 추천의 리뷰가 더 많아요/);
+ assert.equal(b.effect,'top_three_changed');assert.match(b.rankingReason,/순위는 2위/);
 });
 
 

@@ -90,10 +90,11 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
     take(new RegExp(`(${words})(?:는|은|를|을|가)?\\s*(?:제외\\s*취소|포함해도\\s*돼)`,'g'),()=>{patch.excluded_categories=(patch.excluded_categories??state.excluded_categories).filter(x=>x!==category);});
     take(new RegExp(`(${words})(?:는|은|를|을|가)?\\s*(?:좋아하지\\s*않아|안\\s*좋아해|싫어|빼줘|제외|말고)`,'g'),()=>{
       patch.excluded_categories=unique([...(patch.excluded_categories??state.excluded_categories),category]);
-      patch.preferences=(patch.preferences??state.preferences).filter(x=>x!==`category:${category}`);
+      patch.preferences=(patch.preferences??state.preferences).filter(x=>x!==`category:${category}`&&!(category==='coffee_tea'&&['type:tea','type:coffee'].includes(x)));
     });
-    take(new RegExp(`(${words})(?:는|은|를|을|가|로)?\\s*(?:좋아해요|좋아해|선호해|선호|추천해줘|추천|골라줘)`,'g'),()=>{
-      patch.preferences=unique([...(patch.preferences??state.preferences),`category:${category}`]);
+    take(new RegExp(`(${words})(?:는|은|를|을|가|로)?\\s*(?:좋아해요|좋아해|선호해|선호|추천해줘|추천|골라줘)`,'g'),(_,word)=>{
+      const typed=category==='coffee_tea'?[word==='커피'?'type:coffee':'type:tea']:[];
+      patch.preferences=unique([...(patch.preferences??state.preferences),`category:${category}`,...typed]);
     });
   }
   take(/브랜드\s*상관없어|브랜드\s*조건\s*취소/g,()=>{patch.brand=null;});

@@ -142,3 +142,12 @@ test('a canceled Router request cannot apply a late interpreter result',async()=
  const out=await pending;assert.equal(out.kind,'question');assert.equal(out.routing.route,'llm_error');
  await new Promise(resolve=>setTimeout(resolve,25));assert.deepEqual(session,before);assert.deepEqual(out.session,before);
 });
+
+test('typed tea preference survives specialist validation and synthesis without losing exclusions',async()=>{
+ const mock=makeFetcher({override:stage=>stage==='taste'?analysis('taste',[
+  observation('preferences',['category:coffee_tea','type:tea'],'차를 좋아'),
+  observation('excluded_ingredients',['우유'],'우유는 피해요'),
+ ]):undefined});
+ const out=await make(mock)(input());
+ assert.equal(out.unresolved,false);assert.deepEqual(out.patch.preferences,['category:coffee_tea','type:tea']);assert.deepEqual(out.patch.excluded_ingredients,['우유']);
+});

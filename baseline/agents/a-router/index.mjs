@@ -1,6 +1,6 @@
 import { runTurn as runCoreTurn } from '../../src/index.mjs';
 import { BaselineError, checkedPatch, validateSession, validateCatalog } from '../../src/contracts.mjs';
-import { CATEGORIES } from '../../src/vendor/catalog.mjs';
+import { CATEGORIES,PREFERENCE_TAGS } from '../../src/vendor/catalog.mjs';
 import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 import { parseConditions, classifyIntent } from './parser.mjs';
 import { safeDiagnostics } from './subagents/contracts.mjs';
@@ -8,7 +8,7 @@ import { safeDiagnostics } from './subagents/contracts.mjs';
 export async function interpretMessage({ text, state, pendingQuestion }) {
   return parseConditions(text, state, { pendingQuestion });
 }
-const preferences=new Set(['unsweetened','less_sweet',...CATEGORIES.map(c=>`category:${c}`)]);
+const preferences=new Set(PREFERENCE_TAGS);
 function validateInterpretation(value, state) {
   if (!value || typeof value.unresolved!=='boolean' || !Array.isArray(value.questions) || value.questions.length>12 || value.questions.some(q=>typeof q!=='string'||!q.trim()||q.length>400)) throw new BaselineError('invalid_interpretation');
   const next=checkedPatch(state,value.patch);
@@ -65,7 +65,7 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
         if (/성분/.test(pendingQuestion)) return ask(pendingQuestion);
         const out=await runCoreTurn({session,products,request:{...intent,expectedVersion:request.expectedVersion}});
         if (intent.intent==='explain' && out.result?.cards.length) {
-          out.result.message=out.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호 점수가 같으면 상품군 안의 리뷰 비중, 리뷰 수, 낮은 상품값, 상품 ID 순서로 정렬합니다.'+(out.result.notice?`\n${out.result.notice}`:'');
+          out.result.message=out.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 예산대 적합도와 리뷰 수를 함께 보고 유사 상품이 겹치지 않도록 선택합니다.'+(out.result.notice?`\n${out.result.notice}`:'');
         }
         return annotate(out,{intent:intent.intent,route:'rules'});
       }

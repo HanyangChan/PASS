@@ -10,12 +10,12 @@ test('prototype conditions, Korean money, negation and partial edits use zero mo
  let calls=0;const agent=createAgent({interpret:async()=>{calls++;throw Error('unexpected');}});
  let session=await ready();
  for(const [text,check] of [
-  ['엄마는 차 좋아해',s=>assert.deepEqual(s.preferences,['category:coffee_tea'])],
+  ['엄마는 차 좋아해',s=>assert.deepEqual(s.preferences,['category:coffee_tea','type:tea'])],
   ['견과류는 빼줘',s=>assert.deepEqual(s.excluded_ingredients,['견과류'])],
   ['예산 칠만원으로 바꿔줘',s=>assert.equal(s.budget.amount_krw,70000)],
   ['덜 단 상품으로',s=>assert.ok(s.preferences.includes('less_sweet'))],
   ['배송비 별도',s=>assert.equal(s.budget.shipping_included,false)],
-  ['커피는 안 좋아해',s=>assert.ok(s.excluded_categories.includes('coffee_tea'))],
+  ['커피는 안 좋아해',s=>{assert.ok(s.excluded_categories.includes('coffee_tea'));assert.ok(!s.preferences.some(p=>['type:tea','type:coffee','category:coffee_tea'].includes(p)));}],
   ['커피 제외 취소',s=>assert.ok(!s.excluded_categories.includes('coffee_tea'))],
   ['브랜드 "데모"',s=>assert.equal(s.brand,'데모')],
   ['기본 포장',s=>assert.equal(s.packaging,'basic')],
@@ -123,5 +123,5 @@ test('first recipient identification retains conditions entered before the recip
 test('explicit preferences for a new recipient never merge prior recipient arrays',async()=>{
  const session=await ready();session.state.preferences=['less_sweet'];session.state.excluded_ingredients=['견과류'];session.state.excluded_categories=['coffee_tea'];
  const out=await send(createAgent({singleGift:true}),session,'친구 커피 좋아해 우유 알레르기 있어');
- assert.deepEqual(out.session.state.preferences,['category:coffee_tea']);assert.deepEqual(out.session.state.excluded_ingredients,['우유']);assert.deepEqual(out.session.state.excluded_categories,[]);
+ assert.deepEqual(out.session.state.preferences,['category:coffee_tea','type:coffee']);assert.deepEqual(out.session.state.excluded_ingredients,['우유']);assert.deepEqual(out.session.state.excluded_categories,[]);
 });

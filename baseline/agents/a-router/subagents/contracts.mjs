@@ -1,6 +1,6 @@
 import { checkedPatch } from '../../../src/contracts.mjs';
 import { initial } from '../../../src/vendor/engine.mjs';
-import { CATEGORIES } from '../../../src/vendor/catalog.mjs';
+import { CATEGORIES,PREFERENCE_TAGS } from '../../../src/vendor/catalog.mjs';
 import { moneyValues } from '../parser.mjs';
 import { ALLERGEN_NAMES } from '../../../src/vendor/allergens.mjs';
 export const ROLES=Object.freeze(['recipient','occasion','spending','taste']);
@@ -32,7 +32,7 @@ function fieldPatch(field,value) {return field.startsWith('budget.')?{budget:{[f
 export function validateValue(field,value) {
   checkedPatch(initial(),fieldPatch(field,value));
   if(field==='recipients'&&(!Array.isArray(value)||value.length!==1))fail();
-  if(field==='preferences'&&value.some(x=>!['less_sweet','unsweetened',...CATEGORIES.map(c=>`category:${c}`)].includes(x)))fail();
+  if(field==='preferences'&&value.some(x=>!PREFERENCE_TAGS.includes(x)))fail();
   if(field==='excluded_categories'&&value.some(x=>!CATEGORIES.includes(x)))fail();
   if(field==='excluded_ingredients'&&value.some(x=>!ALLERGEN_NAMES.includes(x)))fail();
   if(field==='packaging'&&![null,'basic','formal'].includes(value))fail();
@@ -91,7 +91,7 @@ export function prepareSynthesis(results,state,{text=''}={}) {
   }
   const newPrefs=observations.find(o=>o.field==='preferences')?.value??[];
   if(newPrefs.some(p=>p.startsWith('category:')&&(patch.excluded_categories??base.excluded_categories).includes(p.slice(9))))addQuestion('선호 상품군과 제외 상품군이 겹쳐요. 적용할 조건을 확인해 주세요.');
-  if(patch.excluded_categories)patch.preferences=(patch.preferences??base.preferences).filter(p=>!p.startsWith('category:')||!patch.excluded_categories.includes(p.slice(9)));
+  if(patch.excluded_categories)patch.preferences=(patch.preferences??base.preferences).filter(p=>(!p.startsWith('category:')||!patch.excluded_categories.includes(p.slice(9)))&&!(patch.excluded_categories.includes('coffee_tea')&&['type:tea','type:coffee'].includes(p)));
   if(!observations.length&&!questionOptions.length)addQuestion('받는 분의 선호나 조건을 조금 더 구체적으로 알려주세요.');
   checkedPatch(base,patch);
   return {approvedPatch:questionOptions.length?{}:patch,questionOptions};

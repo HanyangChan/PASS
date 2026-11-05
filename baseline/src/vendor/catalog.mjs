@@ -1,5 +1,6 @@
 export const CATALOG_ID='amazon-kaggle-v1';
 export const CATEGORIES=['food','snack','coffee_tea','health','beauty','makeup','personal_care','kitchen','decor','jewelry','watch','bag','accessory','audio','toy','fitness'];
+export const PREFERENCE_TAGS=['less_sweet','unsweetened','type:tea','type:coffee',...CATEGORIES.map(c=>`category:${c}`)];
 export const CATEGORY_NAMES={food:'식품',snack:'과자·간식',coffee_tea:'커피·차',health:'건강식품',beauty:'뷰티',makeup:'메이크업',personal_care:'생활가전',kitchen:'주방용품',decor:'홈데코',jewelry:'주얼리',watch:'시계',bag:'가방',accessory:'패션소품',audio:'음향기기',toy:'장난감',fitness:'운동용품'};
 // Recipient groups → categories that usually suit them (ranking tabs and a +1 recommendation boost).
 export const RECIPIENT_CATEGORIES={부모님:['health','food','coffee_tea','kitchen','decor'],친구:['beauty','makeup','jewelry','audio','snack'],직장동료:['coffee_tea','snack','decor','accessory','kitchen']};
