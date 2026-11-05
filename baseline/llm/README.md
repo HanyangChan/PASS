@@ -62,5 +62,9 @@ node --env-file=api/.dev.vars baseline/llm/examples/demo.mjs
 - 제외: 에이전트 프롬프트, 조건 추출·추천·기억·계획·라우팅, 대화 저장, 인증 서버·웹 화면.
 - 키는 서버 환경에만 두며 `.env`를 커밋하지 않는다. 브라우저에서 클라이언트를 생성하면 `server_only` 오류를 반환한다.
 - `createLlmClient({apiKey, model, baseUrl, fetcher, timeoutMs, onUsage})`로 직접 구성할 수도 있다. 기본 제한은 18초이며 재시도도 같은 제한을 사용한다. 401·403·429·400은 재시도하지 않는다.
-- 요청별 `signal`, `temperature`, `maxTokens`, `responseFormat`을 전달할 수 있다. 내부 추론과 공급자의 원문 오류는 반환하지 않는다. 키가 없으면 실제 호출 시 `configuration` 오류이며 다른 공급자의 키로 대체하지 않는다.
+- 요청별 `signal`, `temperature`, `maxTokens`, `responseFormat`, 선택적인 `reasoningEffort`을 전달할 수 있다. 내부 추론과 공급자의 원문 오류는 반환하지 않는다. 키가 없으면 실제 호출 시 `configuration` 오류이며 다른 공급자의 키로 대체하지 않는다.
 - 텍스트는 업무 근거 검증 없이 반환된다. 각 에이전트가 자기 결과를 검증해야 한다. 이 모듈을 가져오는 것만으로 기존 앱이나 다른 에이전트가 자동으로 LLM을 사용하는 것은 아니다.
+
+`reasoningEffort`를 지정하면 호환 API의 `reasoning_effort` 필드로 전송한다. 생략하면 공급자의 기본 설정을 유지한다. 지원 값은 모델마다 다르므로 해당 공급자의 지원을 확인한 뒤 사용한다.
+
+OpenRouter 호환 공급자가 지원하는 경우 요청에 `reasoningEnabled: false` 또는 `true`를 선택적으로 지정할 수 있다. 이는 `reasoning: {enabled: ...}`로 전송되며, 생략하면 기존 공급자 기본 동작을 유지한다.
