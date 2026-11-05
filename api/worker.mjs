@@ -61,13 +61,14 @@ export function recommendationView(session, products) {
   const state = engineState(session.state);
   return { question: singleQuestion(session), result: recommend(products, state), comparison: budgetAlternatives(products, state) };
 }
-export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher) } = {}) {
+export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), onDiagnostic } = {}) {
   return {
     async fetch(request, env) {
       const origin = request.headers.get('origin');
       const allowed = (env.APP_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
       const headers = { 'Cache-Control': 'no-store', Vary: 'Origin', 'X-Request-ID': crypto.randomUUID() };
       const json = (body, status = 200) => Response.json(body, { status, headers });
+      const diagnose = (code,status,routing) => { try { onDiagnostic?.({event:'recommendation_request_failed',requestId:headers['X-Request-ID'],code,status,...(routing?{routing}:{})}); } catch {} };
       if (origin && !allowed.includes(origin)) return json({ error: '허용되지 않은 요청입니다.', code: 'origin_denied' }, 403);
       if (origin) Object.assign(headers, { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' });
       const path = new URL(request.url).pathname;
@@ -117,13 +118,14 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
           if (turn) mode = 'rules_fast';
           else if (llm.options.apiKey) {
             try { turn = await llm.extract(input, products, llm.options); mode = 'llm'; }
-            catch (error) { const failure = geminiFailure(error); return json({ error: failure.error, code: failure.code }, 503); }
+            catch (error) { const failure = geminiFailure(error); diagnose(failure.code,503); return json({ error: failure.error, code: failure.code }, 503); }
           } else turn = singleTurn({ state: input.state, issues: input.issues }, input.text, products);
         }
         return json({ ...turn, view: recommendationView(turn.session, products), mode, llmProvider: mode === 'llm' ? llm.provider : null, llmModel: mode === 'llm' ? llm.options.model : null, catalog: CATALOG_ID });
       } catch (error) {
-        if (error instanceof RouterInterpretationError) return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503);
-        if (error instanceof ApiError) { if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
+        if (error instanceof RouterInterpretationError) { diagnose('interpretation_unavailable',503,error.routing); return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503); }
+        if (error instanceof ApiError) { if(error.status>=500)diagnose(error.code,error.status); if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
+        diagnose(['invalid_input','invalid_interpretation','version_conflict'].includes(error?.code)?error.code:'unavailable',503);
         // Keep tokens, input and upstream response bodies out of logs and errors.
         return json({ error: '서버 응답을 처리하지 못했어요. 다시 시도해주세요.', code: 'unavailable' }, 503);
       }

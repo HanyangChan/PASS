@@ -3,7 +3,8 @@ import http from 'node:http';
 import { Readable } from 'node:stream';
 import { loadLocalEnv } from './local-env.mjs';
 import { resolveLlm } from '../lib/llm-provider.mjs';
-import worker from './worker.mjs';
+import { createApi } from './worker.mjs';
+const worker=createApi({onDiagnostic:event=>console.warn(JSON.stringify(event))});
 const values = await loadLocalEnv();
 const localLimit = limit => {
   const buckets = new Map();
