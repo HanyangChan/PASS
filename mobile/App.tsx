@@ -499,16 +499,6 @@ export function AppContent({
                 {question.key ? question.text : result.message}
               </Text>
               {!question.key && cards(result.items.map(toGift), true)}
-              {agentsOn && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                <AgentPanel
-                  agents={recommendation.agents}
-                  disabled={disabledAgents}
-                  busy={chatPending || personalization.busy}
-                  onToggle={toggleAgent}
-                  onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                  onRemember={rememberAgentProposal}
-                />
-              )}
               {!question.key && (
                 <View style={s.comparison}>
                   <Text style={s.sectionTitle}>조건을 바꿔보면?</Text>
@@ -820,6 +810,18 @@ export function AppContent({
                         </Pressable>
                       </View>
                     </>
+                  )}
+                  {agentsOn && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
+                    <View style={s.resultButton}>
+                      <AgentPanel
+                        agents={recommendation.agents}
+                        disabled={disabledAgents}
+                        busy={chatPending || personalization.busy}
+                        onToggle={toggleAgent}
+                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
+                        onRemember={rememberAgentProposal}
+                      />
+                    </View>
                   )}
                 </ScrollView>
                 <View style={s.inputArea}>

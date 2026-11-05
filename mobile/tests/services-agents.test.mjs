@@ -26,6 +26,21 @@ test('agent context carries only the current recipient\'s memory, purchases and 
   assert.deepEqual(agentContext(data, ['어머니', '아버지'], events), { memory: null, purchases: [], calendar: [] });
 });
 
+test('agent mode does not read the giver\'s taste from the whole message on the device', () => {
+  const session = { state: { ...singleInitial(), recipients: ['어머니'] }, issues: [] };
+  const text = '나는 과자 좋아하는데 엄마는 견과류 알레르기가 있어';
+  assert.deepEqual(personalizeSession(session, emptyPersonalization(), text).session.state.preferences, ['category:snack']);
+  assert.deepEqual(personalizeSession(session, emptyPersonalization(), text, undefined, false).session.state.preferences, []);
+});
+
+test('agent mode keeps the recipient when a message names several people, but switches for one', () => {
+  const session = { state: { ...singleInitial(), recipients: ['어머니'], excluded_ingredients: ['견과류'] }, issues: [] };
+  const several = personalizeSession(session, emptyPersonalization(), '아빠랑 엄마 중에 한 분이 우유 알레르기야', undefined, false).session.state;
+  assert.deepEqual(several.recipients, ['어머니']);
+  assert.deepEqual(several.excluded_ingredients, ['견과류']);
+  assert.deepEqual(personalizeSession(session, emptyPersonalization(), '친구 선물 3만원', undefined, false).session.state.recipients, ['친구']);
+});
+
 test('agent mode leaves liked-purchase inference to the server but keeps remembered allergies', () => {
   const session = { state: singleInitial(), issues: [] };
   const classic = personalizeSession(session, { ...data, memories: [] }, '엄마 선물');
