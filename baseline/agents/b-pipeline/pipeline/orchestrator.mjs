@@ -1,9 +1,10 @@
-// P3 orchestrator (TRD §4). One turn: load the session from the DB -> branch on intent -> ① -> ② ③ -> merge ->
+// P3 orchestrator (TRD §4; P8: ① is main's prototype chatbot, PROTO-REBASE §2). One turn: load the session from the DB -> branch on intent -> ① -> ② ③ -> merge ->
 // baseline runTurn(kind:'patch') -> CAS save -> cards -> explanations (template until P5) / memory_prompt.
 // Ranking, amounts and budget checks come only from the common runTurn; nothing here sorts or scores (K1).
 // The client never sends the session: state and meta are always read from the store.
 import { runTurn, createSession, BaselineError } from '../../../src/index.mjs';
-import { createDialogue, FALLBACK_QUESTION, LOWER_BUDGET_QUESTION, UNSUPPORTED_TEXT } from '../dialogue/agent.mjs';
+import { LOWER_BUDGET_QUESTION, UNSUPPORTED_TEXT } from '../dialogue/agent.mjs';
+import { createProtoDialogue, protoQuestion, isDemoIssue, NEW_BUDGET_ISSUE } from './turn.mjs';
 import { loadMemory, findRecipient } from '../memory/read.mjs';
 import { createMemoryWriter } from '../memory/write.mjs';
 import { MemoryError, keyLabel, parseKey, CATEGORY_KO } from '../memory/keys.mjs';
@@ -32,7 +33,7 @@ const suggestedPrompt = p => ({ ...p, kind: 'suggested', candidates: p.candidate
 
 export const defaultMeta = () => ({
   recipientIds: [], sensitivity: 'balanced', experiment: 'B', provenance: {},
-  pendingCandidates: [], pendingGifts: [], pendingPrompt: null, pendingDismissals: [], hiddenProductIds: [], ladderStreak: null, pendingSensitivity: null, conflicts: [], satisfactionAsked: false, ended: false,
+  issues: [], pendingCandidates: [], pendingGifts: [], pendingPrompt: null, pendingDismissals: [], hiddenProductIds: [], ladderStreak: null, pendingSensitivity: null, conflicts: [], satisfactionAsked: false, ended: false,
 });
 
 const invalid = () => new BaselineError('invalid_request');
@@ -46,12 +47,13 @@ const isKnownError = e => e instanceof BaselineError || e instanceof StoreError 
  * @param {object} deps
  * @param {object} deps.store       db/store.mjs or db/memory-store.mjs
  * @param {object[]} deps.products  engine products
- * @param {object|null} [deps.llm]  llm/ adapter (null = rules and templates only)
+ * @param {object|null} [deps.llm]  llm/ adapter for ③ embeddings and ④ explanations (null = rules and templates only)
+ * @param {object|null} [deps.dialogueLlm]  ① proto llmTurn options {apiKey, model, fetcher, timeoutMs, thinkingBudget}; null = main's rules
  * @param {Function|null} [deps.explain]  ④ explainer (explainer/agent.mjs). Its answer is checked by ⑤; failures fall back to the template (AC3, AC11)
  * @param {() => string} [deps.now]
  */
 export function createOrchestrator({ store, products, llm = null, explain = null, now = () => new Date().toISOString(),
-  ragEmbedding = false, dialogue = createDialogue({ llm }), hobbyMapper = createHobbyMapper({ llm, embedding: ragEmbedding }), writer = createMemoryWriter({ store }) }) {
+  ragEmbedding = false, dialogueLlm = null, dialogue = createProtoDialogue({ llm: dialogueLlm }), hobbyMapper = createHobbyMapper({ llm, embedding: ragEmbedding }), writer = createMemoryWriter({ store }) }) {
   if (!store || !Array.isArray(products)) throw new TypeError('store and products are required');
   const realIds = ids => ids.filter(id => !isNewRecipientId(id));
   const setCost = id => { const p = products.find(x => x.id === id); return p ? p.price_krw + p.shipping_fee_per_set_krw : Infinity; };
@@ -196,10 +198,13 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     const choices = await recipientChoices(ctx.ownerId, out.session.state, ids);
     const cap = await budgetCapOf(ctx.ownerId, ids);
     const capChips = cap ? [{ label: wonShort(cap), amount_krw: cap }] : null;
-    const ask = (question, budgetQuestion) => {
-      ctx.send({ type: 'question', question, version: out.session.version, banner, recipientChoices: choices, budgetChips: budgetQuestion ? capChips : null });
+    const ask = (question, budgetQuestion, quickReplies = []) => {
+      ctx.send({ type: 'question', question, choices: quickReplies, version: out.session.version, banner, recipientChoices: choices, budgetChips: budgetQuestion ? capChips : null });
       for (const p of prompts) ctx.send(p);
     };
+    // AC2 (P8): the one question is main's nextQuestion for this state and the open issues, with its quick replies
+    const pq = out.kind === 'comparison' ? { key: null } : protoQuestion(out.session.state, ctx.meta.issues);
+    if (pq.key) return ask(pq.text, out.session.state.budget.amount_krw === null, pq.choices);
     if (out.kind === 'question') return ask(out.question, out.session.state.budget.amount_krw === null);
     const state = out.evaluatedState;
     // K37: the cap is per set with shipping. A per-set budget above it, or a card above it (shipping excluded), is asked.
@@ -247,13 +252,16 @@ export function createOrchestrator({ store, products, llm = null, explain = null
     }
 
     const memory = await loadMemory(store, ownerId, realIds(ids), { now: now() });
+    // ② main rule (docs/personalization.md 2): memory fills the state only when the people are first set or change;
+    // later turns keep what is already in the state, so a cancelled value does not come back. Allergies: always (merge).
+    const applyMemory = JSON.stringify(ids) !== JSON.stringify(meta.recipientIds);
     // ③ one map call (one embedding batch at most) for remembered hobbies and hobbies said in this sentence
     const spoken = candidates.map((c, i) => ({ c, i, k: parseKey(c.key) })).filter(x => x.k?.kind === 'hobby' && x.c.polarity === 1)
       .map(x => ({ memoryId: `utterance-${x.i}`, word: x.k.value }));
     const mapped = await hobbyMapper.map([...memory.hobbies.map(h => ({ memoryId: h.memoryId, word: h.word })), ...spoken]);
     const ragCandidates = mapped.map(r => (r.from.startsWith('memory:utterance-') ? { ...r, from: 'utterance' } : r));
 
-    const merged = mergeConditions({ state: session.state, utterancePatch: u, memory, ragCandidates, previousProvenance: meta.provenance, confirmedReleases, said });
+    const merged = mergeConditions({ state: session.state, utterancePatch: u, memory, ragCandidates, previousProvenance: meta.provenance, confirmedReleases, said, applyMemory });
     const out = await runTurn({ session, request: { kind: 'patch', patch: merged.patch, expectedVersion: session.version }, products });
     const changed = JSON.stringify(out.session.state.recipients) !== JSON.stringify(session.state.recipients);
     // merge owns the list fields and packaging: an empty result there must clear the old record (banner, AC9)
@@ -307,24 +315,40 @@ export function createOrchestrator({ store, products, llm = null, explain = null
 
   const handlers = {
     async message(ctx, request) {
-      if (typeof request.text !== 'string' || !request.text.trim() || request.text.length > 4000) throw invalid();
-      const d = await dialogue.interpret({ text: request.text, state: structuredClone(ctx.session.state) });
-      // AC2: nothing is saved; exactly one question
-      if (d.unresolved) { ctx.send({ type: 'question', question: d.questions[0] || FALLBACK_QUESTION, version: ctx.session.version, banner: null, recipientChoices: null }); return; }
-      // K51: "더 저렴한·싼" -> B: this session's sensitivity becomes value and the 아끼기 chip is put first and highlighted;
-      // A has no price options, so a sentence that only says it asks "예산을 얼마로 낮출까요?" (nothing saved, AC2).
-      // "실용적인" is never mapped: alone it answers with the guidance, inside a recommendation it adds a notice.
-      const isB = ctx.meta.experiment === 'B';
-      const empty = !Object.keys(d.patch).length;
-      const unsupported = d.unsupported ?? [];
-      const ask = question => ctx.send({ type: 'question', question, version: ctx.session.version, banner: null, recipientChoices: null });
-      if (empty && unsupported.length) return ask(UNSUPPORTED_TEXT);
-      if (empty && d.cheaper && !isB) return ask(LOWER_BUDGET_QUESTION);
-      ctx.notice = unsupported.length ? UNSUPPORTED_TEXT : null;
-      ctx.emphasizeDown = Boolean(d.cheaper && isB);
-      await recommend(ctx, { utterancePatch: d.patch, candidates: d.memoryCandidates ?? [], choice: request.recipientChoice, said: d.said ?? null, sensitivity: d.cheaper && isB ? d.sensitivity : undefined });
+      const { meta } = ctx;
+      const version = ctx.session.version;
+      const ask = (question, choices = [], extra = {}) => ctx.send({ type: 'question', question, choices, version, banner: null, recipientChoices: null, ...extra });
+      // ① main's chatbot: fastRuleTurn -> llmTurn (key) -> singleTurn. history (<= 6) and source come from the client as in main.
+      const u = await dialogue.understand({ text: request.text, state: ctx.session.state, issues: meta.issues, history: request.history ?? [], source: request.source ?? 'typed', products });
+      // LLM failure: main's message ("조건은 바뀌지 않았어요"), nothing saved
+      if (u.failure) return ask(u.failure.error, [], { code: u.failure.code });
+      // K51: "더 저렴한·싼" -> B: this session's sensitivity becomes value and the 아끼기 chip is put first and highlighted
+      // (proto's "새 예산 상한" question is dropped: the chip is B's answer); A has no price options, so a sentence that only
+      // says it asks "예산을 얼마로 낮출까요?". "실용적인" is never mapped: alone it answers with the guidance, else a notice.
+      const isB = meta.experiment === 'B';
+      const cheaperB = u.cheaper && isB;
+      const issues = cheaperB ? u.issues.filter(q => q !== NEW_BUDGET_ISSUE) : u.issues;
+      const nothing = !u.changed && !u.memoryCandidates.length;
+      if (nothing && u.unsupported.length) return ask(UNSUPPORTED_TEXT);
+      if (nothing && u.cheaper && !isB) return ask(LOWER_BUDGET_QUESTION);
+      if (nothing && !cheaperB) {
+        // AC2: nothing understood -> main's one question, nothing saved (the client keeps it in history for the next turn)
+        const q = protoQuestion(ctx.session.state, issues);
+        if (q.key) {
+          // main keeps open questions in the session: store them (meta only, state and version unchanged) for the next
+          // llmTurn, except on a new session and for proto's rules-demo fallback, which proto drops next turn (AC2)
+          if (!ctx.isNew && JSON.stringify(issues) !== JSON.stringify(meta.issues) && !issues.every(isDemoIssue)) { meta.issues = issues; await save(ctx, ctx.session); }
+          return ask(q.text, q.choices);
+        }
+      }
+      meta.issues = issues;
+      ctx.notice = u.unsupported.length ? UNSUPPORTED_TEXT : null;
+      ctx.emphasizeDown = cheaperB;
+      await recommend(ctx, { utterancePatch: u.patch, candidates: u.memoryCandidates, choice: request.recipientChoice, said: u.said, sensitivity: cheaperB ? 'value' : undefined });
     },
     async patch(ctx, request) {
+      if (request.clearIssues !== undefined && typeof request.clearIssues !== 'boolean') throw invalid();
+      if (request.clearIssues !== false) ctx.meta.issues = []; // main operation=conditions: an edit answers the open questions
       const releases = request.confirmedReleases ?? [];
       if (!Array.isArray(releases) || !releases.every(x => typeof x === 'string')) throw invalid();
       // 가성비 / 균형 / 품질 우선 chip: this session only (stored for the person only via the sensitivity prompt). B only.

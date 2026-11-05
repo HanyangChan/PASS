@@ -38,7 +38,8 @@
   0. 세션 메타 로드(DB)
   ① proto turn      fastRuleTurn → llmTurn(키 있음) → singleTurn       ← main 코드 그대로 (proto/lib)
                     llmTurn 스키마에 memory 후보 배열만 추가 (패치 L1)
-  ② 기억 읽기       ①의 결과에서 수령인이 처음 정해졌거나 바뀌었으면 그 수령인의 기억을 채운다
+  (① 전)           문장 속 수령인이 지금과 다르면 main switchRecipient처럼 이전 사람의 목록·질문을 비운다 (K66)
+  ② 기억 읽기       ①의 결과에서 수령인이 처음 정해졌거나 바뀌었으면 그 수령인의 기억을 채운다 (K67)
                     (이번 말이 우선, 알레르기는 합집합, 출처는 meta.provenance) — main 패널 규칙과 같은 시점
   ③ 취향 매핑       기억 값 중 엔진 카테고리가 아닌 자유어만 hobby-map / RAG로 변환 (없으면 건너뜀)
   merge → engineState → baseline runTurn(kind:'patch') → 카드 (= main recommend와 같음)
@@ -79,7 +80,7 @@ b-pipeline/
 ## 4. main 복사본에 허용하는 패치 (이 목록 밖은 고치지 않는다)
 | # | 파일 | 패치 | 이유 |
 |---|---|---|---|
-| L1 | proto/lib/llm.mjs | `extractionSchema`에 선택 필드 `memory:[{recipient, key, value, evidence}]`와 지시문 한 줄 추가. `validate`가 이 필드를 상태와 분리해 반환 | 기억 후보를 같은 LLM 호출에서 받기 (호출 추가 없음) |
+| L1 | proto/lib/llm.mjs | `extractionSchema`에 선택 필드 `memory:[{recipient, key, polarity, evidence}]`(key는 기억 키 전체, K65)와 지시문 한 줄 추가. `llmTurn`이 이 필드를 상태와 분리해 반환 | 기억 후보를 같은 LLM 호출에서 받기 (호출 추가 없음) |
 | L2 | proto/lib/llm.mjs | 타임아웃을 옵션 `timeoutMs`로(기본 18000 유지), `thinkingConfig` 미지원 400이면 빼고 재시도 | `DIALOGUE_LLM_TIMEOUT_MS`, AC16 |
 | L3 | proto/lib/llm.mjs | 모델 기본값은 호출 측이 `GEMINI_MODEL`로 넘김(파일 수정 없음, 서버에서 처리) | `-latest` 별칭 404 |
 | A1 | app/ import 경로 | 레포 루트 `lib/` → `../proto/lib/` | main이 바뀌어도 실험 앱이 고정 |

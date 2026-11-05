@@ -166,9 +166,9 @@ for (const [name, make] of Object.entries(stores)) {
     const t = request => pipe.runPipelineTurn({ ownerId: 'userB', sessionId: 'p', request });
     const cap = people.prof.budgetCapKrw;
     const above = products.filter(p => budgetCost(p, { budget: budget(cap), quantity: 1 }) > cap).map(p => p.name);
-    // no budget yet: the baseline question plus a cap chip (R3: never filled in)
+    // no budget yet: main's question plus a cap chip (R3: never filled in)
     const ask = ev(await t({ kind: 'message', text: '교수님 스승의 날 선물 추천해줘' }), 'question');
-    assert.equal(ask.question, '예산 상한을 알려주세요.');
+    assert.equal(ask.question, '얼마까지 쓰고 싶으세요?');
     assert.deepEqual(ask.budgetChips, [{ label: '3만원', amount_krw: cap }]);
     assert.equal((await store.getSession('userB', 'p')).session.state.budget.amount_krw, null, 'not filled from the cap');
     const out = await t({ kind: 'patch', patch: { budget: budget(cap), quantity: 1, packaging: 'formal' } });

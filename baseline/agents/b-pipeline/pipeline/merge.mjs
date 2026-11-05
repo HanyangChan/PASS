@@ -21,9 +21,13 @@ const uniq = a => [...new Set(a)];
  * @param {{field:string,value:any}[]|null} [p.said]  list values the user actually said this turn (dialogue). When given,
  *   a list value that was already in the state and not said keeps its previous sources instead of becoming 'utterance'
  *   (an additive patch from ① repeats the old list; K44). null = every patch value counts as said (chip edits).
+ * @param {boolean} [p.applyMemory]  P8 (main personalization rule 2): remembered preferences, dislikes and packaging fill the
+ *   state only when the people are first set or change; false adds no new value from memory (a value the user cancelled in
+ *   this session does not come back on the next message), but a value still in the state keeps its memory source (banner,
+ *   AC9). Remembered allergies apply on every turn (always protected).
  * @returns {{patch:object, provenance:object, questions:object[], suppressed:object[]}}
  */
-export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {}, confirmedReleases = [], said = null }) {
+export function mergeConditions({ state, utterancePatch, memory, products = [], ragCandidates = [], previousProvenance = {}, confirmedReleases = [], said = null, applyMemory = true }) {
   const u = structuredClone(utterancePatch ?? {});
   checkedPatch(state, u); // refuses unknown keys and bad shapes before anything is merged
   const changed = Object.hasOwn(u, 'recipients') && !same(u.recipients, state.recipients);
@@ -52,7 +56,10 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
     const start = u.excluded_categories ?? base.excluded_categories;
     if (!Object.hasOwn(u, 'excluded_categories')) start.forEach(v => keepBase('excluded_categories', v));
     const result = [...start];
-    for (const i of memItems('excluded_categories')) { add('excluded_categories', i.value, `memory:${i.memoryId}`); if (!result.includes(i.value)) result.push(i.value); }
+    for (const i of memItems('excluded_categories')) {
+      if (!applyMemory && !result.includes(i.value)) continue;
+      add('excluded_categories', i.value, `memory:${i.memoryId}`); if (!result.includes(i.value)) result.push(i.value);
+    }
     if (Object.hasOwn(u, 'excluded_categories') || !same(result, base.excluded_categories)) patch.excluded_categories = uniq(result);
   }
   const excludedCategories = patch.excluded_categories ?? base.excluded_categories;
@@ -92,10 +99,12 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
         }
         continue;
       }
+      if (!applyMemory && !result.includes(i.value)) continue;
       add('preferences', i.value, `memory:${i.memoryId}`); if (!result.includes(i.value)) result.push(i.value);
     }
     for (const r of ragCandidates) {
       if (r.field !== 'preferences' || !allowed(r.value)) continue;
+      if (!applyMemory && r.from !== 'utterance' && !result.includes(r.value)) continue; // a remembered hobby fills only with memory
       add('preferences', r.value, 'rag'); if (r.from) add('preferences', r.value, r.from);
       if (!result.includes(r.value)) result.push(r.value);
     }
@@ -104,7 +113,7 @@ export function mergeConditions({ state, utterancePatch, memory, products = [], 
 
   // packaging: utterance > memory > base
   if (!Object.hasOwn(u, 'packaging')) {
-    const m = memItems('packaging');
+    const m = applyMemory ? memItems('packaging') : [];
     if (m.length) {
       const pick = m.find(i => i.value === memory.conditions.packaging) ?? m[0];
       add('packaging', pick.value, `memory:${pick.memoryId}`);

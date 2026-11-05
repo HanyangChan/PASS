@@ -5,49 +5,51 @@ import assert from 'node:assert/strict';
 import { createSession, runTurn } from '../../../src/index.mjs';
 import { initial } from '../../../src/vendor/engine.mjs';
 import { createPipeline } from '../pipeline/index.mjs';
-import { createFakeLlm } from '../llm/index.mjs';
-import { FALLBACK_QUESTION } from '../dialogue/agent.mjs';
+import { engineState, singleInitial, singleTurn } from '../proto/lib/single-gift.mjs';
+import { fakeGemini, protoState, rulesReply } from './fixtures/proto-llm.mjs';
 import { products } from './fixtures/catalog.mjs';
 import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
 
 const S1 = '추석 선물이야. 엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔. 5만 원';
+// P8: proto llmTurn answer (main's schema + L1 memory)
 const S1_REPLY = {
-  recipients: ['어머니', '아버지'], occasion: '추석', budget_amount_krw: 50000,
-  preferences: ['less_sweet'], excluded_ingredients: ['땅콩'],
-  memoryCandidates: [
+  state: protoState({ recipients: ['어머니', '아버지'], occasion: '추석', budget: { amount_krw: 50000 }, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'] }),
+  memory: [
     { recipient: '엄마', key: 'pref:less_sweet', polarity: 1, evidence: '엄마는 단 거 싫어하시고' },
     { recipient: '엄마', key: 'allergy:땅콩', polarity: -1, evidence: '땅콩 알레르기' },
     { recipient: '아빠', key: 'hobby:등산', polarity: 1, evidence: '아빠는 등산 좋아하셔' },
   ],
 };
 const REST = '세트당 배송비 포함 한 세트';
+const rules = rulesReply(products);
 const CLEAR = '어머니 한 세트 세트당 예산 5만원 이하 배송비 포함 추천';
 const types = r => r.events.map(e => e.type);
 const ev = (r, type) => r.events.find(e => e.type === type);
-const msg = text => ({ kind: 'message', text });
+const msg = (text, source) => ({ kind: 'message', text, ...(source ? { source } : {}) });
 
 function setup(make, { llm = null, replies, now = () => '2026-09-20T03:00:00.000Z', ...rest } = {}) {
   const store = make();
-  const fake = replies ? createFakeLlm({ json: replies }) : llm;
-  const pipe = createPipeline({ store, products, llm: fake, now, explain: null, ...rest });
+  const fake = replies ? fakeGemini(replies) : null; // ① proto llmTurn; llm stays the ③/④ adapter
+  const pipe = createPipeline({ store, products, llm, dialogueLlm: fake?.llm ?? null, now, explain: null, ...rest });
   const turn = (sessionId, request, extra = {}) => pipe.runPipelineTurn({ ownerId: 'userA', sessionId, request, ...extra });
   return { store, pipe, turn, llm: fake };
 }
 
 for (const [name, make] of Object.entries(stores)) {
-  test(`[${name}] AC1: with no memory the pipeline gives exactly the baseline runTurn result, turn after turn`, async () => {
+  test(`[${name}] AC1: with no memory the pipeline gives exactly baseline runTurn on main's state, turn after turn`, async () => {
     for (const seeded of [false, true]) {
       const { store, turn } = setup(make);
       if (seeded) await seedPeople(store);
-      let base = createSession('s');
+      let pub = singleInitial(), issues = [];
       for (const text of [CLEAR, '아버지 한 세트 세트당 예산 3만원 이하 배송비 포함 추천', '친구 한 세트 총예산 3만원 이하 상품값만 추천']) {
-        const expected = await runTurn({ session: base, products, request: { kind: 'message', text, expectedVersion: base.version } });
+        const main = singleTurn({ state: pub, issues }, text, products); // main without a key
+        pub = main.session.state; issues = main.session.issues;
+        const expected = await runTurn({ session: { ...createSession('s'), state: engineState(pub) }, products, request: { kind: 'view', expectedVersion: 0 } });
         const out = await turn('s', msg(text));
         assert.deepEqual(types(out), ['cards', 'explanations']);
         assert.deepEqual(ev(out, 'cards').result, expected.result, text);
         assert.equal(ev(out, 'cards').banner, null);
-        assert.deepEqual((await store.getSession('userA', 's')).session, expected.session);
-        base = expected.session;
+        assert.deepEqual((await store.getSession('userA', 's')).session.state, engineState(pub));
       }
     }
   });
@@ -58,7 +60,7 @@ for (const [name, make] of Object.entries(stores)) {
     const before = await store.getSession('userA', 's');
     const out = await turn('s', msg('센스 있는 선물'));
     assert.deepEqual(types(out), ['question']);
-    assert.equal(ev(out, 'question').question, FALLBACK_QUESTION);
+    assert.ok(ev(out, 'question').question.startsWith('이 데모는'), 'main rules ask their one question');
     assert.deepEqual(await store.getSession('userA', 's'), before);
   });
 
@@ -92,15 +94,17 @@ for (const [name, make] of Object.entries(stores)) {
     assert.deepEqual(row.meta.pendingCandidates.map(c => [c.recipientId, c.key]), [[mom.id, 'pref:less_sweet'], [mom.id, 'allergy:땅콩'], [dad.id, 'hobby:등산']]);
     assert.deepEqual(row.session.state.excluded_ingredients, ['땅콩']);
     assert.ok(row.session.state.preferences.includes('category:fitness'), 'spoken hobby mapped by ③');
-    assert.equal(ev(out, 'question').question, '선물 수량을 알려주세요.', 'baseline asks for what is missing');
+    assert.equal(ev(out, 'question').question, '예산에 배송비도 포함할까요?', "main's nextQuestion asks for what is missing");
+    assert.deepEqual(ev(out, 'question').choices, ['배송비 포함', '상품값만']);
     assert.equal((await store.listMemories('userA', mom.id)).length, 0, 'nothing stored before confirmation');
   });
 
   test(`[${name}] AC4 + R8 + AC5: S1 -> purchased -> end_session -> confirm -> S2 (empty DB at start)`, async () => {
     let clock = '2026-09-20T03:00:00.000Z';
-    const { store, turn, llm } = setup(make, { replies: [S1_REPLY], now: () => clock });
+    const { store, turn, llm } = setup(make, { replies: [S1_REPLY, rules, rules, rules], now: () => clock });
     assert.deepEqual(types(await turn('s1', msg(S1))), ['question']);
-    const cards = ev(await turn('s1', msg(REST)), 'cards');
+    const cards = ev(await turn('s1', msg('배송비 포함', 'quick_reply')), 'cards'); // main's quick reply: rules, no LLM call
+    assert.equal(llm.calls.length, 1);
     assert.ok(cards.result.cards.length > 0);
     assert.ok(!cards.result.cards.some(c => c.id === 'peanut-gangjeong'), 'AC7: no peanut card');
     const top = cards.result.cards[0].id; // the engine's choice; the pipeline never picks
@@ -130,10 +134,11 @@ for (const [name, make] of Object.entries(stores)) {
     // S2: next year, a new session, only "부모님 설 선물 추천해줘"
     clock = '2027-01-25T03:00:00.000Z';
     const s2 = await turn('s2', msg('부모님 설 선물 추천해줘'));
-    assert.equal(llm.calls.length, 1, 'K33: "부모님 설 선물 추천해줘" is solved by rules (occasion split), no ① call');
+    assert.equal(llm.calls.length, 2, 'main: with a key every typed message is one llmTurn');
+    assert.equal(llm.calls[1].input.state.recipients.length, 0, 'the new session starts empty: memory is ② after ①');
     assert.equal((await store.getSession('userA', 's2')).session.state.occasion, '설');
     const q = ev(s2, 'question');
-    assert.equal(q.question, '예산 상한을 알려주세요.');
+    assert.equal(q.question, '얼마까지 쓰고 싶으세요?');
     assert.equal(q.banner.text, '지난 추석 기억을 반영했어요: 단 음식 X · 땅콩 제외 · 등산');
     assert.equal(q.banner.editable, true);
     const state = (await store.getSession('userA', 's2')).session.state;
@@ -150,7 +155,7 @@ for (const [name, make] of Object.entries(stores)) {
   });
 
   test(`[${name}] AC4: declining "기억할까요?" stores nothing — no memory, no person, no gift`, async () => {
-    const { store, turn } = setup(make, { replies: [S1_REPLY] });
+    const { store, turn } = setup(make, { replies: [S1_REPLY, rules] });
     await turn('s1', msg(S1)); await turn('s1', msg(REST));
     await turn('s1', { kind: 'feedback', action: 'purchased', productId: 'hiking-socks' });
     await turn('s1', { kind: 'end_session' });
@@ -186,7 +191,7 @@ for (const [name, make] of Object.entries(stores)) {
   });
 
   test(`[${name}] AC6 S3: a friend turn uses no parent memory and no other user's memory`, async () => {
-    const reply = { recipients: ['친구'], budget_amount_krw: 30000, budget_scope: 'per_set', shipping_included: true, quantity: 1, preferences: ['category:coffee_tea'], memoryCandidates: [{ recipient: '친구', key: 'pref:category:coffee_tea', polarity: 1, evidence: '커피 좋아해' }] };
+    const reply = { state: protoState({ recipients: ['친구'], occasion: null, budget: { amount_krw: 30000, shipping_included: true }, preferences: ['category:coffee_tea'] }), memory: [{ recipient: '친구', key: 'pref:category:coffee_tea', polarity: 1, evidence: '커피 좋아해' }] };
     const { store, turn } = setup(make, { replies: [reply] });
     const people = await seedPeople(store);
     await seedS1Memories(store, people);
@@ -236,7 +241,7 @@ for (const [name, make] of Object.entries(stores)) {
   });
 
   test(`[${name}] S5 / AC8: a sentence against a confirmed memory asks, and changes nothing until accepted`, async () => {
-    const reply = { recipients: ['어머니'], memoryCandidates: [{ recipient: '어머니', key: 'pref:less_sweet', polarity: -1, evidence: '요즘은 단 것도 드셔' }] };
+    const reply = { state: protoState({ recipients: ['어머니'] }), memory: [{ recipient: '어머니', key: 'pref:less_sweet', polarity: -1, evidence: '요즘은 단 것도 드셔' }] };
     const { store, turn } = setup(make, { replies: [reply] });
     const people = await seedPeople(store);
     const m = await seedS1Memories(store, people);
@@ -349,7 +354,7 @@ for (const [name, make] of Object.entries(stores)) {
     await turn('s', msg(CLEAR));
     const before = await store.getSession('userA', 's');
     const look = await pipe.runPipelineTurn({ ownerId: 'userB', sessionId: 's', request: { kind: 'view' } });
-    assert.equal(ev(look, 'question').question, '받는 사람을 알려주세요.', "userB never sees userA's session");
+    assert.equal(ev(look, 'question').question, '누구에게 드릴 선물인가요?', "userB never sees userA's session");
     const theirs = await pipe.runPipelineTurn({ ownerId: 'userB', sessionId: 's', request: msg(CLEAR) });
     assert.equal(ev(theirs, 'error').code, 'session_exists');
     const cmp = await turn('s', { kind: 'what_if_budget', amount_krw: 70000 });

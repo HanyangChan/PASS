@@ -4,16 +4,16 @@ import assert from 'node:assert/strict';
 import { createHandlers, createListener, MAX_BODY_BYTES } from '../server/index.mjs';
 import { createPipeline } from '../pipeline/index.mjs';
 import { stores, seedPeople, seedS1Memories } from './fixtures/people.mjs';
-import { createFakeLlm } from '../llm/index.mjs';
+import { fakeGemini, protoState } from './fixtures/proto-llm.mjs';
 import { products } from './fixtures/catalog.mjs';
 
 const PARENTS = '부모님 한 세트 세트당 예산 5만원 이하 배송비 포함 추천';
 const NOW = () => '2027-01-25T03:00:00.000Z';
 
 const S1 = '추석 선물이야. 엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔. 5만 원';
-const S1_REPLY = {
-  recipients: ['어머니', '아버지'], occasion: '추석', budget_amount_krw: 50000, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'],
-  memoryCandidates: [
+const S1_REPLY = { // P8: ① is proto llmTurn (main schema + L1 memory)
+  state: protoState({ recipients: ['어머니', '아버지'], occasion: '추석', budget: { amount_krw: 50000 }, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'] }),
+  memory: [
     { recipient: '엄마', key: 'pref:less_sweet', polarity: 1, evidence: '엄마는 단 거 싫어하시고' },
     { recipient: '엄마', key: 'allergy:땅콩', polarity: -1, evidence: '땅콩 알레르기' },
     { recipient: '아빠', key: 'hobby:등산', polarity: 1, evidence: '아빠는 등산 좋아하셔' },
@@ -22,8 +22,8 @@ const S1_REPLY = {
 
 function setup(make = stores.memory, { seed = true, replies } = {}) {
   const store = make();
-  const llm = replies ? createFakeLlm({ json: replies }) : null;
-  const h = createHandlers({ store, products, pipeline: createPipeline({ store, products, llm, now: NOW, explain: null }) });
+  const dialogue = replies ? fakeGemini(replies) : null;
+  const h = createHandlers({ store, products, pipeline: createPipeline({ store, products, dialogueLlm: dialogue?.llm ?? null, now: NOW, explain: null }) });
   const chat = async (body, onEvent) => h.chat({ ownerId: 'userA', sessionId: 's', experiment: 'B', ...body }, onEvent);
   return { store, h, chat, ready: (async () => { const people = await seedPeople(store); if (seed) await seedS1Memories(store, people); return people; })() };
 }

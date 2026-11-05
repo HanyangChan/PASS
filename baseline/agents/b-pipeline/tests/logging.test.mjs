@@ -5,12 +5,13 @@ import assert from 'node:assert/strict';
 import { createPipeline } from '../pipeline/index.mjs';
 import { createFakeLlm } from '../llm/index.mjs';
 import { products } from './fixtures/catalog.mjs';
+import { fakeGemini, protoState } from './fixtures/proto-llm.mjs';
 import { stores, seedPeople } from './fixtures/people.mjs';
 
 const S1 = '추석 선물이야. 엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔. 5만 원';
-const S1_REPLY = {
-  recipients: ['어머니', '아버지'], occasion: '추석', budget_amount_krw: 50000, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'],
-  memoryCandidates: [
+const S1_REPLY = { // P8: ① is proto llmTurn (main schema + L1 memory)
+  state: protoState({ recipients: ['어머니', '아버지'], occasion: '추석', budget: { amount_krw: 50000 }, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'] }),
+  memory: [
     { recipient: '엄마', key: 'pref:less_sweet', polarity: 1, evidence: '엄마는 단 거 싫어하시고' },
     { recipient: '아빠', key: 'hobby:등산', polarity: 1, evidence: '아빠는 등산 좋아하셔' },
   ],
@@ -20,8 +21,9 @@ for (const [name, make] of Object.entries(stores)) {
   test(`[${name}] events hold request kinds, event types and verifier codes, never the user's words`, async () => {
     const store = make();
     await seedPeople(store);
-    const llm = createFakeLlm({ json: [S1_REPLY, call => ({ items: call.input.draft.map(i => ({ ...i, tags: ['최고급 구성', i.tags[1]] })) }), call => ({ items: call.input.draft })] });
-    const pipe = createPipeline({ store, products, llm });
+    const llm = createFakeLlm({ json: [call => ({ items: call.input.draft.map(i => ({ ...i, tags: ['최고급 구성', i.tags[1]] })) }), call => ({ items: call.input.draft })] });
+    const dialogue = fakeGemini([S1_REPLY, input => ({ state: input.state, question: '어떤 선물을 찾으세요?' })]);
+    const pipe = createPipeline({ store, products, llm, dialogueLlm: dialogue.llm });
     const turn = request => pipe.runPipelineTurn({ ownerId: 'userA', sessionId: 's', request, experiment: 'B' });
     await turn({ kind: 'message', text: S1 });
     await turn({ kind: 'patch', patch: { budget: { amount_krw: 50000, scope: 'per_set', shipping_included: true }, quantity: 1 } });

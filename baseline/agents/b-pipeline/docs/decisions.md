@@ -66,6 +66,14 @@
 | K61 | `app/`의 현재 패치 목록은 P6 상태 그대로 적었다(R1 import 경로 7개 + App.tsx 병렬 경로 + PrototypeFlows 컨텍스트 등). A1~A4 형태로의 축소는 P10 몫이다. `mobile/tests/`·`.env.example`은 복사하지 않아 해시 표에서도 뺐다 | 기능 변경 없음 |
 | K62 | AC1 고정 테스트는 baseline `result.cards`와 main `result.items`의 모양이 달라 `[id, rank, price_krw, budget_cost_krw, total_krw, score]` 튜플로 비교한다(`budget_cost_krw`는 proto `budgetCost`로 계산). 7개 상태(빈 결과 포함)에서 상품 6개 이상이 실제로 비교되는지도 확인한다 | main 쪽은 `proto/` 엔진, baseline 쪽은 `src/vendor/engine.mjs`를 쓰므로 두 엔진이 어긋나면 실패 |
 | K63 | `proto/lib/test-dialogues.json`은 main 테스트(`tests/engine.test.mjs`)만 읽는 데이터라 복사하지 않는다. PROTO-REBASE §3은 .json이면 괜찮다고 했지만 사용자 지시("main 테스트 파일은 절대 복사하지 마")를 우선한다. 코드에서 import하지 않으므로 기능 영향 없음 | 해시 표에서도 뺐다 |
+| K64 | P8 파일 배치: `pipeline/turn.mjs`는 ①(proto `fastRuleTurn → llmTurn → singleTurn`)과 그 결과를 baseline 패치로 바꾸는 부분만 맡는다. ②기억·③매핑·merge·runTurn·계획기·템플릿 태그는 이미 있는 orchestrator `recommend()`를 그대로 쓴다(같은 흐름을 두 번 만들지 않기). 수령인이 바뀌면 baseline runTurn이 상태를 초기화하므로 패치는 전체 필드, 아니면 바뀐 필드만 보낸다. `engineState`가 quantity 1·same_product·per_set을 채운다 | PROTO-REBASE §2. P9 서버는 orchestrator를 부른다 |
+| K65 | L1 기억 후보 모양은 PROTO-REBASE의 `{recipient,key,value,evidence}` 대신 `{recipient,key,polarity,evidence}`(key는 기억 키 전체, 예 `allergy:땅콩`)다. 기존 기억 키·`checkKey`를 그대로 쓰기 위해서다. 받은 후보는 다시 검증한다: 문장에 그 사람이 나와야 하고, evidence는 문장 그대로의 일부, 알레르기는 evidence에 알레르겐 이름, 키는 `checkKey` 통과. proto `validate`는 선택 필드를 모르므로 `memory`가 없으면 검증 전에 `[]`로 채운다(main 모양 응답도 통과) | AC4·AC7. 대화 LLM 호출은 턴당 1회 유지(K58) |
+| K66 | 수령인 전환은 main `switchRecipient`를 따른다: ① 전에 proto 규칙 `extract`로 문장 속 수령인을 보고, 지금과 다른 사람이면 선호·제외 카테고리·미해결 질문을 비운다(예산·목적·마감은 유지). **알레르기는 이전·새 수령인이 한 명이라도 겹치면 유지**(어머니→부모님 P1 보완, 부모님→어머니 리뷰 [심각]: 세션에서만 말한 알레르기가 확인 없이 사라지면 AC7 위반), 겹치지 않는 사람으로 바뀌면 비운다(기존 baseline 초기화와 같음; 그 사람의 기억 알레르기는 ②에서 다시 채움). 규칙이 못 본 수령인을 LLM이 바꾼 경우에도 같다. **사람 결정 필요(기본값으로 진행):** 부모님 대화 중 "엄마는 단 거 싫어하셔"처럼 한 분만 말하면 main처럼 수령인이 어머니로 좁혀진다(알레르기는 유지). 이를 전환으로 보지 않을지는 D7 | main docs/personalization.md 규칙 1. 이전 사람 취향이 새 사람에게 새지 않음 |
+| K67 | ② 기억 채우기 시점(main 규칙 2): 수령인을 처음 정하거나 바꾼 턴(`meta.recipientIds`가 바뀐 턴)에만 기억의 선호·비선호·포장·취미 매핑을 상태에 **추가**한다. 그 밖의 턴은 새 값을 추가하지 않고, 상태에 남아 있는 값의 기억 출처만 표시한다(배너·AC9 삭제 반영 유지). 기억 알레르기는 매 턴 합집합(항상 보호). `mergeConditions({applyMemory})`. 이것으로 칩에서 지운 기억 선호가 다음 문장에서 되살아나던 문제가 없어진다 | 이번 말이 기억보다 우선 |
+| K68 | 질문: 비교(what_if) 외 모든 턴의 질문은 proto `singleQuestion`(main nextQuestion) 문구와 빠른 답 `choices`를 쓴다. baseline 질문은 그것이 없을 때만. 아무것도 바뀌지 않은 문장(+기억 후보 없음)은 main의 질문 하나를 보내고 **아무것도 저장하지 않는다**(새 세션이거나 proto 규칙의 "이 데모는…" 질문뿐이면 아무것도 저장하지 않는다. 기존 세션에서 LLM이 새 질문을 냈으면 main처럼 `meta.issues`만 저장한다; 상태·버전은 그대로). 미해결 질문이 남아 있으면 feedback·view 등 다른 턴도 main view처럼 그 질문을 먼저 보인다(main `finishSingle`과 같음). 대화 LLM 실패는 main 문구("…조건은 바뀌지 않았어요.")와 `code`를 담은 question 이벤트로 보내고 저장하지 않는다(main은 503; P9에서 계약에 맞춤). 문장 길이 상한은 proto 1200자 | AC2 |
+| K69 | K44·K51 비평 표현은 main 위의 b-pipeline 확장으로 유지한다: "덜 달게·덜 단·안 단"은 main 규칙이 모르더라도 less_sweet를 더하고, 비평 표현이 있는 문장에서는 proto 규칙의 "이 데모는…" 질문을 지운다. B에서 "더 저렴한·싼"은 proto의 "원하는 새 예산 상한을 알려주세요." 질문을 지우고 아끼기 칩을 강조, A에서 그 말만 있으면 "예산을 얼마로 낮출까요?" | 실험 조건 차이는 ④에만(K51 유지) |
+| K70 | `patch`(칩·조건 편집)는 main `operation=conditions`처럼 미해결 질문을 비운다. `clearIssues:false`면 유지 | main worker |
+| K71 | 서버 대화 LLM은 main worker처럼 `GEMINI_API_KEY`만으로 켠다(`LLM_PROVIDER`와 무관). 모델은 `GEMINI_MODEL`(L3, 없으면 proto 기본값), 타임아웃은 `DIALOGUE_LLM_TIMEOUT_MS`(없으면 main 18000; 기존 dialogue/agent의 8000은 index.mjs 계약용으로만 남음), `thinkingBudget: 0`(지연, 400이면 proto가 빼고 재시도). 키가 있으면 main처럼 **타이핑한 모든 문장이 llmTurn 1회**다(K33의 "부모님 설 선물 추천해줘"도 이제 1회). 빠른 답 칩과 배송비 질문의 네/아니는 fastRuleTurn(0회) | AC16 규칙 경로 = fastRuleTurn·키 없는 singleTurn |
 
 ## 팀 결정이 필요한 것 (D)
 | # | 질문 | 현재 기본값 |
@@ -76,6 +84,7 @@
 | D4 | 카탈로그 스냅샷 출처 | 팀 seed(`supabase/seed/products-amazon.json`)를 `data/`로 복사하고 SHA-256 기록 |
 | D5 | `config/hobby-map.v1.json`(취미어 → 엔진 카테고리, 임베딩 `minCosine` 0.75) 확정 | 초안 값(`note: 초안`). 팀 확정 전까지 실험 값으로 고정하지 않음 |
 | D6 | 부모님 공동 선물에서 개인 취미가 다른 분 선호를 압도한다. 엔진은 `category:<c>` 일치에 +3, 단맛 선호에 최대 +2를 주므로 아버지의 등산(→ fitness +3)이 어머니의 '단 음식 X'(+≤2)보다 크게 작용한다 | **실제 카탈로그에서 확인됨(5만원 부모님: 3개 중 2개가 아버지 취미)**: 기억을 쓰는 S2 카드 3개 중 2개가 `등산 좋아하심(아버지)` 태그(운동용품)이고 나머지 1개는 `단맛 없음`. (a) **기본값 유지:** 한 분이라도 해당하면 반영(TRD §5.4 "선호는 둘 중 하나라도"). 대안 (b): 공동 선물은 알레르기·비선호만 합집합으로 반영하고, 선호는 "누구 취향 위주로?" 칩(어머니/아버지/두 분 다)으로 고르게 한다. 팀 결정 필요 |
+| D7 | 부모님(그룹) 대화에서 한 분만 언급한 문장("엄마는 단 거 싫어하셔")을 수령인 전환으로 볼 것인가? | main `switchRecipient`와 같게 전환(어머니로 좁힘). 단 세션 알레르기는 유지(K66). 대안: 그 문장은 그분에 대한 사실로 보고 수령인 유지 |
 
 ## 공통 코어 변경 요청
 (필요해지면 여기에 적는다. b-pipeline 담당자는 공통 코어를 직접 수정하지 않는다.)

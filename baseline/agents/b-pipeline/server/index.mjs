@@ -229,6 +229,18 @@ export function createListener(handlers, { origin = '*', maxBody = MAX_BODY_BYTE
   };
 }
 
+/**
+ * ① proto llmTurn options from the environment, as main's worker reads them: GEMINI_API_KEY turns it on, GEMINI_MODEL
+ * names the model (L3: passed by the caller; proto's default otherwise), DIALOGUE_LLM_TIMEOUT_MS (L2; default 18000 as
+ * main). thinkingBudget 0 for latency (AC16), dropped by proto if the model rejects it. No key -> null (main's rules).
+ */
+export function dialogueLlmFrom(env = process.env) {
+  const apiKey = (env.GEMINI_API_KEY || '').trim();
+  if (!apiKey) return null;
+  const timeoutMs = Number(String(env.DIALOGUE_LLM_TIMEOUT_MS ?? '').trim());
+  return { apiKey, ...((env.GEMINI_MODEL || '').trim() ? { model: env.GEMINI_MODEL.trim() } : {}), ...(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}), thinkingBudget: 0 };
+}
+
 /** Starts the server from the environment (npm run dev:server). Keys are read from the environment only. */
 export async function main(env = process.env) {
   const [{ createSqliteStore }, { loadCatalog }, { createLlm, logLlmError }] = await Promise.all([import('../db/store.mjs'), import('../data/load.mjs'), import('../llm/index.mjs')]);
@@ -236,11 +248,11 @@ export async function main(env = process.env) {
   const products = loadCatalog();
   // token/latency per call goes to events: provider, role, model, counts, latency, ok. Never the prompt or the answer.
   const llm = createLlm({ env, onError: logLlmError, onUsage: u => { store.logEvent({ sessionId: null, type: 'llm_usage', payload: { provider: u.provider, role: u.role ?? null, model: u.model ?? null, inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, latencyMs: u.latencyMs ?? null, ok: u.ok === true } }); } });
-  const pipeline = createPipeline({ store, products, llm });
+  const pipeline = createPipeline({ store, products, llm, dialogueLlm: dialogueLlmFrom(env) });
   const server = createServer(createListener(createHandlers({ store, products, pipeline }), { origin: env.CORS_ORIGIN || '*' }));
   const port = Number(env.PORT) || 8787, host = env.HOST || '127.0.0.1';
   await new Promise(resolve => server.listen(port, host, resolve));
-  console.log(`b-pipeline server http://${host}:${port} (llm: ${llm ? llm.provider : 'none'}, products: ${products.length})`);
+  console.log(`b-pipeline server http://${host}:${port} (llm: ${llm ? llm.provider : 'none'}, dialogue: ${dialogueLlmFrom(env) ? 'llm' : 'rules'}, products: ${products.length})`);
   return server;
 }
 
