@@ -129,6 +129,6 @@ ${table}
 ${failures.length ? failures.map(r => `- ${r.condition} ${r.id} (${r.type}): ${Object.entries({ violation: r.violation, leaked: r.leaked, ask: !r.askRight, attribution: r.holdersRight < r.holdersTotal, hit: r.hit === false, suggestion: r.suggestRight === false, falseSuggest: r.falseSuggest > 0, opinion: r.opinionRight === false }).filter(([, v]) => v).map(([k]) => k).join(', ')}`).join('\n') : '없음'}
 `;
 writeFileSync(here(deepseek ? './results-deepseek.md' : './results.md'), md);
-writeFileSync(here('./results.json'), JSON.stringify(results, null, 1) + '\n');
+writeFileSync(here(deepseek ? './results-deepseek.json' : './results.json'), JSON.stringify(results, null, 1) + '\n');
 console.log(table);
 console.log(`\n${failures.length} unexpected C/D results; details in eval/results.md`);
