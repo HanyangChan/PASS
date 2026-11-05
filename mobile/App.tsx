@@ -52,7 +52,8 @@ import { ChatTools } from './src/ChatTools';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { PersonalizationPanel } from './src/PersonalizationPanel';
 import { usePersonalization } from './src/usePersonalization';
-import { personalizeSession, protectRememberedAllergies, assertSameRecipient } from './src/services/personalization';
+import { personalizeSession, protectRememberedAllergies, assertSameRecipient, agentContext, rememberConditions } from './src/services/personalization';
+import { AgentPanel, type AgentPayload } from './src/AgentPanel';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
@@ -74,6 +75,8 @@ import {
   won,
 } from './src/components';
 let chatConfigurationError = '';
+// Agent mode (C + D graph) is opt-in on both sides: this flag here and AGENTS_MODE on the API.
+const agentsMode = process.env.EXPO_PUBLIC_AGENTS_MODE === 'on';
 const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
@@ -142,6 +145,10 @@ export function AppContent({
     personalization,
     appliedMemory,
     changeChatConditions,
+    agentsOn,
+    disabledAgents,
+    toggleAgent,
+    rememberAgentProposal,
     resetChat,
     heroFailed,
     setHeroFailed,
@@ -492,6 +499,16 @@ export function AppContent({
                 {question.key ? question.text : result.message}
               </Text>
               {!question.key && cards(result.items.map(toGift), true)}
+              {agentsOn && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
+                <AgentPanel
+                  agents={recommendation.agents}
+                  disabled={disabledAgents}
+                  busy={chatPending || personalization.busy}
+                  onToggle={toggleAgent}
+                  onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
+                  onRemember={rememberAgentProposal}
+                />
+              )}
               {!question.key && (
                 <View style={s.comparison}>
                   <Text style={s.sectionTitle}>조건을 바꿔보면?</Text>
@@ -1109,8 +1126,11 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
+  const [disabledAgents, setDisabledAgents] = useState<string[]>([]);
+  const disabledRef = useRef<string[]>([]);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
+  const agentsOn = agentsMode && serverChat !== null;
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
@@ -1123,15 +1143,17 @@ function usePassState() {
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
-      const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text)
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients)
+      const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text, undefined, !agentsOn)
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients, !agentsOn)
           : { session, reasons: appliedMemory };
       const requestSession = recalled.session;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
+      // Agent mode sends the current recipient's on-device records and the switched-off agents.
+      const agents = agentsOn ? { enabled: true, disabled: disabledRef.current, ...agentContext(personalization.data, requestSession.state.recipients, events) } : undefined;
       let turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal)
-          : await serverChat.view(session, controller.signal)
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agents)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agents)
+          : await serverChat.view(session, controller.signal, agents)
         : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
@@ -1152,7 +1174,7 @@ function usePassState() {
         setAppliedMemory(recalled.reasons);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: [...recalled.reasons, turn.message].join('\n') }]);
       }
-      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode });
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
     } catch (error) {
       if (chatFlight.current.revision !== revision) return null;
@@ -1256,6 +1278,15 @@ function usePassState() {
     appliedMemory,
     sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
+    agentsOn,
+    disabledAgents,
+    // Switching an agent recomputes from the stored conditions; the server makes no LLM call for a view.
+    toggleAgent: (agent: string, on: boolean) => {
+      const next = on ? disabledRef.current.filter(a => a !== agent) : [...new Set([...disabledRef.current, agent])];
+      disabledRef.current = next; setDisabledAgents(next);
+      void runChat('view', '');
+    },
+    rememberAgentProposal: () => { void personalization.update(old => rememberConditions(old, session.state, new Date().toISOString(), session.issues)); },
     resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
