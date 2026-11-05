@@ -1,5 +1,7 @@
 # 에이전트별 작업 공간
 
+LLM을 연결하려면 [공통 LLM 사용 방법](LLM-USAGE.md)을 먼저 따른다. 서버 키 설정, 실제 연결 확인, 텍스트·JSON 호출과 기존 `createAgent`에 연결하는 예제를 제공한다.
+
 | 폴더 | 설계 | 권장 브랜치 |
 | --- | --- | --- |
 | `a-router/` | 규칙 Router | `codex/architecture-a-router` |
