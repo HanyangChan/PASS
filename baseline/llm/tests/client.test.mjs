@@ -65,3 +65,17 @@ test('missing keys, invalid messages and unsafe URLs fail before transmission',a
 test('truncated, tool-only and empty responses cannot masquerade as completed text',async()=>{
  for(const data of [{choices:[{finish_reason:'length',message:{content:'truncated'}}]},{choices:[{finish_reason:'stop',message:{content:'',reasoning_content:'reasoning'}}]},{choices:[{finish_reason:'stop',message:{content:'text',tool_calls:[{}]}}]}])await assert.rejects(createLlmClient({apiKey:'test-key',fetcher:async()=>Response.json(data)}).complete({messages}),{code:'invalid_response'});
 });
+
+test('reasoning effort is optional transport configuration and does not change defaults',async()=>{
+ const seen=[];const client=createLlmClient({apiKey:'test-key',fetcher:async(_,options)=>{seen.push(JSON.parse(options.body));return reply();}});
+ await client.complete({messages});await client.complete({messages,reasoningEffort:'none'});
+ assert.ok(!('reasoning_effort' in seen[0]));assert.equal(seen[1].reasoning_effort,'none');
+ await assert.rejects(client.complete({messages,reasoningEffort:'invalid'}),{code:'invalid_request'});
+});
+
+test('provider thinking switch is optional and validated without changing defaults',async()=>{
+ const seen=[];const client=createLlmClient({apiKey:'test-key',fetcher:async(_,options)=>{seen.push(JSON.parse(options.body));return reply();}});
+ await client.complete({messages});await client.complete({messages,reasoningEnabled:false});
+ assert.ok(!('reasoning' in seen[0]));assert.deepEqual(seen[1].reasoning,{enabled:false});
+ await assert.rejects(client.complete({messages,reasoningEnabled:'invalid'}),{code:'invalid_request'});
+});

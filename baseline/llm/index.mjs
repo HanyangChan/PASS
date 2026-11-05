@@ -19,13 +19,17 @@ export function createLlmClient({
   const url=completionUrl(baseUrl,chatPath);
   if (typeof model!=='string'||!model.trim()||typeof fetcher!=='function'||!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>120000) throw new LlmError('configuration');
   const configured=typeof apiKey==='string'&&Boolean(apiKey.trim());
-  async function complete({messages,responseFormat='text',schema,schemaName='response',temperature=0,maxTokens=1600,signal}={}) {
+  async function complete({messages,responseFormat='text',schema,schemaName='response',temperature=0,maxTokens=1600,signal,reasoningEffort,reasoningEnabled}={}) {
     if (!configured) throw new LlmError('configuration');
     if (!Array.isArray(messages)||!messages.length||messages.length>100||messages.some(m=>!m||!['system','user','assistant'].includes(m.role)||typeof m.content!=='string')||!['text','json_object','json_schema'].includes(responseFormat)||!Number.isFinite(temperature)||temperature<0||temperature>2||!Number.isSafeInteger(maxTokens)||maxTokens<1||maxTokens>100000) throw new LlmError('invalid_request');
+    if(reasoningEnabled!==undefined&&typeof reasoningEnabled!=='boolean')throw new LlmError('invalid_request');
+    if(reasoningEffort!==undefined&&!['none','minimal','low','medium','high','xhigh','max'].includes(reasoningEffort))throw new LlmError('invalid_request');
     if (responseFormat==='json_schema'&&(!schema||typeof schema!=='object'||Array.isArray(schema)||typeof schemaName!=='string'||! /^[A-Za-z0-9_-]{1,64}$/.test(schemaName))) throw new LlmError('invalid_request');
     if (signal!==undefined&&!(signal instanceof AbortSignal)) throw new LlmError('invalid_request');
     if (signal?.aborted) throw new LlmError('aborted');
     const payload={model,stream:false,temperature,max_tokens:maxTokens,messages:messages.map(({role,content})=>({role,content}))};
+    if(reasoningEnabled!==undefined)payload.reasoning={enabled:reasoningEnabled};
+    if(reasoningEffort!==undefined)payload.reasoning_effort=reasoningEffort;
     if(responseFormat==='json_object')payload.response_format={type:'json_object'};
     if(responseFormat==='json_schema')payload.response_format={type:'json_schema',json_schema:{name:schemaName,strict:true,schema}};
     const controller=new AbortController();let timedOut=false;
