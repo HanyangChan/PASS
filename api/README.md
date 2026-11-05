@@ -29,6 +29,16 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 검증: Worker 보안/입력/추천 테스트 7개와 모바일 서버 전송/계정 전환/취소 테스트 5개. 실제 Supabase 테스트 계정으로 서버 추천·빠른 응답·조건 편집, 서버 중단 시 상태 보존 및 복구 후 재전송을 확인했습니다. 추가로 실제 Gemini 키를 서버에서 로드하여 “덜 달고 차 종류, 배송비 포함 6만원” 조건 추출과 차 선물 추천을 웹에서 확인했습니다. 키는 Git에서 제외된 서버 파일에만 있으며 공개 Cloudflare 배포와 Vercel 운영 웹 연결을 완료했습니다.
 
+## 에이전트 모드 (C + D, 기본 꺼짐)
+
+서버 변수 `AGENTS_MODE=on`이고 앱 요청에 `agents.enabled: true`가 있을 때만 [C + D 그래프](../baseline/agents/d-langgraph/README.md)를 실행합니다. 둘 중 하나라도 없으면 기존 경로와 완전히 같습니다.
+
+- 요청 `agents`: `disabled`(끈 에이전트: occasion, spending, taste, relationship), 현재 받는 사람의 `memory`, `purchases`(카테고리·금액·만족도), `calendar`(MM-DD 일정). 서버는 검증만 하고 저장하지 않습니다.
+- 응답: 기존 `session`, `view`, `message`에 `mode: 'agents'`, `agents`(귀속, 의견, 제안, 기억 제안)를 덧붙입니다. 제안은 앱이 `conditions` 요청으로 적용할 때만 반영됩니다.
+- Gemini는 규칙으로 이해하지 못한 발화에만 턴당 최대 1회 호출합니다. 모델은 `AGENTS_MODEL`(기본 `gemini-3.5-flash-lite`). 실패하면 조건을 유지하고 질문합니다. 구매·캘린더는 Gemini에 보내지 않습니다.
+- LangGraph는 `nodejs_compat` 플래그가 필요합니다. `npm run deploy`/`build`/`dev:worker`가 먼저 `baseline/agents/d-langgraph`를 설치합니다. Node 테스트는 `npm --prefix ../baseline/agents/d-langgraph ci` 후 `tests/agents.test.mjs`까지 실행합니다(미설치 시 해당 테스트 건너뜀).
+- 2026-11-05 검증: 로컬 workerd(`wrangler dev --local`, `nodejs_compat`)에서 그래프 실행, dry-run 번들 gzip 591KiB.
+
 ## 현재 운영 배포
 
 - 웹: https://temporary-prompt-sable-s15js3l.vercel.app
