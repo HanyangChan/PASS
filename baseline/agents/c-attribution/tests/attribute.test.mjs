@@ -44,7 +44,7 @@ test('negated statements are not read as a preference and go to the LLM', async 
   assert.equal(r.patch.preferences, undefined);
   assert.equal(r.needsLlm, true);
   let calls = 0;
-  const llm = async ({ state }) => { calls++; return fromItems({ items: [{ holder: 'recipient', person: '어머니', field: 'exclude_category', value: 'fitness' }], question: null }, state); };
+  const llm = async ({ state }) => { calls++; return fromItems({ items: [{ holder: 'recipient', person: '어머니', field: 'exclude_category', category: 'fitness' }], question: null }, state); };
   const out = await attribute({ text: '엄마가 요즘 무릎이 안 좋으셔서 운동은 못 하셔', state: mother(), llm });
   assert.equal(calls, 1);
   assert.deepEqual(out.patch.excluded_categories, ['fitness']);
@@ -57,11 +57,18 @@ test('without an LLM an unknown request asks and changes nothing', async () => {
   assert.equal(out.llmCalls, 0);
 });
 
+test('a failing LLM asks instead of failing the turn and changes nothing', async () => {
+  const out = await attribute({ text: '센스 있는 선물로 골라줘', state: mother(), llm: async () => { throw new Error('gemini_http_429'); } });
+  assert.equal(out.unresolved, true);
+  assert.equal(out.provider, 'llm_failed');
+  assert.deepEqual(out.patch, {});
+});
+
 test('LLM items outside the allowed values are dropped', () => {
   const out = fromItems({ items: [
-    { holder: 'recipient', person: null, field: 'preference_category', value: 'cars' },
-    { holder: 'giver', person: null, field: 'preference_category', value: 'snack' },
-    { holder: 'unclear', person: null, field: 'exclude_ingredient', value: '우유' },
+    { holder: 'recipient', person: null, field: 'preference_category', category: 'cars' },
+    { holder: 'giver', person: null, field: 'preference_category', category: 'snack' },
+    { holder: 'unclear', person: null, field: 'exclude_ingredient', ingredient: '우유' },
   ], question: null }, mother());
   assert.deepEqual(out.patch, {});
   assert.equal(out.unresolved, true);
