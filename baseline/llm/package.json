@@ -1,0 +1,11 @@
+{
+  "name": "pass-llm-base",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "demo": "node --env-file=.env examples/demo.mjs"
+  }
+}
