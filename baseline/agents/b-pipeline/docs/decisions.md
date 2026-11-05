@@ -62,6 +62,10 @@
 | K57 | 서버는 main worker와 같은 `/api/chat` JSON 계약 + `pipeline` 블록을 쓴다. SSE는 제거한다. AC3(카드 먼저)는 카드·템플릿 태그를 한 응답에, LLM 태그는 후속 `operation=explain`으로 보내 보장한다 | 앱이 main `serverChatService`를 그대로 사용 |
 | K58 | 기억 후보는 llmTurn 스키마에 선택 필드 `memory`를 추가(L1)해 같은 호출에서 받는다. 대화 LLM 호출은 턴당 1회로 유지한다. 기억 자동 채우기 시점은 main 규칙(수령인 첫 지정·변경 시)을 따르고, 서버 DB가 기억의 단일 출처다. 파이프라인 모드에서는 기기 안 기억을 끈다(A3) | main docs/personalization.md와 같은 시점 규칙 |
 | K59 | `engineState(공개 상태)`를 baseline `runTurn`에 넣는다. main `lib/engine.mjs`와 baseline `src/vendor/engine.mjs`가 바이트 단위로 같아(확인함) 카드가 main과 같다. P7에서 고정 테스트로 유지한다 | AC1 |
+| K60 | P7 `check-proto-sync`는 `UPSTREAM.md`의 세 표(원본 해시 / 패치된 파일 / 추가된 파일)를 읽는다. 원본과 다른 파일은 "패치된 파일"에 없으면 실패하고, 원본과 같은데 패치 목록에 있어도 실패한다(목록 정리 강제). 패치 파일의 개별 해시는 고정하지 않는다(P8~P10에서 계속 바뀌므로). `.DS_Store`·`node_modules`·`dist`·`.expo`는 무시 | 패치 줄 수는 PROTO-REBASE §4 허용 범위 안인지 사람이 PR에서 본다 |
+| K61 | `app/`의 현재 패치 목록은 P6 상태 그대로 적었다(R1 import 경로 7개 + App.tsx 병렬 경로 + PrototypeFlows 컨텍스트 등). A1~A4 형태로의 축소는 P10 몫이다. `mobile/tests/`·`.env.example`은 복사하지 않아 해시 표에서도 뺐다 | 기능 변경 없음 |
+| K62 | AC1 고정 테스트는 baseline `result.cards`와 main `result.items`의 모양이 달라 `[id, rank, price_krw, budget_cost_krw, total_krw, score]` 튜플로 비교한다(`budget_cost_krw`는 proto `budgetCost`로 계산). 7개 상태(빈 결과 포함)에서 상품 6개 이상이 실제로 비교되는지도 확인한다 | main 쪽은 `proto/` 엔진, baseline 쪽은 `src/vendor/engine.mjs`를 쓰므로 두 엔진이 어긋나면 실패 |
+| K63 | `proto/lib/test-dialogues.json`은 main 테스트(`tests/engine.test.mjs`)만 읽는 데이터라 복사하지 않는다. PROTO-REBASE §3은 .json이면 괜찮다고 했지만 사용자 지시("main 테스트 파일은 절대 복사하지 마")를 우선한다. 코드에서 import하지 않으므로 기능 영향 없음 | 해시 표에서도 뺐다 |
 
 ## 팀 결정이 필요한 것 (D)
 | # | 질문 | 현재 기본값 |
