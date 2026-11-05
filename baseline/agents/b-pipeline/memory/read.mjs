@@ -1,16 +1,19 @@
 // Memory read side (TRD §5.4, §3 step ②). Everything goes through owner-filtered store calls.
 import { keyToField, keyLabel, parseKey, checkKey } from './keys.mjs';
+import { canonicalRecipient } from '../proto/lib/llm.mjs';
 
 const norm = s => String(s ?? '').normalize('NFC').trim();
+// K73: names are compared after the alias rule (엄마 = 어머니), so a row saved under either name is found by both
+const canon = s => canonicalRecipient(norm(s));
 
 /**
  * Resolve a mention ("엄마", "부모님") to the owner's recipients.
  * @returns {{status:'found', recipients:[]}|{status:'ambiguous', chips:[]}|{status:'none'}}
  */
 export async function findRecipient(store, ownerId, mention, { choice } = {}) {
-  const word = norm(mention);
+  const word = canon(mention);
   const mine = await store.listRecipients(ownerId);
-  const byName = mine.filter(r => [r.name, ...r.aliases].some(n => norm(n) === word));
+  const byName = mine.filter(r => [r.name, ...r.aliases].some(n => canon(n) === word));
   if (byName.length === 1) return { status: 'found', recipients: byName };
   const group = byName.length ? byName : mine.filter(r => r.groupName && norm(r.groupName) === word);
   if (!group.length) return { status: 'none' };

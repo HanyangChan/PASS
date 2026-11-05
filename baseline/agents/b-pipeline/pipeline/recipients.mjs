@@ -6,6 +6,11 @@ import { findRecipient } from '../memory/read.mjs';
 // Not an inference about taste; only which display name the two people share (decisions K24).
 export const KNOWN_GROUPS = { 어머니: '부모님', 아버지: '부모님' };
 export const KNOWN_ALIASES = { 어머니: ['엄마', '어머님'], 아버지: ['아빠', '아버님'] };
+/** K73: 엄마/어머님 -> 어머니, 아빠/아버님 -> 아버지 (whole name). Every name that reaches a row, an id or a lookup goes through it. */
+export const canonicalName = name => {
+  const n = String(name ?? '').normalize('NFC').trim();
+  return Object.keys(KNOWN_ALIASES).find(k => KNOWN_ALIASES[k].includes(n)) ?? n;
+};
 const NEW = 'new:'; // placeholder id for a person who has no row yet; replaced on memory confirm
 export const isNewRecipientId = id => typeof id === 'string' && id.startsWith(NEW);
 export const newRecipientId = name => `${NEW}${name}`;
@@ -20,7 +25,8 @@ export async function resolveMention(store, ownerId, name, choice = 'together') 
  * R9: two people who share a group (['어머니','아버지']) become one display recipient (['부모님']).
  * Returns the display list for the state and the ids of every person behind it.
  */
-export async function resolveRecipients(store, ownerId, names, { choice } = {}) {
+export async function resolveRecipients(store, ownerId, rawNames, { choice } = {}) {
+  const names = [...new Set(rawNames.map(canonicalName))];
   const rows = [], groups = [];
   for (const name of names) {
     const found = await resolveMention(store, ownerId, name, choice);
@@ -46,7 +52,8 @@ export async function resolveRecipients(store, ownerId, names, { choice } = {}) 
  */
 export async function linkCandidates(store, ownerId, candidates) {
   const out = [];
-  for (const c of candidates) {
+  for (const raw of candidates) {
+    const c = { ...raw, recipientName: canonicalName(raw.recipientName) };
     const rows = await resolveMention(store, ownerId, c.recipientName);
     const members = Object.keys(KNOWN_GROUPS).filter(k => KNOWN_GROUPS[k] === c.recipientName);
     const targets = rows.length ? rows.map(r => ({ id: r.id, name: r.name }))
@@ -65,7 +72,7 @@ export async function materialize(store, ownerId, items) {
   const out = [];
   for (const c of items) {
     if (!isNewRecipientId(c.recipientId)) { out.push(c); continue; }
-    const name = c.recipientId.slice(NEW.length);
+    const name = canonicalName(c.recipientId.slice(NEW.length));
     if (!made.has(name)) {
       const existing = await resolveMention(store, ownerId, name);
       made.set(name, existing.length === 1 ? existing[0] : await store.createRecipient(ownerId, {

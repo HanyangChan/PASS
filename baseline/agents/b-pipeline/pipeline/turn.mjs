@@ -3,7 +3,7 @@
 // The answer is turned into a baseline utterance patch; ② memory, ③ mapping, merge, runTurn, planner and template tags
 // stay in the orchestrator (recommend()), which this module feeds. Nothing here ranks, scores or prices (K1).
 import { fastRuleTurn, singleTurn, publicState, engineState, singleQuestion } from '../proto/lib/single-gift.mjs';
-import { llmTurn, geminiFailure, validateRequest, GeminiError } from '../proto/lib/llm.mjs';
+import { llmTurn, geminiFailure, validateRequest, GeminiError, canonicalRecipient } from '../proto/lib/llm.mjs';
 import { LlmError } from '../llm/errors.mjs';
 import { failureCode } from '../llm/openai-compatible.mjs';
 import { extract, initial as protoInitial, differences } from '../proto/lib/engine.mjs';
@@ -18,8 +18,7 @@ export const LIST_FIELDS = ['preferences', 'excluded_categories', 'excluded_ingr
 export const NEW_BUDGET_ISSUE = '원하는 새 예산 상한을 알려주세요.';
 const DEMO_ISSUE = '이 데모는'; // proto's rules fallback question; it is dropped by proto on the next turn anyway
 
-const ALIASES = [['엄마', '어머니'], ['어머님', '어머니'], ['아빠', '아버지'], ['아버님', '아버지']];
-const canon = s => ALIASES.reduce((t, [a, b]) => t.replaceAll(a, b), String(s ?? '').normalize('NFC').trim());
+const canon = canonicalRecipient; // K73: one alias table (proto L5) for the LLM answer, comparisons and memory candidates
 const uniq = a => [...new Set(a)];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /** 부모님 = 어머니 + 아버지 (R9 fixed relation, K24); other names stand for themselves. */

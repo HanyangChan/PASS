@@ -84,6 +84,7 @@ b-pipeline/
 | L2 | proto/lib/llm.mjs | 타임아웃을 옵션 `timeoutMs`로(기본 18000 유지), `thinkingConfig` 미지원 400이면 빼고 재시도 | `DIALOGUE_LLM_TIMEOUT_MS`, AC16 |
 | L3 | proto/lib/llm.mjs | 모델 기본값은 호출 측이 `GEMINI_MODEL`로 넘김(파일 수정 없음, 서버에서 처리) | `-latest` 별칭 404 |
 | L4 | proto/lib/llm.mjs | `llmTurn` 선택 옵션 `generate({system,input,schema,timeoutMs})`: 있으면 Gemini 대신 공용 OpenAI 호환 클라이언트 호출. 지시문·스키마·검증·알레르기 합집합은 그대로. 없으면 main과 같은 Gemini 경로 | K72 (학교 DeepSeek 전환) |
+| L5 | proto/lib/llm.mjs | LLM 응답 `validateState` 직후 `state.recipients`를 결정적으로 정규화(main `extract`의 엄마→어머니·아빠→아버지 + 어머님·아버님, 중복 제거). 표는 `RECIPIENT_ALIASES` 하나 | K73 (수령인 "엄마" 저장) |
 | A1 | app/ import 경로 | 레포 루트 `lib/` → `../proto/lib/` | main이 바뀌어도 실험 앱이 고정 |
 | A2 | app/src/services/serverChatService.ts | `resolveChatUrl`이 `EXPO_PUBLIC_PIPELINE_URL`을 받고, Supabase 세션 대신 참가자 ID 인증 스텁. 응답 검증은 main 그대로 + `pipeline` 블록 선택 검증(`pipelineEvents.mjs`) | 앱의 기존 서버 경로를 그대로 사용 |
 | A3 | app/src/services/personalization.ts 호출부 | 파이프라인 모드에서는 기기 안 기억 적용(`personalizeSession`)을 끄고, PersonalizationPanel 목록·삭제를 `operation=memory`로 연결 | 기억을 두 번 적용하지 않기 (서버 DB가 기억의 단일 출처) |
