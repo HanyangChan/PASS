@@ -5,7 +5,7 @@ import { initial } from '../../../src/vendor/engine.mjs';
 import { runTurn, createSession } from '../../../src/index.mjs';
 import { parseRules } from '../../../src/parser.mjs';
 import { createFakeLlm, LlmError } from '../llm/index.mjs';
-import { createDialogue, toPort, FALLBACK_QUESTION } from '../dialogue/agent.mjs';
+import { createDialogue, toPort, FALLBACK_QUESTION, TIMEOUT_TEXT, dialogueTimeoutMs } from '../dialogue/agent.mjs';
 import { products } from './fixtures/catalog.mjs';
 
 const S1 = '부모님 추석 선물이야. 엄마는 단 거 싫어하시고 땅콩 알레르기, 아빠는 등산 좋아하셔. 5만 원';
@@ -37,7 +37,7 @@ test('R9 / S1: a free sentence makes ONE LLM call and yields the group patch plu
   const out = await d.interpret({ text: S1, state: state() });
   assert.equal(llm.calls.length, 1);
   assert.equal(llm.calls[0].role, 'dialogue');
-  assert.ok(llm.calls[0].timeoutMs <= 3000, 'AC16 budget for the LLM path');
+  assert.equal(llm.calls[0].timeoutMs, 8000, 'default DIALOGUE_LLM_TIMEOUT_MS');
   assert.equal(out.unresolved, false);
   assert.deepEqual(out.patch, { recipients: ['부모님'], occasion: '추석', budget: { amount_krw: 50000 }, preferences: ['less_sweet'], excluded_ingredients: ['땅콩'] });
   assert.deepEqual(out.memoryCandidates.map(c => [c.recipientName, c.key, c.polarity, c.evidence, c.basis]), [
@@ -120,9 +120,9 @@ test('an LLM with nothing usable is "unresolved" with the fallback question, nev
 });
 
 test('LLM failure or schema violation degrades to the question path and leaks nothing about the user text', async () => {
-  for (const bad of [new LlmError('llm_timeout'), new LlmError('llm_http'), { recipients: 'mom', memoryCandidates: [] }, 'nonsense', { recipients: [], memoryCandidates: [], question: '   ' }, { recipients: [], memoryCandidates: [], unresolved: true }]) {
+  for (const bad of [new LlmError('llm_http'), { recipients: 'mom', memoryCandidates: [] }, 'nonsense', { recipients: [], memoryCandidates: [], question: '   ' }, { recipients: [], memoryCandidates: [], unresolved: true }]) {
     const out = await dlg(bad).d.interpret({ text: S1, state: state() });
-    assert.equal(out.unresolved, true); assert.deepEqual(out.patch, {}); assert.deepEqual(out.questions, [FALLBACK_QUESTION], 'error, timeout and empty answers ask the real question');
+    assert.equal(out.unresolved, true); assert.deepEqual(out.patch, {}); assert.deepEqual(out.questions, [FALLBACK_QUESTION], 'error and empty answers ask the real question');
     assert.ok(!JSON.stringify(out).includes('땅콩'));
   }
 });
@@ -187,4 +187,50 @@ test('K33: occasion words and their canonical value; 설 only as a word; two occ
   // without an occasion the rule path is exactly parseRules (AC16 unchanged)
   const plain = await d.interpret({ text: '부모님 선물 추천해줘', state: state() });
   assert.deepEqual(plain.patch, parseRules('부모님 선물 추천해줘').patch);
+});
+
+test('DIALOGUE_LLM_TIMEOUT_MS: default 8000, env override, garbage ignored', async () => {
+  assert.equal(dialogueTimeoutMs({}), 8000);
+  assert.equal(dialogueTimeoutMs({ DIALOGUE_LLM_TIMEOUT_MS: '12000' }), 12000);
+  for (const bad of ['', 'abc', '0', '-5', '1.5']) assert.equal(dialogueTimeoutMs({ DIALOGUE_LLM_TIMEOUT_MS: bad }), 8000);
+  const { llm, d } = dlg(s1Reply(), { timeoutMs: 1234 });
+  await d.interpret({ text: S1, state: state() });
+  assert.equal(llm.calls[0].timeoutMs, 1234);
+});
+
+test('LLM timeout asks to resend; other LLM failures keep the fallback question', async () => {
+  const run = async err => createDialogue({ llm: createFakeLlm({ json: [err] }) }).interpret({ text: S1, state: state() });
+  const timeout = await run(new LlmError('llm_timeout'));
+  assert.deepEqual([timeout.unresolved, timeout.questions, timeout.patch], [true, ['잠시 후 다시 보내 주세요.'], {}]);
+  assert.equal(TIMEOUT_TEXT, '잠시 후 다시 보내 주세요.');
+  for (const code of ['llm_schema', 'llm_http', 'llm_network', 'llm_parse']) assert.deepEqual((await run(new LlmError(code))).questions, [FALLBACK_QUESTION]);
+});
+
+test('short multi-turn answers resolve by rules with no LLM call (2개 · 개당 · 포함해서 · 네)', async () => {
+  const cases = [
+    ['부모님 추석 선물 2개 개당 5만원 이하', state(), { recipients: ['부모님'], occasion: '추석', quantity: 2, budget: { amount_krw: 50000, scope: 'per_set' } }],
+    ['배송비 포함해서', state(), { budget: { shipping_included: true } }],
+    ['포함해서', state(), { budget: { shipping_included: true } }],
+    ['배송비 별도로', state(), { budget: { shipping_included: false } }],
+    ['2세트', state(), { quantity: 2 }],
+    ['2개', state(), { quantity: 2 }],
+    ['개당 5만원 이하 배송비 포함해서', state(), { budget: { amount_krw: 50000, scope: 'per_set', shipping_included: true } }],
+    ['네', state({ quantity: 2 }), { same_product: true }],
+  ];
+  for (const [text, st, patch] of cases) {
+    const { llm, d } = dlg();
+    const out = await d.interpret({ text, state: st });
+    assert.equal(llm.calls.length, 0, text);
+    assert.equal(out.unresolved, false, text);
+    assert.deepEqual(out.patch, patch, text);
+  }
+});
+
+test('short answers never swallow the rest: "네" without a pending question and unknown leftovers still go on', async () => {
+  const { llm, d } = dlg(undefined);
+  const yes = await d.interpret({ text: '네', state: state() });
+  assert.equal(yes.unresolved, true); // nothing to confirm: LLM path (no queued answer -> fallback question)
+  const left = await d.interpret({ text: '2개 센스 있는 걸로', state: state() });
+  assert.equal(left.unresolved, true);
+  assert.equal(llm.calls.length, 2);
 });

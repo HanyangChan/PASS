@@ -3,6 +3,7 @@ export class LlmError extends Error {
   constructor(code, detail = '') {
     super(detail ? `${code}: ${detail}` : code);
     this.code = code;
+    this.detail = detail; // schema paths / http status only: never user text
   }
 }
 

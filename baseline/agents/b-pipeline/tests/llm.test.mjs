@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLlm, createFakeLlm, LlmError } from '../llm/index.mjs';
+import { toResponseSchema } from '../llm/gemini.mjs';
 import { chatUrl } from '../llm/openai-compatible.mjs';
 
 const KEY = 'test-key-not-real';
@@ -93,4 +94,42 @@ test('adapter failures map to codes that never contain the key', async () => {
     await assert.rejects(llm.json({ system: 's', input: {}, schema, timeoutMs: 20 }), e => e.code === code && !e.message.includes(KEY));
     assert.equal(usage[0].ok, false);
   }
+});
+
+test('gemini request carries the response schema (supported keywords only) and turns thinking off', async () => {
+  const record = [];
+  const big = { type: 'object', required: ['a'], properties: { a: { type: 'string', maxLength: 5 }, b: { type: 'array', maxItems: 2, items: { type: 'integer' } }, c: { type: 'string', enum: ['x'] } } };
+  const llm = createLlm({ env: { LLM_PROVIDER: 'gemini', GEMINI_API_KEY: KEY, GEMINI_MODEL: 'model-a' }, fetcher: fakeFetch({ body: { candidates: [{ content: { parts: [{ text: '{"a":"z"}' }] } }] } }, record) });
+  await llm.json({ system: 's', input: {}, schema: big });
+  const cfg = JSON.parse(record[0].init.body).generationConfig;
+  assert.equal(cfg.responseMimeType, 'application/json');
+  assert.deepEqual(cfg.responseJsonSchema, { type: 'object', required: ['a'], properties: { a: { type: 'string' }, b: { type: 'array', maxItems: 2, items: { type: 'integer' } }, c: { type: 'string', enum: ['x'] } } });
+  assert.deepEqual(cfg.thinkingConfig, { thinkingBudget: 0 });
+  assert.deepEqual(toResponseSchema(undefined), undefined);
+});
+
+test('gemini: a model that rejects thinkingConfig (HTTP 400) is retried once without it, then remembered', async () => {
+  const bodies = [];
+  const fetcher = async (url, init) => {
+    const cfg = JSON.parse(init.body).generationConfig;
+    bodies.push(cfg);
+    if (cfg.thinkingConfig) return { ok: false, status: 400, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }) };
+  };
+  const llm = createLlm({ env: { LLM_PROVIDER: 'gemini', GEMINI_API_KEY: KEY, GEMINI_MODEL: 'm' }, fetcher });
+  assert.deepEqual(await llm.json({ system: 's', input: {}, schema }), { ok: true });
+  assert.deepEqual(await llm.json({ system: 's', input: {}, schema }), { ok: true });
+  assert.deepEqual(bodies.map(b => Boolean(b.thinkingConfig)), [true, false, false]);
+});
+
+test('onError reports role + code + schema path only (no key, no text); llm_schema names the field', async () => {
+  const lines = [];
+  const llm = createLlm({
+    env: { LLM_PROVIDER: 'gemini', GEMINI_API_KEY: KEY, GEMINI_MODEL: 'm' },
+    fetcher: fakeFetch({ body: { candidates: [{ content: { parts: [{ text: '{"wrong":1}' }] } }] } }),
+    onError: e => lines.push(e),
+  });
+  await assert.rejects(llm.json({ system: 's', input: { secret: '원문' }, schema, role: 'dialogue' }), { code: 'llm_schema' });
+  assert.deepEqual(lines, [{ role: 'dialogue', code: 'llm_schema', detail: '$ missing ok' }]);
+  assert.ok(!JSON.stringify(lines).includes(KEY) && !JSON.stringify(lines).includes('원문'));
 });

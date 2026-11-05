@@ -231,11 +231,11 @@ export function createListener(handlers, { origin = '*', maxBody = MAX_BODY_BYTE
 
 /** Starts the server from the environment (npm run dev:server). Keys are read from the environment only. */
 export async function main(env = process.env) {
-  const [{ createSqliteStore }, { loadCatalog }, { createLlm }] = await Promise.all([import('../db/store.mjs'), import('../data/load.mjs'), import('../llm/index.mjs')]);
+  const [{ createSqliteStore }, { loadCatalog }, { createLlm, logLlmError }] = await Promise.all([import('../db/store.mjs'), import('../data/load.mjs'), import('../llm/index.mjs')]);
   const store = createSqliteStore({ path: env.PIPELINE_DB_PATH || '.data/pipeline.sqlite' });
   const products = loadCatalog();
   // token/latency per call goes to events: provider, role, model, counts, latency, ok. Never the prompt or the answer.
-  const llm = createLlm({ env, onUsage: u => { store.logEvent({ sessionId: null, type: 'llm_usage', payload: { provider: u.provider, role: u.role ?? null, model: u.model ?? null, inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, latencyMs: u.latencyMs ?? null, ok: u.ok === true } }); } });
+  const llm = createLlm({ env, onError: logLlmError, onUsage: u => { store.logEvent({ sessionId: null, type: 'llm_usage', payload: { provider: u.provider, role: u.role ?? null, model: u.model ?? null, inputTokens: u.inputTokens ?? null, outputTokens: u.outputTokens ?? null, latencyMs: u.latencyMs ?? null, ok: u.ok === true } }); } });
   const pipeline = createPipeline({ store, products, llm });
   const server = createServer(createListener(createHandlers({ store, products, pipeline }), { origin: env.CORS_ORIGIN || '*' }));
   const port = Number(env.PORT) || 8787, host = env.HOST || '127.0.0.1';

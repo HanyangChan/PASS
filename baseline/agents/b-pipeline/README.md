@@ -18,6 +18,14 @@ P6까지 구현: 기억 저장·읽기, 대화 이해, 취향 매핑, 오케스�
 - S2의 "부모님 설 선물 추천해줘"는 키 없이 풀린다. 행사 단어(설·추석·생일·스승의 날 등)를 먼저 떼어 `occasion`으로 넣고 나머지를 규칙으로 처리한다(K33).
 - 테스트(`node --test`) 중에는 키가 환경에 있어도 LLM을 만들지 않는다(K23).
 
+### 실제 LLM(Gemini) 설정
+- `GEMINI_MODEL`은 `-latest` 별칭 대신 **버전 이름**을 쓴다(별칭은 모델이 바뀌어 지연·응답 형식이 달라질 수 있다). 예: `gemini-3.5-flash-lite`.
+- 대화 이해 호출의 타임아웃은 `DIALOGUE_LLM_TIMEOUT_MS`(기본 8000). 시간 초과면 사용자에게 "잠시 후 다시 보내 주세요."가 나가고, 그 밖의 실패는 위 질문으로 끝난다.
+- 요청에는 응답 스키마(`responseJsonSchema`)가 들어가고 생각(thinking)은 끈다. 끌 수 없는 모델이 HTTP 400을 돌려주면 그 설정 없이 한 번 다시 보낸다.
+- LLM 호출이 실패하면 서버 터미널에 한 줄이 찍힌다: `[llm] role=dialogue code=llm_schema detail="$ missing recipients"`. 이유 코드와 스키마 필드 이름만 나오고 키·원문은 없다.
+- 실제 키로 한 번 측정: `node --env-file=.env scripts/llm-smoke.mjs ["문장"]` (실제 호출, 시간·patch 출력).
+- 규칙으로 먼저 풀리는 짧은 답: "2세트·2개", "개당", "배송비 포함해서", "네"(같은 상품 질문에 대한 답)는 LLM 없이 처리한다(`dialogue/short-answers.mjs`).
+
 ## 계약 (변경 없음)
 - `index.mjs`: `interpretMessage({text,state}) → {patch, questions, unresolved}`, `createAgent({interpret})`
 - 전체 파이프라인은 별도 진입점 `pipeline/index.mjs`의 `createPipeline(deps)`로 추가한다.

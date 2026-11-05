@@ -1,5 +1,5 @@
 import { createAgentRunner } from '../runtime.mjs';
-import { createLlm } from './llm/index.mjs';
+import { createLlm, logLlmError } from './llm/index.mjs';
 import { createDialogue, toPort } from './dialogue/agent.mjs';
 
 /**
@@ -10,7 +10,7 @@ import { createDialogue, toPort } from './dialogue/agent.mjs';
  */
 export function llmFromEnv(vars = process.env) {
   if (vars.NODE_TEST_CONTEXT) return null;
-  try { return createLlm({ env: vars }); } catch { return null; }
+  try { return createLlm({ env: vars, onError: logLlmError }); } catch { return null; }
 }
 
 /** Port for the common runTurn. Called only after parseRules could not resolve the message. */
