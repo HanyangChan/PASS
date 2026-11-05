@@ -17,6 +17,7 @@ npm run demo
 - `src/index.mjs`: `runTurn`, 세션 상태, 질문, 가상 예산 비교, 결과 검증, 설명.
 - `src/vendor/`: 기존 `PASS-auth/lib` 엔진과 의존 파일의 독립 스냅샷. 원본·해시를 `provenance.json`에 기록했다. 순위·금액·예산 대안 계산은 여기서만 한다.
 - `examples/`: 고정 합성 상품 3개와 실행 예제. 실상품 데이터가 아니다.
+- `llm/`: 앱·Router·선물 스키마와 독립적인 [공통 LLM 연결 기반](llm/README.md).
 - `agents/`: 다섯 설계별 작업 폴더, 공통 연결기, 실행 예제 선택. [작업 안내](agents/README.md).
 - `tests/`: 공통 수용 기준. 브랜치에서도 같은 검사를 실행한다.
 

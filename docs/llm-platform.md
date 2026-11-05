@@ -44,7 +44,7 @@ npm run dev:api
 
 ## 호환·실패 처리
 
-`lib/openai-compatible.mjs`는 Bearer 인증, Chat Completions 요청, JSON 파싱과 기존 스키마 검증을 담당한다. 공통 추출 지침은 Gemini와 공유한다. 조건 추출 결과는 Router의 제약 검사도 받는다. 잘린 출력·잘못된 JSON·도구 호출·미지원 조건 값은 적용하지 않는다. 내부 추론 필드는 응답으로 노출하지 않는다.
+공통 `baseline/llm/`는 Bearer 인증·Chat Completions 요청·텍스트/JSON 처리만 담당한다. `lib/openai-compatible.mjs`는 이 기반 위에서 선물 프롬프트·조건 스키마 검증을 수행하는 앱 전용 어댑터다. 공통 추출 지침은 Gemini와 공유한다. 조건 추출 결과는 Router의 제약 검사도 받는다. 잘린 출력·잘못된 JSON·도구 호출·미지원 조건 값은 적용하지 않는다. 내부 추론 필드는 응답으로 노출하지 않는다.
 
 [DeepSeek 공식 JSON 안내](https://api-docs.deepseek.com/guides/json_mode/)의 `response_format: {type: "json_object"}` 형식을 기본으로 한다. `json_schema`와 `text`도 설정할 수 있으나 공급자가 지원하는지 확인해야 한다. 이번 플랫폼에서 실제 검증한 형식은 `json_object`다. 명시적인 경로 변경이 필요한 경우 `LLM_CHAT_PATH=v1/chat/completions` 또는 Base URL의 `/v1` 접두어를 사용할 수 있다. 자동으로 두 경로를 호출하지 않는다.
 
@@ -55,3 +55,7 @@ npm run dev:api
 ## 운영 환경
 
 `api/wrangler.jsonc`에는 공급자·Base URL·모델 같은 공개 설정만 둔다. Cloudflare에는 `LLM_API_KEY`를 secret으로 별도 등록해야 한다. 이 변경은 운영 API를 배포하지 않는다. Gemini로 복귀하려면 `LLM_PROVIDER=gemini`와 기존 `GEMINI_API_KEY`, `GEMINI_MODEL`을 사용한다.
+
+## LLM 연결부만 재사용
+
+다른 에이전트나 프로젝트는 [`baseline/llm/`](../baseline/llm/README.md)만 가져오면 된다. 외부 패키지나 기존 앱 코드에 의존하지 않고, 자신의 프롬프트와 메시지를 `complete`/`completeJson`으로 전달한다. 공통 main에는 이 연결 기반만 반영했고 A안 Router 구현은 별도 브랜치에 유지한다.

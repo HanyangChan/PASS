@@ -31,3 +31,7 @@ const result = await agent.runTurn({ session, request, products });
 공통 `src/`, `src/vendor/`, `tests/`, `agents/runtime.mjs`, `agents/registry.mjs` 변경은 팀 공통 변경으로 관리한다. 개별 의존성은 담당 폴더의 별도 `package.json`에 선언하고 실행법을 문서화한다. 루트 `npm test`는 Node.js 기본 실행기에서 실행 가능한 `*.test.mjs`를 찾는다. 다른 언어·테스트 실행기는 담당 README에 명령을 추가한다.
 
 API 키는 서버 환경에서만 읽는다. 로컬 `.env`는 커밋하지 않고, 필요한 환경 변수 이름은 값 없는 `.env.example`로 문서화한다. `a-router/`는 서버 `CHAT_AGENT=a-router` 설정으로 현재 로그인 채팅 API에 연결된다. 다른 에이전트의 연결·화면에서 에이전트 선택은 후속 작업이다.
+
+## 공통 LLM 사용
+
+LLM 연결만 필요하면 [`baseline/llm/`](../llm/README.md)를 사용한다. 담당 폴더에서 `import { createLlmFromEnv } from '../../llm/index.mjs'`로 가져오고 서버 `env`를 전달한다. `complete`는 일반 텍스트, `completeJson`은 JSON과 각자 정의한 검증을 지원한다. 공통 모듈은 프롬프트·추천·Router를 포함하지 않으며 키는 서버에서만 읽는다.
