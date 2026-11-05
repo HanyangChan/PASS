@@ -4,6 +4,7 @@ import { validateRequest, validateState, llmTurn, geminiFailure } from '../lib/l
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
 import { apply, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
+import { prototypeRouterTurn } from './router-agent.mjs';
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 async function readJson(request) {
@@ -39,7 +40,8 @@ function inputOf(raw) {
       if (raw.patch.budget !== undefined && (!raw.patch.budget || Array.isArray(raw.patch.budget) || typeof raw.patch.budget !== 'object' || Object.keys(raw.patch.budget).some(key => !['amount_krw', 'shipping_included'].includes(key)))) throw Error();
       const patch = normalizeConditions(apply(session.state, raw.patch)).state;
       validateState(patch);
-      raw = { ...raw, patch };
+      const routerPatch = Object.fromEntries(Object.keys(raw.patch).map(key => [key, key === 'budget' ? Object.fromEntries(Object.keys(raw.patch.budget).map(k => [k, patch.budget[k]])) : patch[key]]));
+      raw = { ...raw, patch, routerPatch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
     return { ...raw, session, state: session.state, issues: session.issues };
@@ -71,12 +73,13 @@ export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaul
       if (path === '/health' && request.method === 'GET') {
         let count = null;
         try { count = (await catalog(env)).length; } catch {}
-        return json({ ok: count !== null, provider: env.GEMINI_API_KEY ? 'gemini' : 'rules', catalog: CATALOG_ID, products: count ?? 0 });
+        return json({ agent: env.CHAT_AGENT || 'legacy', ok: count !== null, provider: env.GEMINI_API_KEY ? 'gemini' : 'rules', catalog: CATALOG_ID, products: count ?? 0 });
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
       if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.', code: 'method' }, 405);
       try {
+        if (env.CHAT_AGENT && !['a-router','legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
         if (!env.IP_LIMITER || !env.USER_LIMITER || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') || new URL(env.SUPABASE_URL).protocol !== 'https:') throw new ApiError(503, 'configuration', '서버 연결 설정이 필요합니다.');
         // Never use a client-supplied owner ID or decoded-but-unverified JWT claims.
         const ip = request.headers.get('CF-Connecting-IP') ?? 'native-local';
@@ -97,7 +100,10 @@ export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaul
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
         let turn, mode = 'rules';
-        if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
+        if (env.CHAT_AGENT === 'a-router') {
+          turn = await prototypeRouterTurn(input, products, { extract, apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || 'gemini-3.6-flash', fetcher });
+          mode = turn.mode;
+        } else if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
         else if (input.operation === 'conditions') turn = finishSingle(input.state, apply(input.state, input.patch), input.clearIssues === false ? input.issues : [], products);
         else {
           turn = fastRuleTurn(input, products);

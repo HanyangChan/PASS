@@ -38,3 +38,11 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 - `.vercelignore`는 API 서버 파일, DB 파일, 로컬 환경 변수와 생성 파일을 웹 업로드에서 제외합니다.
 - 2026-10-11 검증: 공개 웹의 더미 계정 로그인, 기존 찜·최근 기록 복원, 새 대화의 차 선물/배송비 포함 6만원 조건 해석 및 추천. API 비로그인 401, 허용 origin OPTIONS 204, 다른 origin 403.
 - 현재 웹 배포는 CLI 운영 배포입니다. GitHub 자동 배포 연결은 별도로 확인해야 합니다.
+
+## A안 Router 구현 (2026-11-05, 개발 브랜치)
+
+로컬 `npm run dev`는 기본 `CHAT_AGENT=a-router`로 동작한다. Worker 설정에도 같은 값을 추가했다. 운영 배포는 별도이며 위의 과거 운영 검증 기록이 새 Router 배포를 뜻하지 않는다. `CHAT_AGENT=legacy`는 기존 Gemini 우선 경로를 유지한다.
+
+Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규칙으로 처리하고, 미해석 문장만 기존 Gemini 추출기로 넘긴다. 키가 없으면 질문하며, 공급자 실패는 상태를 바꾸지 않고 503으로 반환한다. 기존 `session/message/view/mode` 응답을 유지하고 `agent/routing` 진단 정보를 추가했다. 서버가 선택하므로 클라이언트가 임의로 에이전트나 모델을 고르지 않는다. 게스트 기기 엔진과 음성·첨부 UI는 그대로다.
+
+`npm run test:router`(저장소 루트)로 에이전트·API 통합 검사를 실행한다. 모델 키는 서버 `.dev.vars` 또는 Cloudflare secret에만 둔다. [처리 경로·한계·버전 관리 범위](../baseline/agents/a-router/README.md)를 참고한다.

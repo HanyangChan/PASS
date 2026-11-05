@@ -17,7 +17,7 @@ const localLimit = limit => {
     buckets.set(key, bucket); return { success: ++bucket.count <= limit };
   } };
 };
-const env = { ...values, SUPABASE_URL: values.SUPABASE_URL || values.EXPO_PUBLIC_SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY: values.SUPABASE_PUBLISHABLE_KEY || values.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, APP_ORIGINS: values.APP_ORIGINS || 'http://127.0.0.1:8766', IP_LIMITER: localLimit(120), USER_LIMITER: localLimit(30) };
+const env = { ...values, CHAT_AGENT: process.env.CHAT_AGENT || values.CHAT_AGENT || 'a-router', SUPABASE_URL: values.SUPABASE_URL || values.EXPO_PUBLIC_SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY: values.SUPABASE_PUBLISHABLE_KEY || values.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, APP_ORIGINS: values.APP_ORIGINS || 'http://127.0.0.1:8766', IP_LIMITER: localLimit(120), USER_LIMITER: localLimit(30) };
 const server = http.createServer(async (req, res) => {
   try {
     const request = new Request(`http://127.0.0.1:8788${req.url}`, { method: req.method, headers: { ...req.headers, 'CF-Connecting-IP': req.socket.remoteAddress }, ...(req.method === 'GET' || req.method === 'HEAD' ? {} : { body: Readable.toWeb(req), duplex: 'half' }) });

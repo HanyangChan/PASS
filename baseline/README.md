@@ -55,7 +55,7 @@ const output = await runTurn({
 
 ## 에이전트 작업 시작
 
-`agents/a-router`, `b-pipeline`, `c-attribution`, `d-langgraph`, `e-tiered` 중 담당 폴더에서 시작한다. 각 폴더의 `index.mjs`는 공통 코어의 해석기 확장 지점에 연결된 시작 틀이다.
+`agents/a-router`, `b-pipeline`, `c-attribution`, `d-langgraph`, `e-tiered` 중 담당 폴더에서 시작한다. `a-router/`는 규칙 우선 Router를 구현했고, 나머지 폴더의 `index.mjs`는 공통 코어의 해석기 확장 지점에 연결된 시작 틀이다. `a-router`의 현재 앱 API 연결·실행법은 [담당 안내](agents/a-router/README.md)를 따른다.
 
 ```sh
 npm run demo:agent -- a-router

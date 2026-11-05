@@ -14,7 +14,7 @@ test('all agent workspaces preserve common ranking and skip extension for clear 
     let calls=0;
     const agent=loadAgent(id,{interpret:async()=>{calls++;throw Error('unexpected extension');}});
     const actual=await agent.runTurn({session,products,request:clearRequest});
-    assert.deepEqual(actual,expected);assert.equal(calls,0);
+    assert.deepEqual(actual.session,expected.session);assert.deepEqual(actual.result,expected.result);assert.equal(actual.kind,expected.kind);assert.equal(calls,0);
   }
 });
 
