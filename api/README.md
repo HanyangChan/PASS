@@ -35,7 +35,7 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 - 요청 `agents`: `disabled`(끈 에이전트: occasion, spending, taste, relationship), 현재 받는 사람의 `memory`, `purchases`(카테고리·금액·만족도), `calendar`(MM-DD 일정). 서버는 검증만 하고 저장하지 않습니다.
 - 응답: 기존 `session`, `view`, `message`에 `mode: 'agents'`, `agents`(귀속, 의견, 제안, 기억 제안)를 덧붙입니다. 제안은 앱이 `conditions` 요청으로 적용할 때만 반영됩니다.
-- Gemini는 규칙으로 이해하지 못한 발화에만 턴당 최대 1회 호출합니다. 모델은 `AGENTS_MODEL`(기본 `gemini-3.5-flash-lite`). 실패하면 조건을 유지하고 질문합니다. 구매·캘린더는 Gemini에 보내지 않습니다.
+- 귀속 LLM은 규칙으로 이해하지 못한 발화에만 턴당 최대 1회 호출합니다. `AGENTS_LLM=deepseek|gemini`(기본: `DEEPSEEK_API_KEY`가 있으면 DeepSeek). DeepSeek은 OpenAI 호환 주소 `DEEPSEEK_BASE_URL`과 `DEEPSEEK_MODEL`을 씁니다. 예: 한양대 AI부트캠프 프록시 `https://llm.ai.hy.miwork.ai/v1`, `deepseek-v4-flash`. Gemini는 `AGENTS_MODEL`(기본 `gemini-3.5-flash-lite`). 실패하면 조건을 유지하고 질문합니다. 구매·캘린더는 LLM에 보내지 않습니다. 키는 `.dev.vars`나 Cloudflare secret에만 둡니다.
 - LangGraph는 `nodejs_compat` 플래그가 필요합니다. `npm run deploy`/`build`/`dev:worker`가 먼저 `baseline/agents/d-langgraph`를 설치합니다. Node 테스트는 `npm --prefix ../baseline/agents/d-langgraph ci` 후 `tests/agents.test.mjs`까지 실행합니다(미설치 시 해당 테스트 건너뜀).
 - 2026-11-05 검증: 로컬 workerd(`wrangler dev --local`, `nodejs_compat`)에서 그래프 실행, dry-run 번들 gzip 591KiB.
 
