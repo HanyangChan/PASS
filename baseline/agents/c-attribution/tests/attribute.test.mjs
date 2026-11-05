@@ -99,7 +99,9 @@ test('the DeepSeek attributor sends the schema prompt and maps its JSON like Gem
   assert.equal(sent.url, 'https://proxy.example/v1/chat/completions');
   assert.equal(sent.auth, 'Bearer k');
   assert.equal(sent.body.response_format.type, 'json_object');
+  assert.deepEqual(sent.body.reasoning, { enabled: false });
   assert.deepEqual(out.patch.preferences, ['category:beauty']);
+  assert.equal(out.items.find(i => i.holder === 'recipient').person, '어머니');
   const failing = createDeepSeekAttributor({ apiKey: 'k', fetcher: async () => new Response('{"error":"bad key k"}', { status: 401 }) });
   const failed = await attribute({ text: '센스 있는 선물로 골라줘', state: mother(), llm: failing });
   assert.equal(failed.provider, 'llm_failed');

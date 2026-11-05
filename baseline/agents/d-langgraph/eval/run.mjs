@@ -8,17 +8,22 @@ import { extract, initial } from '../../../src/vendor/engine.mjs';
 import { toEngineProduct } from '../../../src/vendor/catalog.mjs';
 import { PERSON_FIELDS } from '../../c-attribution/attribute.mjs';
 import { createGeminiCall, fromItems, PROMPT_VERSION } from '../../c-attribution/gemini.mjs';
+import { createDeepSeekCall } from '../../c-attribution/deepseek.mjs';
 import { runAgentTurn, agentNames } from '../orchestrator.mjs';
 
 const here = p => fileURLToPath(new URL(p, import.meta.url));
 const live = process.argv.includes('--live');
-const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+// LLM_PROVIDER=deepseek uses DEEPSEEK_* settings and its own cassette, so recordings never mix.
+const deepseek = process.env.LLM_PROVIDER === 'deepseek';
+const model = deepseek ? process.env.DEEPSEEK_MODEL || 'deepseek-chat' : process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const { scenarios, defaults, version } = JSON.parse(readFileSync(here('./scenarios.json'), 'utf8'));
 const rows = JSON.parse(readFileSync(here('../../../../supabase/seed/products-amazon.json'), 'utf8'));
-const cassettePath = here('./cassette.json');
+const cassettePath = here(deepseek ? './cassette-deepseek.json' : './cassette.json');
 const cassette = existsSync(cassettePath) ? JSON.parse(readFileSync(cassettePath, 'utf8')) : { model, prompt: PROMPT_VERSION, entries: {} };
 if (cassette.prompt !== PROMPT_VERSION) throw new Error(`cassette prompt ${cassette.prompt} != ${PROMPT_VERSION}; re-record with --live`);
-const call = live ? createGeminiCall({ apiKey: process.env.GEMINI_API_KEY, model }) : null;
+const call = !live ? null : deepseek
+  ? createDeepSeekCall({ apiKey: process.env.DEEPSEEK_API_KEY, model, ...(process.env.DEEPSEEK_BASE_URL ? { baseUrl: process.env.DEEPSEEK_BASE_URL } : {}), timeoutMs: 30000 })
+  : createGeminiCall({ apiKey: process.env.GEMINI_API_KEY, model });
 
 // The cassette stores Gemini's labelled items per (message, recipient); mapping stays in code.
 const used = new Set();
@@ -123,7 +128,7 @@ ${table}
 
 ${failures.length ? failures.map(r => `- ${r.condition} ${r.id} (${r.type}): ${Object.entries({ violation: r.violation, leaked: r.leaked, ask: !r.askRight, attribution: r.holdersRight < r.holdersTotal, hit: r.hit === false, suggestion: r.suggestRight === false, falseSuggest: r.falseSuggest > 0, opinion: r.opinionRight === false }).filter(([, v]) => v).map(([k]) => k).join(', ')}`).join('\n') : '없음'}
 `;
-writeFileSync(here('./results.md'), md);
+writeFileSync(here(deepseek ? './results-deepseek.md' : './results.md'), md);
 writeFileSync(here('./results.json'), JSON.stringify(results, null, 1) + '\n');
 console.log(table);
 console.log(`\n${failures.length} unexpected C/D results; details in eval/results.md`);

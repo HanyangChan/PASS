@@ -1,6 +1,6 @@
 {
  "model": "gemini-3.5-flash-lite",
- "prompt": "c-attribution-v2",
+ "prompt": "c-attribution-v3",
  "entries": {
   "어머니|엄마는 단 거 별로 안 좋아해": {
    "parsed": {
@@ -17,14 +17,14 @@
     ],
     "question": null
    },
-   "ms": 1603
+   "ms": 1423
   },
   "어머니|엄마가 요즘 무릎이 안 좋으셔서 운동은 못 하셔": {
    "parsed": {
     "items": [
      {
       "holder": "recipient",
-      "person": "어머니",
+      "person": "엄마",
       "field": "exclude_category",
       "category": "fitness",
       "ingredient": null,
@@ -34,7 +34,7 @@
     ],
     "question": null
    },
-   "ms": 1288
+   "ms": 6628
   },
   "어머니|어머니는 피부 관리에 관심이 많으셔": {
    "parsed": {
@@ -51,14 +51,14 @@
     ],
     "question": null
    },
-   "ms": 10263
+   "ms": 1155
   },
   "어머니|센스 있는 선물로 골라줘": {
    "parsed": {
     "items": [],
     "question": null
    },
-   "ms": 2748
+   "ms": 1173
   }
  },
  "recorded": "2026-11-05"
