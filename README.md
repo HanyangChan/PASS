@@ -114,3 +114,7 @@ A안 Router는 OpenAI 호환 플랫폼의 `deepseek-v4-flash`를 지원한다. �
 LLM 연결부만 공통으로 사용할 때는 [`baseline/llm/`](baseline/llm/README.md)를 가져오면 됩니다. 공통 main에는 이 독립 모듈만 추가했으며 Router·조건 추출 프롬프트는 각 에이전트에서 구성합니다.
 
 A안의 Supervisor·전문 서브 에이전트·종합 판단 초기 구현을 추가했습니다. `A_ROUTER_LLM_MODE=subagents`로 시험하고, 설정을 생략하면 기존 `single`을 유지합니다. [실행·진단 안내](baseline/agents/a-router/README.md).
+
+## PR 로컬 검토
+
+Node 22.13 이상에서 저장소 루트의 `npm run setup` → `npm run setup:local` → `npm run dev:api` 순으로 실행합니다. 웹은 다른 터미널에서 `npm --prefix mobile run web -- --port 8766`으로 시작합니다. A 규칙 모드가 기본이며 서버 채팅은 Supabase 로그인이 필요합니다. B/C에는 서버 LLM 키가 추가로 필요합니다. 기존 환경 파일은 덮어쓰지 않습니다. [설정·포트·CORS·상태 확인 안내](api/README.md#로컬-시험)를 참고하세요.

@@ -1,7 +1,10 @@
-# Local development only. Copy to .dev.vars and never commit real keys.
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_me
-APP_ORIGINS=http://127.0.0.1:8766
+# Local development only. npm run setup:local creates this without overwriting existing files.
+# Blank Supabase values inherit mobile/.env.local public settings.
+# Blank APP_ORIGINS allows localhost/127.0.0.1 ports 8766, 8081, 19006 in the Node dev server.
+# API_PORT=8788
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+APP_ORIGINS=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.6-flash
 
@@ -18,3 +21,5 @@ LLM_API_KEY=
 
 # single (default) or supervised multi-agent interpretation
 A_ROUTER_LLM_MODE=single
+
+# Luna experiment: LLM_MODEL=gpt-5.6-luna and LLM_REASONING_ENABLED=false

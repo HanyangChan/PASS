@@ -1111,7 +1111,7 @@ function usePassState() {
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
-  const [agentMode, setAgentMode] = useState<ChatAgentMode>('full-chat');
+  const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   const changeAgentMode = useCallback((next: ChatAgentMode) => {

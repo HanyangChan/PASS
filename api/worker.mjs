@@ -81,7 +81,8 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, catalog: CATALOG_ID, rankingPolicy: RANKING_POLICY, products: count ?? 0 });
+        const availableAgents=['a-router',...(llm.provider==='openai-compatible'&&llm.options.apiKey?['full-chat','full-chat-feedback-2']:[])];
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, rankingPolicy: RANKING_POLICY, products: count ?? 0 },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });

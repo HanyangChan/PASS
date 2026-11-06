@@ -4,13 +4,26 @@
 
 ## 로컬 시험
 
-Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑터는 **동일한 Worker 핸들러**를 127.0.0.1:8788에 연결합니다. 기존 `mobile/.env.local`의 공개 Supabase 설정을 읽습니다. 키는 출력하지 않습니다.
+Node 22.13 이상을 사용합니다. **저장소 루트**에서 다음 순서로 실행하세요.
 
-- 모바일 `.env.local`: `EXPO_PUBLIC_CHAT_API_URL=http://127.0.0.1:8788`. 환경 변수 변경 뒤 웹 export/앱 재시작이 필요합니다.
-- 서버 `.dev.vars`: 필요한 경우 `GEMINI_API_KEY=...`, `GEMINI_MODEL=...`. 이 파일은 Git에서 제외됩니다. 모델은 프로젝트에서 사용 가능한 Gemini 모델 ID로 지정합니다. 저장 후 API를 재시작합니다.
-- 키가 비어 있으면 서버 규칙 기반 추천으로 동작하고 앱에 그 방식을 표시합니다. 키가 존재할 때 Gemini가 실패하면 503을 반환하며 로컬 해석으로 바꿔 처리하지 않습니다.
-- `GET /health`(`catalog: amazon-kaggle-v1`, `products`: 활성 상품 수), `POST /api/chat` 및 웹 CORS 사전 요청 `OPTIONS /api/chat`를 제공합니다. POST는 Supabase access token의 Bearer 인증이 필요합니다.
-- 실기기에서 127.0.0.1은 해당 기기입니다. 실기기 시험에는 HTTPS 서버 주소를 사용합니다. HTTP 예외는 로컬 웹 시험의 localhost/127.0.0.1만 허용합니다.
+```sh
+npm run setup
+npm run setup:local
+npm run dev:api
+# 다른 터미널, 저장소 루트
+npm --prefix mobile run web -- --port 8766
+```
+
+`setup`은 의존성을 설치합니다. `setup:local`은 공개 예제를 바탕으로 `mobile/.env.local`과 `api/.dev.vars`를 만들고 모바일 API 주소를 `http://127.0.0.1:8788`로 지정합니다. 기존 파일은 덮어쓰지 않으므로 기존 API 주소가 운영 주소라면 직접 수정한 뒤 웹/앱을 재시작하세요. 실제 Supabase 프로젝트를 따로 쓰려면 본인의 공개 URL/Publishable key를 설정하고 상품 테이블/인증을 준비하세요. 예제에 들어 있는 공개 프로젝트는 해당 프로젝트의 접근 정책과 가용성에 따릅니다.
+
+- API 폴더 안에서는 `npm run dev`입니다. `npm run dev:api`는 저장소 루트 명령입니다.
+- 앱과 로컬 API의 기본 방식은 A입니다. 모델 키 없이 명확한 규칙 요청을 검토할 수 있습니다. 미해석 문장은 확인 질문으로 처리합니다. B/C는 서버의 `LLM_PROVIDER=openai-compatible`, 유효한 `LLM_API_KEY`와 사용 가능한 모델이 필요합니다. 명시적인 모델 선택이 실패해도 A로 몰래 전환하지 않습니다.
+- `api/.dev.vars`의 빈 값/예제용 Supabase 값은 `mobile/.env.local`의 정상 공개 설정을 덮어쓰지 않습니다. 실제 값은 서버 파일 → 프로세스 환경 변수 순으로 우선합니다. 비밀 키를 `EXPO_PUBLIC_*`에 넣지 마세요.
+- 로컬 Node 서버의 `APP_ORIGINS`가 비어 있으면 localhost/127.0.0.1의 8766, 8081, 19006 포트만 허용합니다. 다른 웹 주소는 실제 origin을 명시하세요. Worker 운영 환경에는 이 개발용 기본값을 적용하지 않습니다.
+- 기본 API 포트는 8788입니다. 사용 중이면 이전 서버를 종료하거나 `API_PORT=8789 npm run dev:api`처럼 바꾸고 모바일 API 주소도 맞추세요. 서버는 기본적으로 127.0.0.1에 바인딩합니다. 실기기에는 접근 가능한 HTTPS API가 필요합니다.
+- 시작 시 필수 Supabase/모드 설정 오류를 검사합니다. `curl http://127.0.0.1:8788/health`에서 `ok:true`, 상품 수와 `availableAgents`를 확인하세요. 카탈로그 로드 실패는 HTTP 503입니다. 이 검사는 모델 키 자체의 유효성/모델 응답까지 시험하지는 않습니다.
+- 채팅은 **Supabase 로그인**이 필요합니다. API 주소만 열거나 access token 없이 POST하면 인증 오류가 정상입니다. 로그인·키 없이 코드 검토는 `npm test`, 실제 모델 연결 확인은 서버 키 설정 후 `npm run smoke:llm`을 사용하세요.
+- 설정 파일은 Git에서 제외됩니다. 로컬의 Luna 설정은 PR을 받은 사람에게 자동 전달되지 않습니다. Luna 실험은 `LLM_MODEL=gpt-5.6-luna`, `LLM_REASONING_ENABLED=false`를 설정하며 같은 게이트웨이에서 해당 모델을 사용할 권한이 필요합니다.
 
 ## 배포
 
@@ -57,7 +70,7 @@ Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규�
 
 `A_ROUTER_LLM_MODE=single|subagents`로 A안 해석기를 선택한다. 기본값은 `single`이다. `subagents`는 OpenAI 호환 공급자에서 Supervisor → 필요한 역할 병렬 실행 → 종합 판단을 수행한다. 규칙 경로는 모델을 호출하지 않는다. 현재 앱 응답 계약은 유지하며 `routing.subagents`에 안전한 단계 진단을 추가한다. `GET /health`의 `llmMode`로 선택을 확인한다. 상세 실행·제한은 [A안 안내](../baseline/agents/a-router/README.md)를 따른다.
 
-`LLM_REASONING_ENABLED=false`를 명시하면 호환 전송에 `reasoning.enabled=false`를 전달한다. 단일 모드는 생략 시 공급자 기본값을 유지하고, 서브 모드의 DeepSeek 단계는 짧은 JSON 분석을 위해 기본적으로 비사고 설정을 사용한다. 공급자 지원이 필요하며 다른 모델로 자동 전환하지 않는다.
+`LLM_REASONING_ENABLED=false`를 명시하면 호환 전송에 `reasoning.enabled=false`를 전달한다. A 단일 모드와 B/C의 DeepSeek 단계는 생략 시 비사고 설정을 사용하고, 서브 모드의 DeepSeek 단계는 짧은 JSON 분석을 위해 기본적으로 비사고 설정을 사용한다. 공급자 지원이 필요하며 다른 모델로 자동 전환하지 않는다.
 
 ## 채팅 화면의 A/B/C 선택
 
