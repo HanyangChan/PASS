@@ -1,0 +1,209 @@
+{
+  "generatedAt": "2026-11-06T11:39:04.743Z",
+  "catalog": "amazon-snapshot",
+  "passed": true,
+  "runs": [
+    {
+      "mode": "full-chat",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "이렇게 이해했어요: 어머니 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 1446
+        },
+        {
+          "text": "어",
+          "message": "선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 1725
+        },
+        {
+          "text": "그래",
+          "message": "선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 1065
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "이렇게 이해했어요: 어머니 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 2592
+        },
+        {
+          "text": "어",
+          "message": "선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 7665
+        },
+        {
+          "text": "그래",
+          "message": "선호·예산대·상품 다양성을 함께 고려했어요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 1999
+        }
+      ]
+    }
+  ]
+}

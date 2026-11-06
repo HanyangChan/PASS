@@ -28,6 +28,11 @@ test('network and API failures reject instead of applying a local fallback', asy
     await assert.rejects(service.send(session(), '부모님', []));
   }
 });
+
+test('AI interpretation failures display a specific safe message instead of a connection error',async()=>{
+ const service=createServerChatService('https://api.example/api/chat',auth(),'owner',async()=>Response.json({code:'interpretation_unavailable',error:'private upstream details'},{status:503}));
+ await assert.rejects(service.send(session(),'향이 강한 제품은 빼줘',[]),error=>/조건 해석을 완료하지 못했어요/.test(error.message)&&!error.message.includes('private'));
+});
 test('account changes while response is in flight reject the old response', async () => {
   let current = 'owner';
   const identity = { getSession: async () => ({ data: { session: { access_token: 'test.jwt', user: { id: current } } }, error: null }) };
@@ -44,4 +49,21 @@ test('cancelling a request prevents delivering an otherwise valid response', asy
   const controller = new AbortController();
   const service = createServerChatService('https://api.example/api/chat', auth(), 'owner', async (url, options) => { const response = await transport.fetch(new Request(url, options), config); controller.abort(); return response; });
   await assert.rejects(service.send(session(), '부모님', [], 'typed', controller.signal), /취소/);
+});
+
+test('selected response mode is sent for chat, edits and view and verified in the response', async () => {
+  const posted=[];
+  const service=createServerChatService('https://api.example/api/chat',auth(),'owner',async(url,options)=>{
+    posted.push(JSON.parse(options.body));
+    return transport.fetch(new Request(url,options),{...config,CHAT_AGENT:'full-chat',LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'synthetic-secret'});
+  });
+  const turn=await service.send(session(),'어머니 예산 5만원 배송비 포함',[],'typed',undefined,'a-router');
+  await service.updateConditions(turn.session,{budget:{amount_krw:70000}},true,undefined,'a-router');
+  await service.view(turn.session,undefined,'full-chat-feedback-2');
+  assert.deepEqual(posted.map(v=>v.agentMode),['a-router','a-router','full-chat-feedback-2']);
+  const mismatch=createServerChatService('https://api.example/api/chat',auth(),'owner',async(url,options)=>{
+    const raw=JSON.parse(options.body);delete raw.agentMode;
+    return transport.fetch(new Request(url,{...options,body:JSON.stringify(raw)}),{...config,CHAT_AGENT:'a-router'});
+  });
+  await assert.rejects(mismatch.view(turn.session,undefined,'full-chat'),/선택한 응답 방식/);
 });

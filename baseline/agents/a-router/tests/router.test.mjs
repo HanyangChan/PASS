@@ -6,6 +6,21 @@ import { products } from '../../../examples/catalog.mjs';
 const ready=async()=> (await runTurn({session:createSession('router'),products,request:{kind:'patch',expectedVersion:0,patch:{recipients:['어머니'],quantity:1,same_product:true,budget:{amount_krw:50000,scope:'per_set',shipping_included:true}}}})).session;
 const send=(agent,session,text,extra={})=>agent.runTurn({session,products,request:{kind:'message',expectedVersion:session.version,text},...extra});
 
+test('food exclusion is applied while shipping is pending and scent has an explicit capability notice',async()=>{
+ const session=await ready();session.state.budget.shipping_included=null;session.state.preferences=['category:coffee_tea','type:tea'];session.state.excluded_ingredients=['우유'];
+ const agent=createAgent({interpret:async()=>{throw Error('must use rules');}});
+ const out=await send(agent,session,'향이 강한 제품은 빼고, 먹는 것도 제외해줘.',{pendingQuestion:'예산에 배송비도 포함할까요?'});
+ assert.equal(out.kind,'question');assert.match(out.question,/배송비/);assert.equal(out.routing.llmCalls,0);
+ assert.deepEqual(out.session.state.excluded_categories,['food','snack','coffee_tea','health']);assert.deepEqual(out.session.state.preferences,['avoid_fragrance']);
+ assert.deepEqual(out.session.state.excluded_ingredients,['우유']);
+ const next=await send(agent,out.session,'배송비 포함');
+ assert.equal(next.kind,'recommendation');assert.deepEqual(next.session.state.excluded_categories,out.session.state.excluded_categories);
+ const scent=await send(agent,await ready(),'향이 강한 제품은 제외해줘.');
+ assert.equal(scent.kind,'recommendation');assert.deepEqual(scent.session.state.excluded_categories,[]);assert.deepEqual(scent.session.state.preferences,['avoid_fragrance']);
+ const cancelled=await send(agent,next.session,'향 제품 제외 취소');
+ assert.ok(!cancelled.session.state.preferences.includes('avoid_fragrance'));assert.deepEqual(cancelled.session.state.excluded_categories,next.session.state.excluded_categories);
+});
+
 test('prototype conditions, Korean money, negation and partial edits use zero model calls',async()=>{
  let calls=0;const agent=createAgent({interpret:async()=>{calls++;throw Error('unexpected');}});
  let session=await ready();

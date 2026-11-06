@@ -1,0 +1,270 @@
+{
+  "runs": [
+    {
+      "reasoning": "omitted",
+      "turns": [
+        {
+          "text": "친구 생일 선물을 찾고 있어. 예산은 10만 원이고 실용적인 걸 좋아해",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 함께 요청한 지원 가능한 조건은 반영했으며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.",
+          "question": {
+            "key": null,
+            "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+            "choices": [
+              "덜 단 상품으로",
+              "견과류는 빼줘"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          }
+        }
+      ],
+      "wire": [
+        {
+          "status": 200,
+          "finishReason": "stop",
+          "hasContent": true,
+          "usage": {
+            "completion_tokens": 75,
+            "prompt_tokens": 1178,
+            "total_tokens": 1253,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.000092002,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.000092002,
+              "upstream_inference_prompt_cost": 0.000069502,
+              "upstream_inference_completions_cost": 0.0000225
+            }
+          }
+        }
+      ]
+    },
+    {
+      "reasoning": false,
+      "turns": [
+        {
+          "text": "친구 생일 선물을 찾고 있어. 예산은 10만 원이고 실용적인 걸 좋아해",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 함께 요청한 지원 가능한 조건은 반영했으며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.",
+          "question": {
+            "key": null,
+            "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+            "choices": [
+              "덜 단 상품으로",
+              "견과류는 빼줘"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          }
+        }
+      ],
+      "wire": [
+        {
+          "status": 200,
+          "finishReason": "stop",
+          "hasContent": true,
+          "usage": {
+            "completion_tokens": 75,
+            "prompt_tokens": 1178,
+            "total_tokens": 1253,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.00013505,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.00013505,
+              "upstream_inference_prompt_cost": 0.0001178,
+              "upstream_inference_completions_cost": 0.00001725
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

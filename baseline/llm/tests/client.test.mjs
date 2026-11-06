@@ -4,6 +4,18 @@ import {createLlmClient,createLlmFromEnv,completionUrl} from '../index.mjs';
 const messages=[{role:'system',content:'Your own prompt.'},{role:'user',content:'Hello'}];
 const reply=(text='Hello',extra={})=>Response.json({choices:[{finish_reason:'stop',message:{content:text,reasoning_content:'hidden reasoning'}}],usage:{prompt_tokens:10,completion_tokens:5,total_tokens:15},...extra});
 
+test('GPT-5.6 Luna maps thinking controls to native OpenAI options without changing other models',async()=>{
+ const seen=[];
+ const client=createLlmClient({apiKey:'test-key',model:'gpt-5.6-luna',fetcher:async(_,options)=>{seen.push(JSON.parse(options.body));return reply();}});
+ await client.complete({messages,reasoningEnabled:false,maxTokens:900});
+ await client.complete({messages,reasoningEnabled:true});
+ await client.complete({messages,reasoningEffort:'low'});
+ assert.equal(seen[0].reasoning_effort,'none');assert.equal(seen[0].temperature,0);assert.equal(seen[0].max_completion_tokens,900);
+ assert.ok(!('reasoning' in seen[0]));assert.ok(!('max_tokens' in seen[0]));
+ assert.equal(seen[1].reasoning_effort,'medium');assert.ok(!('temperature' in seen[1]));
+ assert.equal(seen[2].reasoning_effort,'low');assert.ok(!('temperature' in seen[2]));
+});
+
 test('generic completion sends caller messages without gift or Router dependencies',async()=>{
  let usage;
  const client=createLlmClient({apiKey:'test-key',onUsage:v=>{usage=v;},fetcher:async(url,options)=>{

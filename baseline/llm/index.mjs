@@ -30,6 +30,13 @@ export function createLlmClient({
     const payload={model,stream:false,temperature,max_tokens:maxTokens,messages:messages.map(({role,content})=>({role,content}))};
     if(reasoningEnabled!==undefined)payload.reasoning={enabled:reasoningEnabled};
     if(reasoningEffort!==undefined)payload.reasoning_effort=reasoningEffort;
+    // Luna uses OpenAI reasoning_effort, not the gateway's DeepSeek thinking switch.
+    if(model==='gpt-5.6-luna') {
+      payload.max_completion_tokens=maxTokens;delete payload.max_tokens;delete payload.reasoning;
+      const effort=reasoningEffort??(reasoningEnabled===false?'none':reasoningEnabled===true?'medium':undefined);
+      if(effort!==undefined)payload.reasoning_effort=effort;
+      if(effort!=='none')delete payload.temperature;
+    }
     if(responseFormat==='json_object')payload.response_format={type:'json_object'};
     if(responseFormat==='json_schema')payload.response_format={type:'json_schema',json_schema:{name:schemaName,strict:true,schema}};
     const controller=new AbortController();let timedOut=false;

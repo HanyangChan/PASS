@@ -1,0 +1,492 @@
+{
+  "generatedAt": "2026-11-06T11:33:36.151Z",
+  "runs": [
+    {
+      "mode": "full-chat",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "향이 강한 것과 먹는 것을 제외하면 남는 카테고리가 거의 없네요. 카테고리 제한을 완화하거나 선호 카테고리를 알려주시면 맞춰 드릴게요.",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health",
+                  "beauty",
+                  "makeup",
+                  "personal_care"
+                ]
+              }
+            },
+            {
+              "action": "clarify",
+              "question": "향이 강한 것과 먹는 것을 제외하면 남는 카테고리가 거의 없네요. 카테고리 제한을 완화하거나 선호 카테고리를 알려주시면 맞춰 드릴게요."
+            }
+          ],
+          "elapsedMs": 2844
+        },
+        {
+          "text": "어",
+          "message": "어머니 선물로 어떤 종류를 원하시나요? 예를 들어 주얼리, 가방, 시계, 홈데코 등이 가능해요.",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "어머니 선물로 어떤 종류를 원하시나요? 예를 들어 주얼리, 가방, 시계, 홈데코 등이 가능해요."
+            }
+          ],
+          "elapsedMs": 741
+        },
+        {
+          "text": "그래",
+          "message": "주얼리, 가방, 시계, 홈데코 중 어떤 종류가 좋으세요?",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "주얼리, 가방, 시계, 홈데코 중 어떤 종류가 좋으세요?"
+            }
+          ],
+          "elapsedMs": 1482
+        }
+      ]
+    },
+    {
+      "mode": "full-chat",
+      "scenario": "confirmation",
+      "turns": [
+        {
+          "text": "어",
+          "message": "이렇게 이해했어요: 어머니 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health",
+            "beauty",
+            "personal_care"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health",
+                  "beauty",
+                  "personal_care"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "result"
+            }
+          ],
+          "elapsedMs": 1469
+        },
+        {
+          "text": "그래",
+          "message": "네, 이어서 궁금한 점이나 바꾸고 싶은 선물 조건을 알려주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health",
+            "beauty",
+            "personal_care"
+          ],
+          "actions": [
+            {
+              "action": "respond",
+              "type": "acknowledge"
+            }
+          ],
+          "elapsedMs": 1393
+        }
+      ]
+    },
+    {
+      "mode": "full-chat",
+      "scenario": "inverted_question",
+      "turns": [
+        {
+          "text": "어",
+          "message": "네, 이어서 궁금한 점이나 바꾸고 싶은 선물 조건을 알려주세요.",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "respond",
+              "type": "acknowledge"
+            }
+          ],
+          "elapsedMs": 1436
+        },
+        {
+          "text": "그래",
+          "message": "요청을 끝까지 확인하지 못했어요. 조건은 유지했어요. 요청을 나누어 다시 알려주세요.",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health",
+                  "beauty",
+                  "makeup",
+                  "personal_care"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "acknowledge"
+            }
+          ],
+          "elapsedMs": 3357
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "향이 강한 제품을 제외하시려는 건가요? 어떤 종류의 향(예: 향수, 방향제, 화장품 향)을 말씀하시는 건지 알려주시면 조건에 맞게 조정하겠습니다.",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health",
+                  "beauty",
+                  "personal_care"
+                ]
+              }
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "clarify",
+              "question": "향이 강한 제품을 제외하시려는 건가요? 어떤 종류의 향(예: 향수, 방향제, 화장품 향)을 말씀하시는 건지 알려주시면 조건에 맞게 조정하겠습니다."
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 4335
+        },
+        {
+          "text": "어",
+          "message": "어떤 종류의 향을 제외할까요? (향수, 방향제, 화장품 향 등)",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "어떤 종류의 향을 제외할까요? (향수, 방향제, 화장품 향 등)"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 1828
+        },
+        {
+          "text": "그래",
+          "message": "향을 제외하는 범위를 확인할게요. 향수나 방향제 같은 '향기 제품 자체'를 제외하는 건가요, 아니면 화장품이나 세제처럼 '향이 첨가된 제품'도 모두 제외할까요?",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "향을 제외하는 범위를 확인할게요. 향수나 방향제 같은 '향기 제품 자체'를 제외하는 건가요, 아니면 화장품이나 세제처럼 '향이 첨가된 제품'도 모두 제외할까요?"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 2459
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "confirmation",
+      "turns": [
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산을 올리거나 제외 조건을 조정할까요?",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "acknowledge"
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "premature_finish",
+                "wrong_response"
+              ],
+              "feedback": "검색 결과 조건에 맞는 상품이 없다는 관측이 있는데, 단순 인사(acknowledge)로 끝내면 안 됩니다. 사용자에게 조건 조정(예산·제외 조건)을 제안하거나 대안을 묻는 응답을 하세요."
+            },
+            {
+              "action": "clarify",
+              "question": "조건에 맞는 상품이 없어요. 예산을 올리거나 제외 조건을 조정할까요?"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 7694
+        },
+        {
+          "text": "그래",
+          "message": "예산을 올릴까요, 아니면 제외 조건을 조정할까요?",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "예산을 올릴까요, 아니면 제외 조건을 조정할까요?"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 1419
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "inverted_question",
+      "turns": [
+        {
+          "text": "어",
+          "message": "향이 강한 제품(향수·방향제 등)도 제외할까요?",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "clarify",
+              "question": "향이 강한 제품을 제외하고, 어떤 종류의 선물을 원하시나요?"
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "unnecessary_question"
+              ],
+              "feedback": "이미 사용자가 향이 강한 제품 제외와 음식 제외를 명확히 요청했고, 현재 질문에 대한 확인이 필요합니다. 새 질문을 추가하지 말고 현재 질문에 대한 답변을 유도하세요."
+            },
+            {
+              "action": "clarify",
+              "question": "향이 강한 제품을 제외하고, 음식도 제외할까요?"
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "wrong_response"
+              ],
+              "feedback": "사용자가 이미 '먹는 것도 제외'라고 명시했으므로 음식 제외 여부를 다시 묻지 말고, 향이 강한 제품 제외만 확인하는 질문으로 수정하세요."
+            },
+            {
+              "action": "clarify",
+              "question": "향이 강한 제품(향수·방향제 등)도 제외할까요?"
+            }
+          ],
+          "elapsedMs": 5122
+        },
+        {
+          "text": "그래",
+          "message": "향이 강한 제품을 제외하면 남는 카테고리가 거의 없어요. 어떤 선물을 원하시나요? (예: 주얼리, 시계, 가방, 액세서리 등)",
+          "question": "issue",
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "wrong_response"
+              ],
+              "feedback": "사용자가 '그래'라고 답했으므로 향이 강한 제품(향수·방향제 등)을 제외 카테고리에 추가해야 합니다. 현재 패치는 기존 제외 카테고리만 유지하고 향 관련 항목을 추가하지 않았습니다."
+            },
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health",
+                  "beauty",
+                  "personal_care",
+                  "decor"
+                ]
+              }
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "clarify",
+              "question": "향이 강한 제품을 제외하면 남는 카테고리가 거의 없어요. 어떤 선물을 원하시나요? (예: 주얼리, 시계, 가방, 액세서리 등)"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 4091
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+flowchart TB
+  ui["PASS 앱 / 웹 · 모든 사용자 발화"]
+  gate["인증 · 세션 확인"]
+  context["대화 메모리 로드 · 조건 변경 후보 추출"]
+  check{"조건 충돌 / 필수 정보 누락?"}
+  ask["확인 질문 · 상태 저장 · 이번 턴 종료"]
+  plan["Planner · 목표 / 작업 순서 / 성공 조건"]
+  act{"Agent · 다음 행동 선택"}
+  tools["도구 Gateway · 인자 / 권한 / 호출 한도 검증"]
+  engine["공통 PASS 엔진 · 검색 / 비교 / 근거 조회"]
+  db[("동일 상품 DB")]
+  observe["결과 검증 · 제약 충족 / 근거 / 상태 버전"]
+  reflect{"Reflection · 결과가 충분한가?"}
+  draft["답변 초안 · 질문 / 추천 / 설명 / 제안 / 일반 대화"]
+  review{"응답 검증 · 근거 / 조건 / 요청 충족"}
+  repair["지적 사항에 따라 답변 수정"]
+  finish["응답 표시 · 확인된 상태 / 실행 요약 저장"]
+  limit["공통 실행 예산 · 모든 내부 반복 전 검사"]
+  fallback["한도 / 반복 정체 · 검증된 부분 답변 또는 확인 질문"]
+
+  ui --> gate --> context --> check
+  check -->|"누락 / 충돌"| ask
+  ask -->|"화면 표시"| ui
+  check -->|"진행 가능"| plan
+  plan --> act
+  act -->|"도구 필요"| tools
+  tools -->|"허용"| engine
+  engine --- db
+  engine --> observe --> reflect
+  tools -->|"인자 오류 · 수정 피드백"| act
+  reflect -->|"충분"| draft
+  reflect -->|"추가 근거 필요 · 도구 재선택"| act
+  reflect -->|"후보 없음 / 계획 부적합 · 재계획"| plan
+  reflect -->|"사용자 판단 필요"| ask
+  act -->|"도구 불필요 / 근거 확보"| draft
+  review -->|"표현 / 구성 문제"| repair
+  repair --> review
+  draft --> review
+  review -->|"근거 부족"| act
+  review -->|"목표 / 조건 불일치"| plan
+  review -->|"통과"| finish
+  finish -->|"다음 발화"| ui
+  limit -.-> act
+  limit -.-> plan
+  limit -.-> repair
+  limit -->|"한도 도달 / 진행 없음"| fallback
+  fallback --> finish

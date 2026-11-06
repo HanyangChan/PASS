@@ -41,6 +41,7 @@ export function moneyValues(text) {
 export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   let rest=normalizeMoney(text).trim();
   const patch={};
+  const limitations=[];
   if (/나는|저는|제가|내가|주는 사람/.test(rest)) return question('주는 사람과 받는 사람의 취향을 구분해서, 받는 사람의 조건만 알려주세요.');
   if (/최소|이상|하한|최대.*최소/.test(rest)) return question('적용할 예산 상한 하나를 알려주세요.');
   const amounts=moneyValues(rest);
@@ -63,6 +64,14 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
     patch.recipients=unique(recipients);
     if (state.recipients.length && JSON.stringify(patch.recipients)!==JSON.stringify(state.recipients)) state=initial();
   }
+  // Persist the name-based fragrance rule without excluding whole categories.
+  take(/향\s*(?:제품\s*)?(?:제외|조건)\s*(?:해제|취소)|향(?:이|은)?\s*(?:강한|센|진한)\s*(?:제품|상품|것)(?:은|는|도|을)?\s*(?:포함해도\s*돼|제외\s*(?:취소|해제))/g,()=>{patch.preferences=(patch.preferences??state.preferences).filter(p=>p!=='avoid_fragrance');});
+  take(/향(?:이|은)?\s*(?:강한|센|진한)\s*(?:제품|상품|것)(?:은|는|도|을)?\s*(?:빼(?:줘|고)|제외(?:해줘|하고|해)?)/g,()=>{patch.preferences=unique([...(patch.preferences??state.preferences),'avoid_fragrance']);});
+  take(/(?:먹는\s*(?:것|거)|음식|먹거리)(?:은|는|도|을)?\s*(?:빼(?:줘|고)|제외(?:해줘|하고|해)?)/g,()=>{
+    const edible=['food','snack','coffee_tea','health'];
+    patch.excluded_categories=unique([...state.excluded_categories,...edible]);
+    patch.preferences=(patch.preferences??state.preferences).filter(p=>!edible.some(c=>p===`category:${c}`)&&!['type:tea','type:coffee'].includes(p));
+  });
   take(/(\d+(?:\.\d+)?)\s*(만\s*원|천\s*원|원)/g,()=>{patch.budget={...patch.budget,amount_krw:amounts[0]};});
   take(/배송비\s*(?:포함하지\s*않아|포함\s*안\s*해|불포함|제외|별도|빼줘)|상품값만/g,()=>{patch.budget={...patch.budget,shipping_included:false};});
   take(/배송비(?:도|를|는)?\s*포함(?:해줘|해요)?/g,()=>{patch.budget={...patch.budget,shipping_included:true};});
@@ -107,7 +116,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   // Only recognized filler may disappear. Unconsumed text triggers the LLM/clarification route.
   rest=rest.replace(/추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|선물|예산|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|주세요|해주세요|변경|바꿔줘|수정|까지|요/g,'').replace(/[\s,.!?~]/g,'');
   if (rest) return unknown();
-  if (!Object.keys(patch).length) return unknown();
+  if (!Object.keys(patch).length&&!limitations.length) return unknown();
   if (patch.delivery_by!==undefined && patch.delivery_by!==null) {
     const date=new Date(patch.delivery_by);
     if (!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==patch.delivery_by) return question('실제 수령 마감일을 YYYY-MM-DD 형식으로 알려주세요.');
@@ -115,7 +124,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   if (patch.quantity!==undefined && (!Number.isSafeInteger(patch.quantity)||patch.quantity<1||patch.quantity>1000)) return question('수량을 1개 이상으로 알려주세요.');
   const excluded=patch.excluded_categories??state.excluded_categories;
   if ((patch.preferences??[]).some(x=>x.startsWith('category:')&&excluded.includes(x.slice(9)))) return question('선호 상품군과 제외 상품군이 겹쳐요. 적용할 조건을 확인해 주세요.');
-  return {patch,questions:[],unresolved:false,route:'rules'};
+  return {patch,questions:[],unresolved:false,route:'rules',...(limitations.length?{limitations:unique(limitations)}:{})};
 }
 
 export function classifyIntent(text, state) {

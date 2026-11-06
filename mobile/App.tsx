@@ -5,6 +5,7 @@ import React, {
   useRef,
   useMemo,
   useState,
+  useCallback,
 } from 'react';
 import { useRouter } from 'expo-router';
 import {
@@ -40,7 +41,6 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronRight,
-  ArrowLeftRight,
   Star,
   Calendar as CalendarIcon,
   X,
@@ -49,6 +49,9 @@ import SearchIcon from './assets/figma/search.svg';
 import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
+import { ChatPendingIndicator } from './src/ChatPendingIndicator';
+import { AgentModeControl } from './src/AgentModeControl';
+import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { PersonalizationPanel } from './src/PersonalizationPanel';
 import { usePersonalization } from './src/usePersonalization';
@@ -79,6 +82,7 @@ const chatEndpoint = (() => {
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
 type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
+const conditionComparisonEnabled = false;
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
   { key: 'chat', label: 'AI 추천', Icon: Sparkles },
@@ -137,6 +141,9 @@ export function AppContent({
     retrySave,
     recommendation,
     chatPending,
+    agentMode,
+    changeAgentMode,
+    agentConnected,
     chatError,
     sendChat,
     personalization,
@@ -213,7 +220,8 @@ export function AppContent({
     } else close('/');
   };
   const setResultsOpen = (open: boolean) => {
-    if (open) router.push('/results');
+    if (open && conditionComparisonEnabled) router.push('/results');
+    else if (open) return;
     else close('/chat');
   };
   useEffect(() => {
@@ -492,7 +500,7 @@ export function AppContent({
                 {question.key ? question.text : result.message}
               </Text>
               {!question.key && cards(result.items.map(toGift), true)}
-              {!question.key && (
+              {!question.key && conditionComparisonEnabled && (
                 <View style={s.comparison}>
                   <Text style={s.sectionTitle}>조건을 바꿔보면?</Text>
                   <Text style={s.subtitle}>{comparison.message}</Text>
@@ -756,7 +764,6 @@ export function AppContent({
                   }
                   keyboardShouldPersistTaps="handled"
                 >
-                  {chatPending && <Text style={s.demoNote}>추천을 확인하고 있어요…</Text>}
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
@@ -792,18 +799,9 @@ export function AppContent({
                           </View>;
                         })}
                       </ScrollView>
-                      <View style={s.resultButton}>
-                        <Pressable accessibilityRole="button" accessibilityLabel="조건을 바꾸면 추천이 어떻게 달라지는지 비교해보기" onPress={() => setResultsOpen(true)} style={s.compareButton}>
-                          <View style={s.compareIcon}><ArrowLeftRight size={18} color={c.white}/></View>
-                          <View style={s.flex}>
-                            <Text style={s.compareTitle}>조건을 바꾸면 어떻게 달라질까요?</Text>
-                            <Text style={s.compareSubtitle}>예산·조건별 추천 비교해보기</Text>
-                          </View>
-                          <ChevronRight size={20} color={c.primary}/>
-                        </Pressable>
-                      </View>
                     </>
                   )}
+                  {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
                   <ScrollView
@@ -820,6 +818,7 @@ export function AppContent({
                     ))}
                   </ScrollView>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
+                  <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={s.inputShell}>
@@ -1112,8 +1111,14 @@ function usePassState() {
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
+  const [agentMode, setAgentMode] = useState<ChatAgentMode>('full-chat');
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
+  const changeAgentMode = useCallback((next: ChatAgentMode) => {
+    if (chatFlight.current.controller) return;
+    setAgentMode(next);
+    setChatError('');
+  }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
   const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
     if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
@@ -1129,15 +1134,15 @@ function usePassState() {
       const requestSession = recalled.session;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
       let turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal)
-          : await serverChat.view(session, controller.signal)
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agentMode)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode)
+          : await serverChat.view(session, controller.signal, agentMode)
         : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
       if (JSON.stringify(protectedSession) !== JSON.stringify(turn.session)) {
         const safe = serverChat
-          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal)
+          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal, agentMode)
           : chatService.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
         assertSameRecipient(requestSession, safe.session);
         if (JSON.stringify(protectRememberedAllergies(safe.session, personalization.data)) !== JSON.stringify(safe.session)) throw new Error('저장한 제외 조건을 적용하지 못했어요. 다시 시도해주세요.');
@@ -1251,6 +1256,9 @@ function usePassState() {
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
     recommendation,
     chatPending,
+    agentMode,
+    changeAgentMode,
+    agentConnected: Boolean(serverChat),
     chatError,
     personalization,
     appliedMemory,
@@ -1653,11 +1661,6 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  resultButton: { marginHorizontal: 16, marginVertical: 4 },
-  compareButton: { backgroundColor: c.white, borderWidth: 1.5, borderColor: c.primary, borderRadius: 16, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  compareIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' },
-  compareTitle: { fontFamily: f.bold, fontSize: 14, color: c.text, marginBottom: 2 },
-  compareSubtitle: { fontFamily: f.regular, fontSize: 12, color: c.muted },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },

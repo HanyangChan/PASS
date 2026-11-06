@@ -5,6 +5,8 @@ import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } f
 import { apply, recommend, RANKING_POLICY } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
+import { prototypeFullChatTurn, FullChatError } from './full-chat-agent.mjs';
+import { createAgent as createFeedbackAgent } from '../baseline/agents/full-chat-feedback/index.mjs';
 import { resolveLlm } from '../lib/llm-provider.mjs';
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
@@ -77,13 +79,15 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         try { count = (await catalog(env)).length; } catch {}
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, catalog: CATALOG_ID, rankingPolicy: RANKING_POLICY, products: count ?? 0 });
+        const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
+        if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, catalog: CATALOG_ID, rankingPolicy: RANKING_POLICY, products: count ?? 0 });
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
       if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.', code: 'method' }, 405);
       try {
-        if (env.CHAT_AGENT && !['a-router','legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
+        if (env.CHAT_AGENT && !['a-router','full-chat','full-chat-feedback-1','full-chat-feedback-2','legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
         if (!env.IP_LIMITER || !env.USER_LIMITER || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') || new URL(env.SUPABASE_URL).protocol !== 'https:') throw new ApiError(503, 'configuration', '서버 연결 설정이 필요합니다.');
         // Never use a client-supplied owner ID or decoded-but-unverified JWT claims.
         const ip = request.headers.get('CF-Connecting-IP') ?? 'native-local';
@@ -100,15 +104,24 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const user = await auth.json();
         if (!user.id || user.role !== 'authenticated') throw new ApiError(401, 'unauthorized', '다시 로그인해주세요.');
         if (!(await env.USER_LIMITER.limit({ key: user.id })).success) throw new ApiError(429, 'rate_limit', '요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
+        const raw = await readJson(request);
+        if (raw?.agentMode !== undefined && !['a-router','full-chat','full-chat-feedback-2'].includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
+        const chatAgent = raw?.agentMode ?? env.CHAT_AGENT;
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { throw new ApiError(503,'configuration','LLM 연결 설정을 확인해주세요.'); }
-        if (env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
-        if (env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
-        const input = inputOf(await readJson(request));
+        const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(chatAgent);
+        if (fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) throw new ApiError(503,'configuration','전체 채팅 Agent는 서버의 OpenAI 호환 LLM 설정과 키가 필요합니다.');
+        if (!fullChat && env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
+        if (!fullChat && env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
+        const input = inputOf(raw);
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
         let turn, mode = 'rules';
-        if (env.CHAT_AGENT === 'a-router') {
+        if (fullChat) {
+          const feedback=chatAgent!=='full-chat';
+          turn = await prototypeFullChatTurn(input,products,{env,fetcher,signal:request.signal,...(feedback?{agentFactory:createFeedbackAgent,maxReviews:Number(chatAgent.slice(-1))}:{})});
+          mode = turn.mode;
+        } else if (chatAgent === 'a-router') {
           turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options, llmMode: env.A_ROUTER_LLM_MODE || 'single', signal: request.signal });
           mode = turn.mode;
         } else if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
@@ -123,6 +136,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         }
         return json({ ...turn, view: recommendationView(turn.session, products), mode, llmProvider: mode === 'llm' ? llm.provider : null, llmModel: mode === 'llm' ? llm.options.model : null, catalog: CATALOG_ID });
       } catch (error) {
+        if (error instanceof FullChatError) { const code=error.code==='configuration'?'configuration':'agent_unavailable';diagnose(code,503,error.routing);return json({error:'전체 채팅 Agent가 요청을 완료하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code,routing:error.routing},503); }
         if (error instanceof RouterInterpretationError) { diagnose('interpretation_unavailable',503,error.routing); return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503); }
         if (error instanceof ApiError) { if(error.status>=500)diagnose(error.code,error.status); if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
         diagnose(['invalid_input','invalid_interpretation','version_conflict'].includes(error?.code)?error.code:'unavailable',503);

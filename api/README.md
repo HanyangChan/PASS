@@ -43,7 +43,7 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 로컬 `npm run dev`는 기본 `CHAT_AGENT=a-router`로 동작한다. Worker 설정에도 같은 값을 추가했다. 운영 배포는 별도이며 위의 과거 운영 검증 기록이 새 Router 배포를 뜻하지 않는다. `CHAT_AGENT=legacy`는 기존 Gemini 우선 경로를 유지한다.
 
-Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규칙으로 처리하고, 미해석 문장만 기존 Gemini 추출기로 넘긴다. 키가 없으면 질문하며, 공급자 실패는 상태를 바꾸지 않고 503으로 반환한다. 기존 `session/message/view/mode` 응답을 유지하고 `agent/routing` 진단 정보를 추가했다. 서버가 선택하므로 클라이언트가 임의로 에이전트나 모델을 고르지 않는다. 게스트 기기 엔진과 음성·첨부 UI는 그대로다.
+Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규칙으로 처리하고, 미해석 문장만 설정된 추출기로 넘긴다. 키가 없으면 질문하며, 공급자 실패는 상태를 바꾸지 않고 503으로 반환한다. 기존 `session/message/view/mode` 응답을 유지하고 `agent/routing` 진단 정보를 추가했다. 현재는 아래의 허용된 A/B/C 선택을 요청별로 지원하며 모델·공급자·키는 서버 설정을 사용한다. 게스트 기기 엔진과 음성·첨부 UI는 그대로다.
 
 `npm run test:router`(저장소 루트)로 에이전트·API 통합 검사를 실행한다. 모델 키는 서버 `.dev.vars` 또는 Cloudflare secret에만 둔다. [처리 경로·한계·버전 관리 범위](../baseline/agents/a-router/README.md)를 참고한다.
 
@@ -58,3 +58,9 @@ Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규�
 `A_ROUTER_LLM_MODE=single|subagents`로 A안 해석기를 선택한다. 기본값은 `single`이다. `subagents`는 OpenAI 호환 공급자에서 Supervisor → 필요한 역할 병렬 실행 → 종합 판단을 수행한다. 규칙 경로는 모델을 호출하지 않는다. 현재 앱 응답 계약은 유지하며 `routing.subagents`에 안전한 단계 진단을 추가한다. `GET /health`의 `llmMode`로 선택을 확인한다. 상세 실행·제한은 [A안 안내](../baseline/agents/a-router/README.md)를 따른다.
 
 `LLM_REASONING_ENABLED=false`를 명시하면 호환 전송에 `reasoning.enabled=false`를 전달한다. 단일 모드는 생략 시 공급자 기본값을 유지하고, 서브 모드의 DeepSeek 단계는 짧은 JSON 분석을 위해 기본적으로 비사고 설정을 사용한다. 공급자 지원이 필요하며 다른 모델로 자동 전환하지 않는다.
+
+## 채팅 화면의 A/B/C 선택
+
+인증된 `/api/chat` 요청의 선택적 `agentMode` 필드는 `a-router`(A), `full-chat`(B), `full-chat-feedback-2`(C)만 허용한다. 생략하면 기존 서버 `CHAT_AGENT`를 따른다. 다른 값은 400으로 거절한다. 선택은 해당 요청에만 적용하고 서버 환경이나 다른 사용자의 요청을 바꾸지 않는다. 응답의 `agent`로 실제 실행 모드를 확인하며 앱은 선택값과 응답값이 다르면 결과를 적용하지 않는다. 인증·호출 제한·도구 검증은 모든 모드에 동일하게 적용한다.
+
+채팅·명시적 조건 편집·조회가 같은 선택값을 전달한다. 앱 선택기는 기본 B이며 대화·조건을 보존한 채 다음 요청부터 적용한다. 응답 중에는 선택을 잠근다. 게스트·API 미연결 상태는 기존 로컬 엔진을 사용하며 화면에 로그인 후 비교가 가능함을 표시한다. 운영 반영은 별도 배포가 필요하다.

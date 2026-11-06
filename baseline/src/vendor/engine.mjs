@@ -1,4 +1,5 @@
 import {mentionedAllergens} from './allergens.mjs';
+import {FRAGRANCE_TAG,FRAGRANCE_NOTICE,isFragranceProduct} from './fragrance.mjs';
 import {recipientCategories} from './catalog.mjs';
 import {typeScore,rankingFacts,diversify,RANKING_POLICY} from './ranking.mjs';
 export {RANKING_POLICY} from './ranking.mjs';
@@ -20,12 +21,12 @@ export function rankProducts(products, s) {
  if(s.budget.scope==='total'&&!s.quantity)return {status:'needs_clarification',message:'총 몇 세트가 필요한가요?',items:[]};
  if(s.quantity>1&&s.same_product!==true)return {status:'needs_clarification',message:'모두 같은 상품으로 보낼까요?',items:[]};
  const q=s.quantity||1;
- const candidates=products.filter(p=>!s.excluded_categories.includes(p.category)&&(!s.brand||p.brand===s.brand)&&(!s.packaging||p.packaging===s.packaging)&&(!s.delivery_by||p.arrival_date<=s.delivery_by)&&p.stock_sets>=q&&!(p.allergens_declared||[]).some(a=>s.excluded_ingredients.includes(a))).map(p=>({...p,popularity:(p.rating_count||0)/(leader[p.category]||1),total:q*(p.price_krw+(s.budget.shipping_included?p.shipping_fee_per_set_krw:0)),score:(suited.has(p.category)?1:0)+typeScore(p,s)+s.preferences.reduce((v,x)=>v+(x===`category:${p.category}`?3:x==='unsweetened'&&p.sweetness==='unsweetened'?2:x==='less_sweet'?({unsweetened:2,naturally_sweet:1,sweet:0}[p.sweetness]||0):0),0)})).filter(p=>s.budget.amount_krw===null||budgetCost(p,s)<=s.budget.amount_krw).map(p=>({...p,...rankingFacts(p,s,budgetCost(p,s))})).sort((a,b)=>b.score-a.score||b.ranking_utility-a.ranking_utility||morePopular(b,a)||a.price_krw-b.price_krw||a.id.localeCompare(b.id));
+ const candidates=products.filter(p=>!(s.preferences.includes(FRAGRANCE_TAG)&&isFragranceProduct(p))&&!s.excluded_categories.includes(p.category)&&(!s.brand||p.brand===s.brand)&&(!s.packaging||p.packaging===s.packaging)&&(!s.delivery_by||p.arrival_date<=s.delivery_by)&&p.stock_sets>=q&&!(p.allergens_declared||[]).some(a=>s.excluded_ingredients.includes(a))).map(p=>({...p,popularity:(p.rating_count||0)/(leader[p.category]||1),total:q*(p.price_krw+(s.budget.shipping_included?p.shipping_fee_per_set_krw:0)),score:(suited.has(p.category)?1:0)+typeScore(p,s)+s.preferences.reduce((v,x)=>v+(x===`category:${p.category}`?3:x==='unsweetened'&&p.sweetness==='unsweetened'?2:x==='less_sweet'?({unsweetened:2,naturally_sweet:1,sweet:0}[p.sweetness]||0):0),0)})).filter(p=>s.budget.amount_krw===null||budgetCost(p,s)<=s.budget.amount_krw).map(p=>({...p,...rankingFacts(p,s,budgetCost(p,s))})).sort((a,b)=>b.score-a.score||b.ranking_utility-a.ranking_utility||morePopular(b,a)||a.price_krw-b.price_krw||a.id.localeCompare(b.id));
  const items=diversify(candidates);
- const notice=s.excluded_ingredients.length?ALLERGY_NOTICE:null;
+ const notice=[s.excluded_ingredients.length?ALLERGY_NOTICE:null,s.preferences.includes(FRAGRANCE_TAG)?FRAGRANCE_NOTICE:null].filter(Boolean).join(' ')||null;
  const lowPricePool=candidates.length&&candidates[0].budget_ratio!==null&&Math.max(...candidates.filter(p=>p.score===candidates[0].score).map(p=>p.budget_ratio))<0.5;
  const budgetNotice=lowPricePool?'선호에 맞는 후보가 예산보다 낮은 가격대에 몰려 있어요.':null;
- return {rankingPolicy:RANKING_POLICY,eligibleCount:items.length,status:items.length?'ready':'no_match',message:items.length?`선호·예산대·상품 다양성을 함께 고려했어요.${budgetNotice?` ${budgetNotice}`:''}${notice?` ${notice}`:''}`:'조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.',notice,budgetNotice,items};
+ return {rankingPolicy:RANKING_POLICY,eligibleCount:items.length,status:items.length?'ready':'no_match',message:items.length?`선호·예산대·상품 다양성을 함께 고려했어요.${budgetNotice?` ${budgetNotice}`:''}${notice?` ${notice}`:''}`:`조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.${notice?` ${notice}`:''}`,notice,budgetNotice,items};
 }
 export function recommend(products,s){const result=rankProducts(products,s);return {...result,items:result.items.slice(0,3)}}
 const nums={'한':1,'두':2,'세':3,'네':4,'다섯':5,'네 집':4};

@@ -1,0 +1,259 @@
+{
+  "runs": [
+    {
+      "reasoning": "omitted",
+      "turns": [
+        {
+          "text": "친구 생일 선물을 찾고 있어. 예산은 10만 원이고 실용적인 걸 좋아해",
+          "status": 503,
+          "code": "interpretation_unavailable"
+        },
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 503,
+          "code": "interpretation_unavailable"
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "message": "이렇게 이해했어요: 배송비 포함.\n누구에게 드릴 선물인가요?",
+          "question": {
+            "key": "recipient",
+            "text": "누구에게 드릴 선물인가요?",
+            "choices": [
+              "부모님",
+              "손주들",
+              "친구"
+            ]
+          },
+          "state": {
+            "occasion": null,
+            "recipients": [],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": null,
+              "shipping_included": true
+            }
+          }
+        }
+      ],
+      "wire": [
+        {
+          "status": 200,
+          "finishReason": "length",
+          "hasContent": false,
+          "usage": {
+            "completion_tokens": 1600,
+            "prompt_tokens": 1232,
+            "total_tokens": 2832,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 1600,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.00031024,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.00031024,
+              "upstream_inference_prompt_cost": 0.00008624,
+              "upstream_inference_completions_cost": 0.000224
+            }
+          }
+        },
+        {
+          "status": 200,
+          "finishReason": "length",
+          "hasContent": false,
+          "usage": {
+            "completion_tokens": 1600,
+            "prompt_tokens": 1227,
+            "total_tokens": 2827,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 1600,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.00047843,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.00047843,
+              "upstream_inference_prompt_cost": 0.00011043,
+              "upstream_inference_completions_cost": 0.000368
+            }
+          }
+        }
+      ]
+    },
+    {
+      "reasoning": false,
+      "turns": [
+        {
+          "text": "친구 생일 선물을 찾고 있어. 예산은 10만 원이고 실용적인 걸 좋아해",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "message": "예산에 배송비도 포함할까요?",
+          "question": {
+            "key": "shipping",
+            "text": "예산에 배송비도 포함할까요?",
+            "choices": [
+              "배송비 포함",
+              "상품값만"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          }
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 선호에 맞는 후보가 예산보다 낮은 가격대에 몰려 있어요.",
+          "question": {
+            "key": null,
+            "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+            "choices": [
+              "덜 단 상품으로",
+              "견과류는 빼줘"
+            ]
+          },
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [],
+            "excluded_categories": [],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          }
+        }
+      ],
+      "wire": [
+        {
+          "status": 200,
+          "finishReason": "stop",
+          "hasContent": true,
+          "usage": {
+            "completion_tokens": 75,
+            "prompt_tokens": 1153,
+            "total_tokens": 1228,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.00013255,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.00013255,
+              "upstream_inference_prompt_cost": 0.0001153,
+              "upstream_inference_completions_cost": 0.00001725
+            }
+          }
+        },
+        {
+          "status": 200,
+          "finishReason": "stop",
+          "hasContent": true,
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 1231,
+            "total_tokens": 1327,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "image_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0,
+              "cache_write_tokens": 0,
+              "cache_creation_tokens": 0
+            },
+            "cost": 0.00019922,
+            "is_byok": false,
+            "cost_details": {
+              "upstream_inference_cost": 0.00019922,
+              "upstream_inference_prompt_cost": 0.00017234,
+              "upstream_inference_completions_cost": 0.00002688
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

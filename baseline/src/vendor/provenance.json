@@ -1,11 +1,12 @@
 {
-  "source": "PASS-auth/lib (shared ranking v2 snapshot, 2026-11-05)",
+  "source": "PASS-auth/lib (shared ranking v2 + fragrance name filter, 2026-11-06)",
   "sha256": {
     "allergens.mjs": "b04cc6d5ae8fd7f3f03212260a0c9a7d4feea3c63d7e1b6aabc2a0acb561e85c",
-    "catalog.mjs": "528cdedfcdd5794da33defb17b1886efbc70f881e5f6e1c62a957e2c55b506ea",
+    "catalog.mjs": "f14f19313dad683bc9cc1a1a7d8464689a886cb8e3389b79e45dd49d4349112c",
     "counterfactual.mjs": "87f0efc3d45e9adaf0f0156cf0e0528a8d050043d395710e3d5ee28e63d35c63",
-    "engine.mjs": "bf9d94b28a548477009e501bf2133e38f2b37caf9db6e1ebe8fc4dd1a0514d49",
-    "ranking.mjs": "fdfa51d5c426871df113044681564270b2d8fc7c6ee3a9b24a15fd19605f0315"
+    "engine.mjs": "0804217c405c64f6e56ae57c883859d5519534a545025cf9703afd3b61f374de",
+    "ranking.mjs": "fdfa51d5c426871df113044681564270b2d8fc7c6ee3a9b24a15fd19605f0315",
+    "fragrance.mjs": "98184bd94c91b88492d08669861ebba5911ef13c5aefa0ae76cd1e4b1584132e"
   },
   "rankingPolicy": "gift-budget-diversity-v2"
 }

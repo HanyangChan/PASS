@@ -5,6 +5,7 @@ import { runTurn as coreTurn } from '../baseline/src/index.mjs';
 import { engineState, publicState, finishSingle } from '../lib/single-gift.mjs';
 import { validateState } from '../lib/llm.mjs';
 import { createSubagentInterpreter } from '../baseline/agents/a-router/subagents/interpreter.mjs';
+import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
 
 function changedPatch(before, after) {
   const patch={};
@@ -27,7 +28,7 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
   const catalog=products.map(p=>({...p,rating_count:p.rating_count??0}));
   const interpret=apiKey ? llmMode==='subagents' ? createSubagentInterpreter({llmOptions:{...providerOptions,apiKey,model,fetcher}}) : async ({text,state,history}) => {
     const stateBefore=publicState(state);
-    const turn=await extract({text,state:stateBefore,issues:input.issues,history,source:input.source??'typed'},products,{...providerOptions,apiKey,model,fetcher,retainAllergens:false,additionalInstructions:'Only recipient-attributed facts may update gift conditions. Never apply giver preferences to the recipient. If ownership is unclear, ask a clarification question. When a recipient changes, do not copy prior recipient tastes or restrictions. Do not remove a hard exclusion from an unmentioned condition. Return no invented product or explanation.'});
+    const turn=await extract({text,state:stateBefore,issues:input.issues,history,source:input.source??'typed'},products,{...providerOptions,reasoningEnabled:providerOptions.reasoningEnabled??(model?.startsWith('deepseek-')?false:undefined),apiKey,model,fetcher,retainAllergens:false,additionalInstructions:'Only recipient-attributed facts may update gift conditions. Never apply giver preferences to the recipient. If ownership is unclear, ask a clarification question. When a recipient changes, do not copy prior recipient tastes or restrictions. Do not remove a hard exclusion from an unmentioned condition. A pending shipping question does not prevent accepting other explicit condition updates. Abstract practicality has no preference enum; do not invent one. Return no invented product or explanation.'});
     validateState(turn.session?.state);
     if (!Array.isArray(turn.session.issues)||turn.session.issues.some(q=>typeof q!=='string'||q.length>400)) throw Error('invalid_extraction');
     return {patch:changedPatch(stateBefore,turn.session.state),questions:turn.session.issues,unresolved:turn.session.issues.length>0};
@@ -57,5 +58,6 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
     message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 예산대 적합도와 리뷰 수를 함께 보고 유사 상품이 겹치지 않도록 선택합니다.':output.result.message;
   }
   if ((output.kind==='comparison'||output.routing.intent==='explain') && output.result?.notice) message+=`\n${output.result.notice}`;
+  if(state.preferences.includes(FRAGRANCE_TAG)&&!message.includes(FRAGRANCE_NOTICE))message+='\n'+FRAGRANCE_NOTICE;
   return {...turn,message,mode:output.routing.llmCalls?'llm':input.source==='quick_reply'?'rules_fast':'rules',agent:'a-router',routing:output.routing};
 }

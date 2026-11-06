@@ -23,6 +23,14 @@
     "smoke:llm": "node api/smoke-llm.mjs",
     "audit:router": "node api/audit-router.mjs",
     "smoke:subagents": "node api/smoke-subagents.mjs",
-    "test:subagents": "node --test baseline/agents/a-router/tests/subagents.test.mjs api/tests/subagents.test.mjs"
+    "test:subagents": "node --test baseline/agents/a-router/tests/subagents.test.mjs api/tests/subagents.test.mjs",
+    "test:full-chat": "node --test baseline/agents/full-chat/tests/*.test.mjs api/tests/full-chat-agent.test.mjs",
+    "demo:full-chat": "node baseline/agents/full-chat/demo.mjs",
+    "smoke:full-chat": "node api/smoke-full-chat.mjs",
+    "dev:api:full-chat": "CHAT_AGENT=full-chat npm --prefix api run dev",
+    "benchmark:agents": "node api/benchmarks/agent-comparison.mjs",
+    "benchmark:feedback": "node api/benchmarks/feedback-tradeoff.mjs",
+    "test:feedback": "node --test baseline/agents/full-chat-feedback/tests/*.test.mjs api/tests/feedback-agent.test.mjs",
+    "demo:feedback": "node baseline/agents/full-chat-feedback/demo.mjs"
   }
 }

@@ -1,0 +1,506 @@
+{
+  "generatedAt": "2026-11-06T11:40:09.427Z",
+  "catalog": "synthetic",
+  "passed": true,
+  "runs": [
+    {
+      "mode": "full-chat",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 2471
+        },
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 1882
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result"
+            }
+          ],
+          "elapsedMs": 1103
+        }
+      ]
+    },
+    {
+      "mode": "full-chat",
+      "scenario": "confirmation",
+      "turns": [
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 950
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 2233
+        }
+      ]
+    },
+    {
+      "mode": "full-chat",
+      "scenario": "inverted_question",
+      "turns": [
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            }
+          ],
+          "elapsedMs": 1080
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "action": "respond",
+              "type": "result"
+            }
+          ],
+          "elapsedMs": 2048
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "new_constraint",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 2022
+        },
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 3639
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 3671
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "confirmation",
+      "turns": [
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 2571
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 2843
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "scenario": "inverted_question",
+      "turns": [
+        {
+          "text": "어",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "update_conditions",
+              "patch": {
+                "excluded_categories": [
+                  "food",
+                  "snack",
+                  "coffee_tea",
+                  "health"
+                ]
+              }
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "wrong_response"
+              ],
+              "feedback": "사용자의 '어'는 향이 강한 제품 제외 제안에 대한 수락입니다. 음식 제외 조건은 이미 state에 반영되어 있으므로 중복 패치가 필요 없습니다. 대신 향 강한 제품 제외를 반영해야 합니다."
+            },
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "unnecessary_question"
+              ],
+              "feedback": "The user's '어' accepts the yes/no proposal, so proceed with the search; do not ask again."
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 6016
+        },
+        {
+          "text": "그래",
+          "message": "조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "exclusions": [
+            "food",
+            "snack",
+            "coffee_tea",
+            "health"
+          ],
+          "actions": [
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "revise",
+              "issues": [
+                "premature_finish",
+                "other"
+              ],
+              "feedback": "조건에 맞는 상품이 없다고 이미 안내했는데, 현재 턴에서 실행된 도구 관측이 없습니다. 결과 응답은 관측이 있어야 하므로 search_products를 먼저 실행하거나, 이전에 없던 새 검색 실행을 취소하고 현재 상태를 정리하세요."
+            },
+            {
+              "action": "search_products"
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            },
+            {
+              "action": "respond",
+              "type": "result",
+              "limitations": [
+                "scent_strength"
+              ]
+            },
+            {
+              "verdict": "pass",
+              "issues": [],
+              "feedback": ""
+            }
+          ],
+          "elapsedMs": 5199
+        }
+      ]
+    }
+  ]
+}

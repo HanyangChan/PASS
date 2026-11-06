@@ -9,6 +9,24 @@ const ready=()=>({state:{...singleInitial(),recipients:['어머니'],budget:{amo
 const body=(extra={})=>({operation:'turn',session:initial(),text:'엄마 예산 5만원 배송비 포함',history:[],...extra});
 const request=(value,headers={})=>new Request('https://api.example/api/chat',{method:'POST',headers:{Authorization:'Bearer test.jwt.value','Content-Type':'application/json',...headers},body:JSON.stringify(value)});
 const verified=async()=>Response.json({id:'owner',role:'authenticated'});
+
+test('A accepts mixed scent/food conditions before shipping and defaults DeepSeek extraction to non-reasoning',async()=>{
+ const session=ready();session.state.budget.shipping_included=null;
+ const mixed=await send(body({session,text:'향이 강한 제품은 빼고, 먹는 것도 제외해줘.'}));
+ assert.equal(mixed.status,200);assert.deepEqual(mixed.data.session.state.excluded_categories,['food','snack','coffee_tea','health']);
+ assert.equal(mixed.data.question.key,'shipping');assert.match(mixed.data.message,/상품명 기준/);assert.deepEqual(mixed.data.session.state.preferences,['avoid_fragrance']);assert.equal(mixed.data.routing.llmCalls,0);
+ const wire=[];
+ const instance=api({fetcher:async(url,options)=>{
+  if(String(url).includes('/auth/v1/user'))return verified();
+  wire.push(JSON.parse(options.body));
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({state:ready().state,question:null})}}]});
+ }});
+ const config={...env(),LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'synthetic',LLM_MODEL:'deepseek-v4-flash'};
+ assert.equal((await send(body({session:ready(),text:'실용적인 선물을 골라줘'}),config,instance)).status,200);
+ assert.deepEqual(wire[0].reasoning,{enabled:false});
+ await send(body({session:ready(),text:'실용적인 선물을 골라줘'}),{...config,LLM_REASONING_ENABLED:'true'},instance);
+ assert.deepEqual(wire[1].reasoning,{enabled:true});
+});
 const api=(extra={})=>createApi({catalog:async()=>products,fetcher:verified,...extra});
 async function send(value,config=env(),instance=api()) {
  const response=await instance.fetch(request(value),config);

@@ -87,8 +87,8 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       if (route==='llm' && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients)) && parsed.patch.excluded_ingredients) parsed.patch.excluded_ingredients=[...new Set([...session.state.excluded_ingredients,...parsed.patch.excluded_ingredients])];
       const out=await runCoreTurn({session,products,request:{kind:'patch',expectedVersion:request.expectedVersion,patch:preparePatch(session.state,parsed.patch)}});
       if (/성분/.test(pendingQuestion) && !Object.hasOwn(parsed.patch,'excluded_ingredients') && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients))) return annotate({session:out.session,kind:'question',question:pendingQuestion,trace:out.trace},{intent:intent.intent,route:'clarification',llmCalls,diagnostics});
-      if (parsed.questions.length) return annotate({session:out.session,kind:'question',question:parsed.questions[0],trace:out.trace},{intent:intent.intent,route,llmCalls,diagnostics});
-      return annotate(out,{intent:intent.intent,route,llmCalls,diagnostics});
+      if (parsed.questions.length) return annotate({session:out.session,kind:'question',question:parsed.questions[0],trace:out.trace,limitations:parsed.limitations??[]},{intent:intent.intent,route,llmCalls,diagnostics});
+      return annotate({...out,limitations:parsed.limitations??[]},{intent:intent.intent,route,llmCalls,diagnostics});
     },
   };
 }
