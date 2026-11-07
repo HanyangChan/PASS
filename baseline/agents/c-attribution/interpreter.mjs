@@ -2,7 +2,9 @@
 // Output contract of the common interpret port: {patch, questions, unresolved}.
 import { LlmError } from '../../llm/index.mjs';
 import { checkedPatch } from '../../src/contracts.mjs';
-import { analyze, hasSubjectMarker, ownerForSpan } from './rules.mjs';
+import { analyze, bestClause, hasSubjectMarker, otherSubjectOnly, ownerForSpan } from './rules.mjs';
+
+const squash = s => s.replace(/\s+/g, '');
 import { isOwnerFree, routeClaims, validateClassification, validateExtraction } from './attribution.mjs';
 import { PROMPT_VERSION, classificationMessages, extractionMessages } from './prompts.mjs';
 import { CONDITION_KINDS, MIXED_POLICIES, QUESTIONS } from './vocabulary.mjs';
@@ -148,7 +150,13 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     if (hasCondition && (mixedPolicy === 'ask_first' || !llm)) { stats.skipped = 'condition_found_by_rules'; return copy(CONDITION); }
     if (!llm) return copy(GENERIC);
     const data = await ask('extract', { messages: extractionMessages({ text, state }), validate: d => validateExtraction(d, text) });
-    claims = data.claims.map(c => ({ ...c, ...ownerForSpan(c.span, analysis, state) }));
+    let extracted = data.claims.map(c => ({ ...c, ...ownerForSpan(c.span, analysis, state), clause: bestClause(c.span, analysis) }));
+    // C2 hybrid: clauses the rules could read keep their rule claims; LLM claims over those clauses are dropped.
+    extracted = extracted.filter(c => c.clause < 0 || !analysis.parsed[c.clause]);
+    // C3: an `other` with the same span as a taste claim is a duplicate of that claim.
+    const tasteSpans = new Set([...analysis.claims, ...extracted].filter(c => !isOwnerFree(c)).map(c => squash(c.span)));
+    extracted = extracted.filter(c => !(c.kind === 'other' && tasteSpans.has(squash(c.span))));
+    claims = [...analysis.claims, ...extracted];
   }
   if (!claims.length) return copy(GENERIC);
 
@@ -167,8 +175,13 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     const data = await ask('classify', { messages: classificationMessages({ text, state, claims: sent }), validate: d => validateClassification(d, ids) });
     const owners = new Map(data.owners.map(o => [o.id, o.owner]));
     pending.forEach((c, i) => { c.owner = owners.get(ids[i]); c.reason = 'llm'; });
+    // C1 supplementary defense: a recipient answer is not trusted when only another person is the subject.
+    for (const c of pending) if (c.owner === 'recipient' && otherSubjectOnly(c.span, analysis, state)) { c.owner = 'unknown'; c.reason = 'other_subject_guard'; }
   }
-  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person }) => ({ span, kind, value, polarity, strength, owner: owner ?? null, reason: isOwnerFree({ kind }) ? 'kind_first' : reason, person: person ?? null }));
+  // Kinds decided before owner carry no owner in diagnostics (it was never judged for them).
+  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person }) => isOwnerFree({ kind })
+    ? { span, kind, value, polarity, strength, owner: null, reason: 'kind_first', person: null }
+    : { span, kind, value, polarity, strength, owner: owner ?? null, reason, person: person ?? null });
 
   const result = routeClaims(state, claims, mixedPolicy);
   checkedPatch(state, result.patch); // common schema check; throws invalid_input

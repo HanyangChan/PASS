@@ -56,3 +56,28 @@ test('T1-B2 the runner works end to end with the no-network interpreter', async 
   assert.equal(summary.llmCalls, 0);
   assert.equal(summary.giverLeakRate, 0);
 });
+
+test('T1-B4 scoring: span overlap, owner n/a for owner-free kinds, n/a denominators, timeout-free view', () => {
+  const base = { type: 'mixed', text: 'x', state: {}, expect_question: null };
+  // S1: rule span and label span differ at both ends but are the same claim.
+  const overlap = scoreRun({ ...base, id: 'o', claims: [{ span: '견과류 알레르기가 있고', owner: 'recipient' }], expected_patch: {} }, {
+    result: { patch: {}, questions: [], unresolved: false },
+    stats: { claims: [{ span: '엄마는 견과류 알레르기가 있', kind: 'ingredient', value: '견과류', polarity: 'avoid', owner: 'recipient' }] },
+  });
+  assert.equal(overlap.ownerCorrect, 1); assert.equal(overlap.ownerTotal, 1);
+  // S2: an owner-free prediction is n/a only when the item expects no patch.
+  const pastTaste = { claims: [{ span: '예전엔 커피 좋아했는데', kind: 'other', value: null, polarity: null, owner: null }] };
+  const na = scoreRun({ ...base, id: 'n', claims: [{ span: '예전엔 커피 좋아했는데', owner: 'recipient' }], expected_patch: {} }, { result: { patch: {}, questions: ['q'], unresolved: true }, stats: pastTaste });
+  assert.equal(na.ownerNA, 1); assert.equal(na.ownerTotal, 0);
+  const counted = scoreRun({ ...base, id: 'c', claims: [{ span: '예전엔 커피 좋아했는데', owner: 'recipient' }], expected_patch: { preferences: ['category:coffee_tea'] } }, { result: { patch: {}, questions: ['q'], unresolved: true }, stats: pastTaste });
+  assert.equal(counted.ownerNA, 0); assert.equal(counted.ownerTotal, 1); assert.equal(counted.ownerCorrect, 0);
+  // S3: no denominator → null, not 0.
+  const condition = { ...base, id: 'k', type: 'condition', claims: [], expected_patch: {}, expect_question: true };
+  const run = scoreRun(condition, { result: { patch: {}, questions: ['q'], unresolved: true }, stats: { claims: [] } });
+  const summary = summarize([condition], [{ id: 'k', type: 'condition', repeat: 0, ...run }, { id: 'k', type: 'condition', repeat: 1, ...scoreRun(condition, { error: 'timeout', stats: { timedOut: true } }) }]);
+  assert.equal(summary.ownerAccuracy, null); assert.equal(summary.byType.condition.ownerAccuracy, null); assert.equal(summary.giverLeakRate, null);
+  // S4: the same metrics without timed-out runs.
+  assert.equal(summary.runs, 2); assert.equal(summary.errors, 1);
+  assert.equal(summary.excludingTimeouts.runs, 1); assert.equal(summary.excludingTimeouts.errors, 0); assert.equal(summary.excludingTimeouts.exactPatchRate, 1);
+  assert.equal(summary.ownerNA, 0);
+});

@@ -98,7 +98,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/try-att
 # 발화 하나(조립된 에이전트 경유)
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-live.mjs "엄마는 견과류는 좀 그렇대"
 
-# 평가셋 전체(B층, 기본 reasoning off): 결과는 eval/results/에 모델·PROMPT_VERSION·reasoning·날짜·평가셋 해시와 함께 저장
+# 평가셋 전체(B층, 기본 reasoning off, 해석기 제한 8초). --timeout-ms N(최대 17000)은 측정용. 결과는 eval/results/에 저장
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mjs --repeat 2
 ```
 
@@ -171,6 +171,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 4. 오류 안내 문구와 코드 분류(`invalid_response`·`provider_unavailable`을 "재시도"로 분류함)
 5. 턴 제한 `maxTurns` 기본값 8(근거 없는 임시값). 대화가 잘 진행돼도 모든 턴을 세므로, 8턴 데모에서도 8턴째에 걸린다(데모는 10으로 지정). 미해결 질문만 세는 방식도 검토 필요
 6. 앱 `/api/chat` 연결 방식과 `plan`·`explanation`을 화면에 보여주는 방식
+7. LLM 응답 멈춤에 대한 재시도 정책: 2026-11-07 B층 평가에서 호출의 약 10%(39회 중 4회)가 해석기 제한 8초를 넘었고, 정상 응답은 최대 3.0초였다. 해석기는 재시도하지 않고 `timeout`을 던진다. 호스트 재시도 여부·횟수와 제한값은 `--timeout-ms` 측정 후 결정한다(`eval/results/2026-11-07T135005-analysis.md`)
 
 ## 설계 메모: 확정 조건 "대기" 보관(D8, 구현하지 않음)
 
@@ -192,5 +193,12 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 - 남은 일: 8턴 데모 실제 실행, `maxTurns` 기본값과 계산 방식은 팀 결정.
 - **2026-11-08 (2)**: 8턴 실제 데모 결과를 기록했다(T6-09, LLM 2회·출력 34토큰). 선호가 없을 때 0점 문장에서 "말씀하신 선호"를 뺐다. 점수 내역은 대조 설명에만 쓰고, 후보가 1개면 이유에 쓴다.
 - 평가 실행기 요약에 날짜·reasoning·출력 토큰·최대 지연을 추가했다. 다음은 B층 평가 실행(`--repeat 2`)이다.
+- **2026-11-08 (3) B층 평가 후속**: 평가 결과와 분석을 `eval/results/`에 기록했다.
+  - C1: LLM span은 가장 많이 겹치는 절로 주어를 판정하고, 가드 범위를 그 절로 한정했다. 다른 사람 주어만 있으면 recipient 답을 unknown으로 낮춘다(잘못된 확정 t-02 대응).
+  - C2: 규칙이 읽은 절의 claim은 유지하고, 그 절과 겹치는 LLM claim은 버린다.
+  - C3: 같은 span에 선호 claim과 `other`가 함께 나오면 `other`를 버린다.
+  - C4: `--timeout-ms` 측정 옵션을 추가했다(기본 8초 유지).
+  - 채점 S1~S4를 보완하고 t-03 라벨을 바꿨다(L1). 평가셋 변경 이력은 `eval/CHANGELOG.md`에 있다.
+  - 남은 일: 같은 조건으로 B층을 다시 평가하고, C5(프롬프트 카테고리에 한국어 이름 병기)를 결정한다.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.

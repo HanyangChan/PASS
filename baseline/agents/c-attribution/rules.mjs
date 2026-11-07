@@ -96,29 +96,79 @@ export function analyze(text, state) {
   const quoted = isQuoted(text);
   const clauses = splitClauses(text);
   const claims = [];
+  const parsed = [];
   let complete = clauses.length > 0;
   for (const clause of clauses) {
     const found = extractClause(clause);
+    parsed.push(found !== null);
     if (found === null) { complete = false; continue; }
     const owner = ruleOwner(clause, state, quoted);
     for (const c of found) claims.push({ ...c, ...owner });
   }
-  return { text, quoted, clauses, claims, complete };
+  return { text, quoted, clauses, parsed, claims, complete };
+}
+
+const squash = s => s.replace(/\s+/g, '');
+/** Length of the longest common substring (spaces ignored). */
+function commonLength(a, b) {
+  a = squash(a); b = squash(b);
+  let best = 0;
+  const row = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const above = row[j];
+      row[j] = a[i - 1] === b[j - 1] ? diagonal + 1 : 0;
+      if (row[j] > best) best = row[j];
+      diagonal = above;
+    }
+  }
+  return best;
+}
+
+/**
+ * The clause an LLM span belongs to: the one that contains it, else the one it overlaps most.
+ * Returns -1 when nothing overlaps meaningfully (at least 2 characters) or two clauses tie.
+ */
+export function bestClause(span, analysis) {
+  const target = squash(span);
+  let best = -1, bestLength = 0, tie = false;
+  analysis.clauses.forEach((clause, i) => {
+    const length = squash(clause).includes(target) ? target.length : commonLength(clause, span);
+    if (length > bestLength) { best = i; bestLength = length; tie = false; }
+    else if (length === bestLength && length > 0) tie = true;
+  });
+  return best < 0 || tie || bestLength < Math.min(2, target.length) ? -1 : best;
+}
+
+/** Scope for subject checks: the quoted message as a whole, otherwise only the span's clause. */
+function scopeOf(span, analysis) {
+  if (analysis.quoted) return analysis.text;
+  const i = bestClause(span, analysis);
+  return i < 0 ? null : analysis.clauses[i];
 }
 
 const PERSON_ONCE = new RegExp(PERSON.source);
 /**
  * Subject guard: does the claim's scope name who it is about? Markers are a first-person word,
  * a person/recipient alias with a particle, or (for quoted speech) the quoted speaker anywhere in the message.
- * A direct gift instruction ("견과류는 빼줘") also counts. Without a marker the claim must stay unknown.
+ * A direct gift instruction ("견과류는 빼줘") also counts. The scope never widens to other clauses.
  */
 export function hasSubjectMarker(span, analysis) {
-  const scope = analysis.quoted ? analysis.text : (analysis.clauses.find(c => c.includes(span.trim())) ?? analysis.text);
-  return GIVER.test(scope) || PERSON_ONCE.test(scope) || INSTRUCTION.test(scope);
+  const scope = scopeOf(span, analysis);
+  return scope !== null && (GIVER.test(scope) || PERSON_ONCE.test(scope) || INSTRUCTION.test(scope));
 }
 
-/** Owner for an LLM-extracted span, using the clause that contains it. */
+/** Supplementary defense: the scope names another person and not the current recipient. */
+export function otherSubjectOnly(span, analysis, state) {
+  const scope = scopeOf(span, analysis);
+  if (scope === null) return false;
+  const named = [...scope.matchAll(PERSON)].map(m => RECIPIENT_ALIASES[m[1]] ?? m[1]);
+  return named.some(n => !state.recipients.includes(n)) && !named.some(n => state.recipients.includes(n));
+}
+
+/** Owner for an LLM-extracted span, judged by the clause it belongs to (contained or most overlapped). */
 export function ownerForSpan(span, analysis, state) {
-  const clause = analysis.clauses.find(c => c.includes(span.trim()));
-  return clause === undefined ? { owner: null, reason: 'span_crosses_clauses' } : ruleOwner(clause, state, analysis.quoted);
+  const i = bestClause(span, analysis);
+  return i < 0 ? { owner: null, reason: 'span_unmapped' } : ruleOwner(analysis.clauses[i], state, analysis.quoted);
 }

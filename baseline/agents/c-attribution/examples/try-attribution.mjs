@@ -1,11 +1,12 @@
 // Try the P1 attribution interpreter with the REAL LLM. Not part of npm test (name/folder do not match test patterns).
 // Run manually from the repository root:
 //   node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/try-attribution.mjs \
-//     [--only=3,6] [--repeat=3] [--reasoning=off|low|none] [--max-tokens=1600]
+//     [--only=3,6] [--repeat=3] [--reasoning=off|low|none] [--max-tokens=1600] [--timeout-ms=12000]
 // --only       sentence numbers (default: all)
 // --repeat     runs per sentence, 1..10 (default 1)
 // --reasoning  omitted → interpreter default (off: payload.reasoning={enabled:false}); low → payload.reasoning_effort='low'; none → nothing sent
 // --max-tokens override both LLM steps' output limit for this run only
+// --timeout-ms interpreter limit for this run only (measurement), 1..17000; default 8000
 // Prints results, error codes, diagnostics, token usage and latency. Never prints the key or the environment.
 import { createLlmFromEnv } from '../../../llm/index.mjs';
 import { createSession, runTurn } from '../../../src/index.mjs';
@@ -44,6 +45,7 @@ const only = onlyArg === undefined ? SENTENCES.map((_, i) => i + 1) : onlyArg.sp
 if (!only.length || only.some(n => !Number.isSafeInteger(n) || n < 1 || n > SENTENCES.length)) fail(`--only must list numbers 1..${SENTENCES.length}, e.g. --only=3,6`);
 const repeat = intOption('repeat', 1, 10) ?? 1;
 const maxTokens = intOption('max-tokens', 1, 100000);
+const timeoutMs = intOption('timeout-ms', 1, 17000);
 const reasoningArg = option('reasoning');
 if (reasoningArg !== undefined && !Object.hasOwn(REASONING, reasoningArg)) fail('--reasoning must be off, low or none');
 const reasoning = reasoningArg === undefined ? undefined : REASONING[reasoningArg];
@@ -67,7 +69,7 @@ const first = await runTurn({
 });
 const state = first.session.state;
 const limits = maxTokens === undefined ? { ...DEFAULT_MAX_TOKENS, source: 'default' } : { extract: maxTokens, classify: maxTokens, source: '--max-tokens' };
-console.log(JSON.stringify({ model: llm.model, promptVersion: PROMPT_VERSION, only, repeat, reasoning: reasoningArg ?? 'default(off)', maxTokens: limits, baseState: { recipients: state.recipients, quantity: state.quantity, budget: state.budget } }));
+console.log(JSON.stringify({ model: llm.model, promptVersion: PROMPT_VERSION, only, repeat, reasoning: reasoningArg ?? 'default(off)', timeoutMs: timeoutMs ?? 'default(8000)', maxTokens: limits, baseState: { recipients: state.recipients, quantity: state.quantity, budget: state.budget } }));
 
 const median = values => {
   if (!values.length) return null;
@@ -78,7 +80,7 @@ const spread = values => (values.length ? { min: Math.min(...values), median: me
 const count = list => list.reduce((acc, key) => ({ ...acc, [key]: (acc[key] ?? 0) + 1 }), {});
 
 let stats = null;
-const interpret = createInterpreter({ llm, maxTokens, reasoning, onStats: s => { stats = s; } });
+const interpret = createInterpreter({ llm, maxTokens, reasoning, timeoutMs, onStats: s => { stats = s; } });
 const summaries = [];
 
 for (const n of only) {
