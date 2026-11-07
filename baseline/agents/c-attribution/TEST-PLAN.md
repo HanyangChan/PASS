@@ -4,7 +4,7 @@
 
 - 기준 커밋: `d95dca4` (`main`), 브랜치 `codex/architecture-c-attribution`
 - 작성일: 2026-11-05
-- 상태 값: `계획` / `구현` / `미구현(이유)`. 2026-11-07 기준 P1~P5 A·C층 항목은 `구현`이다. 미구현은 T1-49, T2-02, T2-18, T2-19(이유는 각 행)이고, 실제 LLM 항목 T1-B3·T6-09는 담당자 실행 대기다.
+- 상태 값: `계획` / `구현` / `미구현(이유)`. 2026-11-08 기준 P1~P5 A·B·C층 항목은 `구현`이다. 미구현은 T1-49, T2-02, T2-18, T2-19(이유는 각 행)다.
 - P1 테스트 위치: `tests/attribution.test.mjs`(T1-01~T1-43, 테스트 이름 앞에 ID), `tests/eval-data.test.mjs`(T1-B1·B2).
 - 원래 요구에서 고친 항목은 `수정:`으로 이유를 적었다. 근거는 P0에서 실제 코드를 실행해 확인한 결과다.
 
@@ -250,7 +250,7 @@
 | T1-B1 | 평가셋 각 줄이 스키마를 지키고 `state`가 `validateState`를 통과함. 유형 10개 × 3문항(2026-11-07 `condition` 추가), 2026-11-08 t-03 라벨 변경(L1). 이 검사만 A층 테스트로도 실행(실제 LLM 없음) | A·B | 구현 |
 | T1-B2 | 지표 계산(`eval/evaluate.mjs`의 `scoreRun`·`summarize`)이 고정 응답에서 정확한지, 실행 함수 `runEval`이 네트워크 없는 해석기로 끝까지 도는지 A층에서 검사 | A | 구현 (수정: `--mock` 옵션 대신 지표 함수를 `evaluate.mjs`로 분리해 직접 검사. 실제 호출 CLI `run-eval.mjs`는 import하지 않음) |
 | T1-B4 | 채점 보완 S1~S4 | S1: 서로 포함하거나 가장 긴 공통 부분이 짧은 쪽의 60% 이상이면 같은 claim. S2: 예측 kind가 owner를 판단하지 않는 종류이고 기대 patch가 빈 문항이면 owner n/a(개수는 `ownerNA`). 기대 patch가 있으면 여전히 채점. S3: 분모 0이면 `null`(화면 `n/a`). S4: 요약에 시간 초과 제외 지표(`excludingTimeouts`) | A | 구현 (추가 2026-11-08) |
-| T1-B3 | 실제 LLM 실행 결과 지표 기록 | B | 계획 |
+| T1-B3 | 실제 LLM 실행 결과 지표 기록 | B | 구현, 결과 기록(2026-11-07~08, 4회. README "B층 평가 1~4차", `eval/results/`) |
 
 ## P2 플래너 — A층 (`tests/planner.test.mjs`)
 
