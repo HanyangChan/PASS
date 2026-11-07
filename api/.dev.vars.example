@@ -8,13 +8,14 @@ APP_ORIGINS=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.6-flash
 
-# a-router: rules first; full-chat: B, every chat uses a model action loop; legacy: original path.
+# a-router: rules first; full-chat: C, every chat uses a model action loop; legacy: original path.
 # full-chat requires openai-compatible, a server LLM_API_KEY, and json_object or text responses.
-# full-chat-feedback-1 / full-chat-feedback-2: B plus bounded action review/revision.
+# full-chat-feedback-1 / full-chat-feedback-2: C plus bounded action review/revision.
 CHAT_AGENT=a-router
 LLM_PROVIDER=openai-compatible
 LLM_BASE_URL=https://llm.ai.hy.miwork.ai
-LLM_MODEL=deepseek-v4-flash
+LLM_MODEL=gpt-5.6-luna
+LLM_REASONING_ENABLED=false
 LLM_CHAT_PATH=chat/completions
 LLM_RESPONSE_FORMAT=json_object
 LLM_API_KEY=
@@ -22,4 +23,4 @@ LLM_API_KEY=
 # single (default) or supervised multi-agent interpretation
 A_ROUTER_LLM_MODE=single
 
-# Luna experiment: LLM_MODEL=gpt-5.6-luna and LLM_REASONING_ENABLED=false
+# langgraph-advisors: B, rule attribution with optional Luna plus four advisors.

@@ -51,11 +51,10 @@ import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
 import { AgentModeControl } from './src/AgentModeControl';
+import { AgentPanel, type AgentPayload } from './src/AgentPanel';
 import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
-import { PersonalizationPanel } from './src/PersonalizationPanel';
-import { usePersonalization } from './src/usePersonalization';
-import { personalizeSession, protectRememberedAllergies, assertSameRecipient } from './src/services/personalization';
+import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
@@ -146,9 +145,9 @@ export function AppContent({
     agentConnected,
     chatError,
     sendChat,
-    personalization,
-    appliedMemory,
     changeChatConditions,
+    disabledAdvisors,
+    toggleAdvisor,
     resetChat,
     heroFailed,
     setHeroFailed,
@@ -767,7 +766,6 @@ export function AppContent({
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
-                  <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
@@ -800,6 +798,17 @@ export function AppContent({
                         })}
                       </ScrollView>
                     </>
+                  )}
+                  {agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
+                    <View style={s.advisorPanel}>
+                      <AgentPanel
+                        agents={recommendation.agents}
+                        disabled={disabledAdvisors}
+                        busy={chatPending}
+                        onToggle={toggleAdvisor}
+                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
+                      />
+                    </View>
                   )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
@@ -1075,8 +1084,6 @@ function usePassState() {
   }, [catalogAttempt]);
   const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
-  const personalization = usePersonalization(owner ?? null);
-  const [appliedMemory, setAppliedMemory] = useState<string[]>([]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
@@ -1109,9 +1116,10 @@ function usePassState() {
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string } | null>(null);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
+  const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   const changeAgentMode = useCallback((next: ChatAgentMode) => {
@@ -1120,44 +1128,35 @@ function usePassState() {
     setChatError('');
   }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
-    if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
-    if (!ready || personalization.busy || chatFlight.current.controller) return false;
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors) => {
+    if (!ready || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
-      const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text)
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients)
-          : { session, reasons: appliedMemory };
-      const requestSession = recalled.session;
+      const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
+      const noHistory = emptyPersonalization();
+      const requestSession = operation === 'turn' ? personalizeSession(session, noHistory, text, undefined, !useAdvisors).session
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, noHistory, '', patch.recipients, !useAdvisors).session
+          : session;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
-      let turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agentMode)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode)
-          : await serverChat.view(session, controller.signal, agentMode)
+      const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
+      const turn = serverChat
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agentMode, agents)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
+          : await serverChat.view(session, controller.signal, agentMode, agents)
         : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
-      const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
-      if (JSON.stringify(protectedSession) !== JSON.stringify(turn.session)) {
-        const safe = serverChat
-          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal, agentMode)
-          : chatService.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
-        assertSameRecipient(requestSession, safe.session);
-        if (JSON.stringify(protectRememberedAllergies(safe.session, personalization.data)) !== JSON.stringify(safe.session)) throw new Error('저장한 제외 조건을 적용하지 못했어요. 다시 시도해주세요.');
-        turn = { ...safe, message: `저장한 알레르기 제외 조건을 유지했어요.\n${safe.message}` };
-      }
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(session)) setSession(turn.session);
       if (operation !== 'view') {
         setSession(turn.session);
-        setAppliedMemory(recalled.reasons);
-        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: [...recalled.reasons, turn.message].join('\n') }]);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
-      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode });
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
     } catch (error) {
       if (chatFlight.current.revision !== revision) return null;
@@ -1171,11 +1170,11 @@ function usePassState() {
     if (ready && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, serverChat, personalization.ready]);
+  }, [ready, serverChat]);
   const resetChat = () => {
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
-    setSession(chatService.createSession()); setMessages([]); setAppliedMemory([]);
+    setSession(chatService.createSession()); setMessages([]);
   };
   useEffect(() => {
     let mounted = true;
@@ -1260,10 +1259,15 @@ function usePassState() {
     changeAgentMode,
     agentConnected: Boolean(serverChat),
     chatError,
-    personalization,
-    appliedMemory,
     sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
+    disabledAdvisors,
+    toggleAdvisor: (advisor: string, enabled: boolean) => {
+      const next = enabled ? disabledAdvisors.filter(name => name !== advisor) : [...new Set([...disabledAdvisors, advisor])];
+      void runChat('view', '', undefined, true, 'typed', next).then(applied => {
+        if (applied) setDisabledAdvisors(next);
+      });
+    },
     resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
@@ -1661,6 +1665,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
+  advisorPanel: { marginHorizontal: 16, marginVertical: 4 },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },

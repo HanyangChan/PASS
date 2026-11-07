@@ -3,6 +3,8 @@ import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react
 import { chatAgentModes, type ChatAgentMode } from './chatAgentModes';
 import { colors as c, fonts as f } from './theme';
 
+const lastIndex = chatAgentModes.length - 1;
+
 type Props = { value: ChatAgentMode; onChange: (value: ChatAgentMode) => void; disabled: boolean; connected: boolean };
 export function AgentModeControl({ value, onChange, disabled, connected }: Props) {
   const [width, setWidth] = useState(0);
@@ -12,7 +14,7 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
   const pan = useMemo(() => {
     const selectAt = (x: number) => {
       if (disabled || width <= 24) return;
-      const next = Math.round(Math.max(0, Math.min(1, (x - 12) / (width - 24))) * 2);
+      const next = Math.round(Math.max(0, Math.min(1, (x - 12) / (width - 24))) * lastIndex);
       onChange(chatAgentModes[next].agent);
     };
     return PanResponder.create({
@@ -32,18 +34,18 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
       <View
         accessibilityRole="adjustable"
         aria-valuemin={0}
-        aria-valuemax={2}
+        aria-valuemax={lastIndex}
         aria-valuenow={index}
         aria-valuetext={`${mode.id} ${mode.title}`}
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
-        accessibilityLabel="A B C 응답 방식"
-        accessibilityValue={{ min: 0, max: 2, now: index, text: `${mode.id} ${mode.title}` }}
+        accessibilityLabel="A B C D 응답 방식"
+        accessibilityValue={{ min: 0, max: lastIndex, now: index, text: `${mode.id} ${mode.title}` }}
         accessibilityState={{ disabled }}
         accessibilityActions={[{ name: 'increment', label: '다음 응답 방식' }, { name: 'decrement', label: '이전 응답 방식' }]}
         onAccessibilityAction={event => {
           if (disabled) return;
-          const next = Math.max(0, Math.min(2, index + (event.nativeEvent.actionName === 'increment' ? 1 : -1)));
+          const next = Math.max(0, Math.min(lastIndex, index + (event.nativeEvent.actionName === 'increment' ? 1 : -1)));
           onChange(chatAgentModes[next].agent);
         }}
         onLayout={event => setWidth(event.nativeEvent.layout.width)}
@@ -51,17 +53,17 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
         {...pan.panHandlers}
         {...(Platform.OS === 'web' ? { onKeyDown: (event: { key: string; preventDefault: () => void }) => {
           if (disabled) return;
-          const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : ['ArrowRight', 'ArrowUp'].includes(event.key) ? Math.min(2, index + 1) : ['ArrowLeft', 'ArrowDown'].includes(event.key) ? Math.max(0, index - 1) : null;
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : ['ArrowRight', 'ArrowUp'].includes(event.key) ? Math.min(lastIndex, index + 1) : ['ArrowLeft', 'ArrowDown'].includes(event.key) ? Math.max(0, index - 1) : null;
           if (next === null) return;
           event.preventDefault();
           onChange(chatAgentModes[next].agent);
         } } : {})}
       >
         <View pointerEvents="none" style={s.track}>
-          <View style={[s.fill, { width: 12 + span * index / 2 }]} />
-          {chatAgentModes.map((item, i) => <View key={item.id} style={[s.stop, { left: 9 + span * i / 2 }, i <= index && s.filledStop]} />)}
+          <View style={[s.fill, { width: 12 + span * index / lastIndex }]} />
+          {chatAgentModes.map((item, i) => <View key={item.id} style={[s.stop, { left: 9 + span * i / lastIndex }, i <= index && s.filledStop]} />)}
         </View>
-        <View pointerEvents="none" style={[s.thumb, { left: span * index / 2 }]} />
+        <View pointerEvents="none" style={[s.thumb, { left: span * index / lastIndex }]} />
       </View>
       <View style={s.labels}>
         {chatAgentModes.map(item => (

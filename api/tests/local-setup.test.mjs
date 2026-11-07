@@ -34,7 +34,7 @@ test('placeholder Supabase fields do not override valid mobile settings; real se
  const shell=await loadLocalEnv({root,processEnv:{SUPABASE_URL:'https://shell.supabase.co',API_PORT:'18789'}});
  assert.equal(localConfig(shell).env.SUPABASE_URL,'https://shell.supabase.co');assert.equal(localConfig(shell).port,18789);
 });
-test('startup rejects missing/placeholder configuration, old Node and unsupported B/C without leaking keys',()=>{
+test('startup rejects missing/placeholder configuration, old Node and unsupported full-chat modes without leaking keys',()=>{
  assert.throws(()=>localConfig({}),/setup:local/);
  const valid={EXPO_PUBLIC_SUPABASE_URL:'https://valid.supabase.co',EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic'};
  assert.throws(()=>localConfig(valid,{nodeVersion:'20.19.0'}),/Node 22.13/);
@@ -48,7 +48,7 @@ test('health returns unavailable status when catalog fails and advertises modes 
  const bad=await createApi({catalog:async()=>{throw Error('private detail');}}).fetch(new Request('http://local/health'),env);
  assert.equal(bad.status,503);assert.equal((await bad.json()).ok,false);
  const good=await createApi({catalog:async()=>products}).fetch(new Request('http://local/health'),env);
- assert.deepEqual((await good.json()).availableAgents,['a-router']);
+ assert.deepEqual((await good.json()).availableAgents,['a-router','langgraph-advisors']);
  const llm=await createApi({catalog:async()=>products}).fetch(new Request('http://local/health'),{...env,LLM_API_KEY:'synthetic'});
- assert.deepEqual((await llm.json()).availableAgents,['a-router','full-chat','full-chat-feedback-2']);
+ assert.deepEqual((await llm.json()).availableAgents,['a-router','langgraph-advisors','full-chat','full-chat-feedback-2']);
 });

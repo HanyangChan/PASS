@@ -36,5 +36,5 @@ server.on('error',error=>{
   process.exitCode=1;
 });
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Recommendation API: http://127.0.0.1:${port} (${llm.provider}: ${llm.options.model}, ${llm.options.apiKey ? 'LLM enabled' : 'A 규칙 모드; B/C는 LLM_API_KEY 필요'})`);
+  console.log(`Recommendation API: http://127.0.0.1:${port} (${llm.provider}: ${llm.options.model}, ${llm.options.apiKey ? 'LLM enabled' : '규칙 모드 가능 (A/B), C/D는 LLM_API_KEY 필요'})`);
 });

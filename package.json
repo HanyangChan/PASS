@@ -7,7 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "setup": "npm --prefix mobile ci && npm --prefix api ci",
+    "setup": "npm --prefix mobile ci && npm --prefix api ci && npm --prefix baseline/agents/d-langgraph ci",
     "dev": "npm --prefix mobile start",
     "web": "npm --prefix mobile run web",
     "android": "npm --prefix mobile run android",

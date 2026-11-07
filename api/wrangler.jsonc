@@ -2,6 +2,7 @@
   "name": "pass-recommendation-api",
   "main": "worker.mjs",
   "compatibility_date": "2026-10-10",
+  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "CHAT_AGENT": "a-router",
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
@@ -10,7 +11,8 @@
     "GEMINI_MODEL": "gemini-3.6-flash",
     "LLM_PROVIDER": "openai-compatible",
     "LLM_BASE_URL": "https://llm.ai.hy.miwork.ai",
-    "LLM_MODEL": "deepseek-v4-flash",
+    "LLM_MODEL": "gpt-5.6-luna",
+    "LLM_REASONING_ENABLED": "false",
     "LLM_CHAT_PATH": "chat/completions",
     "LLM_RESPONSE_FORMAT": "json_object",
     "A_ROUTER_LLM_MODE": "single"

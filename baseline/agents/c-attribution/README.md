@@ -1,15 +1,5 @@
-# 귀속·플래너 작업 공간
+# 조건 귀속
 
-담당 범위: 주는 사람과 받는 사람의 조건 귀속 및 대화 계획. 현재는 실행 가능한 시작 틀이며 해당 아키텍처나 실제 LLM 연동은 구현하지 않았다.
+`attribute.mjs`는 문장 속 조건이 누구에게 해당하는지 판단하고 수령인의 조건만 반영합니다. `output.mjs`는 모델 출력 스키마와 귀속 결과 변환을 담당합니다. 채팅 B의 API 어댑터가 공유 Luna 전송을 사용해 규칙으로 이해하기 어려운 발화를 보완합니다.
 
-1. 이 폴더의 `index.mjs`에서 `interpretMessage`를 구현한다. 프롬프트·도구·내부 모듈도 이 폴더에 추가한다.
-2. 출력 계약은 `{patch, questions: string[], unresolved: boolean}`이다. 미확정 조건은 `unresolved: true`와 질문으로 반환한다.
-3. 자체 테스트는 이 폴더의 `tests/*.test.mjs`에 추가한다. `baseline/`에서 `npm test`를 실행하면 공통·개별 테스트를 함께 찾는다.
-4. 전체 오케스트레이션을 구현할 때는 공통 엔진·검증·비교 계약을 재사용하고 추가 진입점을 문서화한다. 현재 연결기는 해석기 확장만 지원한다.
-
-```sh
-# baseline/ 기준
-npm run demo:agent -- c-attribution
-```
-
-브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.
+저장소 루트에서 `node --test baseline/agents/c-attribution/tests/*.test.mjs`로 검증합니다.
