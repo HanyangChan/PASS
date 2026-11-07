@@ -15,7 +15,7 @@ npm run demo
 - `src/contracts.mjs`: 요청 상태와 상품 입력 검증, 세션 생성.
 - `src/parser.mjs`: 좁고 보수적인 한국어 규칙 파서. 처리하지 못한 내용은 추측하지 않고 질문한다.
 - `src/index.mjs`: `runTurn`, 세션 상태, 질문, 가상 예산 비교, 결과 검증, 설명.
-- `src/vendor/`: 기존 `PASS-auth/lib` 엔진과 의존 파일의 독립 스냅샷. 원본·해시를 `provenance.json`에 기록했다. 순위·금액·예산 대안 계산은 여기서만 한다. 2026-11-05 공통 순위 v2를 앱과 함께 반영했으며 [정책 문서](../docs/recommendation-ranking.md)를 따른다.
+- `src/vendor/`: 기존 `PASS-auth/lib` 엔진과 의존 파일의 독립 스냅샷. 원본·해시를 `provenance.json`에 기록했다. 순위·금액·예산 대안 계산은 여기서만 한다.
 - `examples/`: 고정 합성 상품 3개와 실행 예제. 실상품 데이터가 아니다.
 - `llm/`: 앱·Router·선물 스키마와 독립적인 [공통 LLM 연결 기반](llm/README.md).
 - `agents/`: 다섯 설계별 작업 폴더, 공통 연결기, 실행 예제 선택. [작업 안내](agents/README.md).

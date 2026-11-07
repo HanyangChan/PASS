@@ -101,7 +101,7 @@ A_ROUTER_LLM_MODE=subagents npm run audit:router
 
 ## 공통 추천 정책 v2 (2026-11-05)
 
-현재 데이터는 `supabase/seed/products-amazon.json`의 3,376개를 사용한다. 원본 전체를 검색하는 구조가 아니다. [공통 순위 정책과 검증 방법](../../../docs/recommendation-ranking.md)을 따른다. Router·서브 에이전트는 조건을 추출하며 가격·후보·순위를 생성하지 않는다. 차 선호는 `category:coffee_tea`와 `type:tea`, 커피는 `category:coffee_tea`와 `type:coffee`로 반환한다. 기존 대화의 상품군 태그만으로 차·커피를 추측하지 않으므로 구체적인 선호를 다시 입력하면 구분이 반영된다.
+현재 데이터는 `supabase/seed/products-amazon.json`의 3,376개를 사용한다. Router·서브 에이전트는 조건을 추출하고 공통 엔진이 가격·후보·순위를 계산한다. 차 선호는 `category:coffee_tea`와 `type:tea`, 커피는 `category:coffee_tea`와 `type:coffee`로 반환한다. 구체적인 선호를 입력하면 차와 커피의 구분이 반영된다.
 
 ## 상품명 기반 향 제품 제외 규칙 (2026-11-06)
 

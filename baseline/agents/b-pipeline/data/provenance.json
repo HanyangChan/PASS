@@ -1,0 +1,11 @@
+{
+  "source": "supabase/seed/products-amazon.json (repo root, read-only copy)",
+  "copiedAt": "2026-11-05",
+  "file": "products-amazon.json",
+  "sha256File": "catalog.sha256",
+  "rows": 3376,
+  "attribution": "ATTRIBUTION.md (CC BY-NC 4.0)",
+  "converter": "baseline/src/vendor/catalog.mjs toEngineProduct(row, referenceDate)",
+  "referenceDate": "2026-11-05",
+  "referenceDateNote": "arrival_date = referenceDate + arrival_days. Fixed so rankings are reproducible; defaults to the copy date."
+}

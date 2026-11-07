@@ -115,18 +115,16 @@ test('actual Gemini wire adapter receives server-only attribution policy and ret
  assert.equal(out.status,200);assert.equal(modelCalls,1);assert.equal(out.data.routing.route,'llm');assert.deepEqual(out.data.session.state.preferences,['category:coffee_tea']);assert.ok(!JSON.stringify(out.data).includes('test-secret'));
 });
 
-test('prototype API uses the shared v2 ranking with the 3376-product catalog',async()=>{
+test('prototype API keeps tea preference when adjusting the budget for the full catalog',async()=>{
  const {readFile}=await import('node:fs/promises');const {toEngineProduct}=await import('../../lib/catalog.mjs');
  const rows=JSON.parse(await readFile(new URL('../../supabase/seed/products-amazon.json',import.meta.url),'utf8'));
  const instance=api({catalog:async()=>rows.map(p=>toEngineProduct(p,'2026-11-05'))});
  const first=await send(body({text:'엄마 차 좋아해 예산 10만원 배송비 포함'}),env(),instance);
  assert.equal(first.status,200);assert.equal(first.data.routing.llmCalls,0);
  assert.deepEqual(first.data.session.state.preferences,['category:coffee_tea','type:tea']);
- assert.equal(first.data.view.result.rankingPolicy,'gift-budget-diversity-v2');
- assert.match(first.data.message,/낮은 가격대/);
  const next=await send(body({session:first.data.session,text:'예산 3만원으로 바꿔줘'}),env(),instance);
  assert.equal(next.status,200);assert.ok(next.data.view.result.items.every(p=>p.total<=30000));
- assert.notDeepEqual(next.data.view.result.items.map(p=>p.id),first.data.view.result.items.map(p=>p.id));
+ assert.deepEqual(next.data.session.state.preferences,first.data.session.state.preferences);
  const health=await instance.fetch(new Request('https://api.example/health'),env());
- const info=await health.json();assert.equal(info.products,3376);assert.equal(info.rankingPolicy,'gift-budget-diversity-v2');
+ const info=await health.json();assert.equal(info.products,3376);
 });

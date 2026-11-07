@@ -33,7 +33,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     const summary=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.name} (${p.budget_cost_krw.toLocaleString('ko-KR')}원)`).join(', '):'조건에 맞는 상품이 없습니다.';
     message=`예산을 ${amount.toLocaleString('ko-KR')}원으로 가정해 비교했어요. ${summary}\n현재 예산은 그대로입니다. 적용하려면 예산을 변경해 달라고 알려주세요.`;
   } else if(output.intent==='explain'&&output.result) {
-    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호·예산대·리뷰 수·상품 다양성을 함께 고려합니다.':output.result.message;
+    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n예산 안에서 선호와 상품 인기도를 고려합니다.':output.result.message;
   }
   if((output.kind==='comparison'||output.intent==='explain')&&output.result?.notice) message+=`\n${output.result.notice}`;
   if(state.preferences.includes(FRAGRANCE_TAG)) {

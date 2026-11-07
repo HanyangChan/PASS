@@ -88,3 +88,5 @@ Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규�
 B는 현재 수령인의 캘린더와 비활성 자문 목록을 서버에 전달합니다. 채팅 API는 기억·구매 이력을 추천에 사용하지 않습니다. 귀속 규칙으로 해석하기 어려울 때만 같은 서버의 Luna 설정으로 모델을 호출합니다. 모델에는 발화와 현재 조건을 보내며, 제안을 누르면 조건 변경 요청을 보냅니다. B의 규칙과 자문은 모델 키 없이 실행할 수 있습니다.
 
 `npm run setup`은 LangGraph를 포함해 설치합니다. API 시작은 기존 `npm run dev:api`를 사용합니다. Luna 비교 설정은 서버의 `LLM_MODEL=gpt-5.6-luna`, `LLM_REASONING_ENABLED=false`입니다. 벤치마크는 저장소 루트에서 `node api/benchmarks/luna-advisors-comparison.mjs`로 실행합니다.
+
+2026-11-07 비교 결과는 순위 개편을 함께 시험하던 시점의 기록입니다. 현재 앱은 `main`의 순위 정책으로 동작합니다. [당시 벤치마크 결과](../docs/verification/luna-advisors-comparison-2026-11-07.json)

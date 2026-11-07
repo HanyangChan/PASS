@@ -1,14 +1,21 @@
 import { createAgentRunner } from '../runtime.mjs';
+import { createLlm, logLlmError } from './llm/index.mjs';
+import { createDialogue, toPort } from './dialogue/agent.mjs';
 
-/** Starter only: implement 대화 이해·기억·후보 탐색·설명 역할 분리 here. */
+/**
+ * LLM from the environment for the common port. null (rules + FALLBACK_QUESTION) when:
+ *  - running under `node --test` (NODE_TEST_CONTEXT is set): baseline tests must never reach the network,
+ *    even when a key is exported in the shell;
+ *  - no key, or an unusable provider setting.
+ */
+export function llmFromEnv(vars = process.env) {
+  if (vars.NODE_TEST_CONTEXT) return null;
+  try { return createLlm({ env: vars, onError: logLlmError }); } catch { return null; }
+}
+
+/** Port for the common runTurn. Called only after parseRules could not resolve the message. */
 export async function interpretMessage({ text, state }) {
-  // text and state are data. Return confirmed condition changes only.
-  // Put provider calls, prompts and internal modules in this directory.
-  return {
-    patch: {},
-    questions: ['이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.'],
-    unresolved: true,
-  };
+  return toPort(createDialogue({ llm: llmFromEnv() }))({ text, state });
 }
 
 export function createAgent({ interpret = interpretMessage } = {}) {

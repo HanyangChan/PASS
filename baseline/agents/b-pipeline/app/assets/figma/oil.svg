@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="SVG">
+<path id="Neck" d="M11.5 3.5H16.5V7.5H11.5V3.5Z" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Body" d="M11.5 7.5L9 11V21.5C9 22.6046 9.89543 23.5 11 23.5H17C18.1046 23.5 19 22.6046 19 21.5V11L16.5 7.5" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Fill" d="M9 15.5H19" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

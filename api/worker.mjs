@@ -2,7 +2,7 @@ import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
 import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
-import { apply, recommend, RANKING_POLICY } from '../lib/engine.mjs';
+import { apply, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
 import { prototypeFullChatTurn, FullChatError } from './full-chat-agent.mjs';
@@ -85,7 +85,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
         const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, rankingPolicy: RANKING_POLICY, products: count ?? 0 },count===null?503:200);
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, products: count ?? 0 },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
