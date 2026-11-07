@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="SVG">
+<path id="Cup" d="M5.5 11.5H19V17C19 20.0376 16.5376 22.5 13.5 22.5H11C7.96243 22.5 5.5 20.0376 5.5 17V11.5Z" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Handle" d="M19 13.5H20.5C21.8807 13.5 23 14.6193 23 16C23 17.3807 21.8807 18.5 20.5 18.5H19" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Steam1" d="M10 8.5C10 7 11.5 7 11.5 5.5C11.5 4 10 4 10 2.5" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Steam2" d="M15 8.5C15 7 16.5 7 16.5 5.5C16.5 4 15 4 15 2.5" stroke="#66625D" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
