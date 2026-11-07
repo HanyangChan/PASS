@@ -265,12 +265,12 @@ export function AppContent({
   const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
   const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
     chatService.toGift(product, session.state);
-  const send = (text: string, source: 'typed' | 'quick_reply' = 'typed') => {
+  const send = (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => {
     if (!text.trim()) return;
     // Clear optimistically so a slow (e.g. LLM) round trip can't let further typing
     // pile onto the just-sent text; restore it only if the send actually fails.
     if (source === 'typed') setInput('');
-    void sendChat(text, source).then(ok => {
+    void sendChat(text, source, fresh).then(ok => {
       if (ok) setComparisonId(null);
       else if (ok === false && source === 'typed') setInput(text);
     });
@@ -279,6 +279,29 @@ export function AppContent({
     navigate('chat');
     if (label)
       send(label === '부모님' ? '부모님' : `${label} 선물을 찾고 있어요`);
+  };
+  // Category entry: end the current conversation, then send the first message on the fresh session
+  // (passed explicitly because setState from resetChat hasn't been applied yet).
+  const chatNew = (label: string) => {
+    const fresh = resetChat();
+    setInput(''); setAttachments([]); setComparisonId(null);
+    navigate('chat');
+    send(label === '부모님' ? '부모님' : `${label} 선물을 찾고 있어요`, 'typed', fresh);
+  };
+  const submitComposer = () => {
+    if (chatPending || (!input.trim() && attachments.length === 0)) return;
+    if (attachments.length) {
+      setMessages(old => [...old, { role: 'user', text: `첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 첨부 파일 내용은 분석하지 않아요.' }]);
+      setAttachments([]);
+    }
+    if (input.trim()) send(input);
+  };
+  const onComposerKeyPress = (e: any) => {
+    const ev = e.nativeEvent ?? {};
+    if (ev.key !== 'Enter' || ev.shiftKey) return;
+    if (ev.isComposing || ev.keyCode === 229) return; // Korean IME composition in progress
+    if (Platform.OS === 'web') e.preventDefault?.(); // keep Enter from inserting a newline
+    submitComposer();
   };
   const changeBudget = (a: any) => {
     void changeChatConditions(a.patch, `예산을 ${won(a.amount)}으로 변경해줘.`, false).then(ok => { if (ok) setComparisonId(null); });
@@ -607,7 +630,7 @@ export function AppContent({
                         key={cat.label}
                         accessibilityRole="button"
                         accessibilityLabel={`${cat.label} 선물 상담`}
-                        onPress={() => chat(cat.label)}
+                        onPress={() => chatNew(cat.label)}
                         style={s.category}
                       >
                         <Text style={s.emoji}>{cat.emoji}</Text>
@@ -836,6 +859,7 @@ export function AppContent({
                       accessibilityLabel="선물 조건 입력"
                       value={input}
                       onChangeText={setInput}
+                      onKeyPress={onComposerKeyPress}
                       editable={!chatPending}
                       placeholder={chatPending ? '보내는 중…' : '받는 분, 예산을 말해 주세요'}
                       maxLength={1200}
@@ -848,13 +872,7 @@ export function AppContent({
                       accessibilityRole="button"
                       accessibilityLabel="메시지 보내기"
                       disabled={chatPending || (!input.trim() && attachments.length === 0)}
-                      onPress={() => {
-                        if (attachments.length) {
-                          setMessages(old => [...old, { role: 'user', text: `첨부: ${attachments.join(' · ')}` }, { role: 'assistant', text: '첨부를 확인했어요. 받는 분과 예산을 알려주시면 선물을 골라볼게요. 첨부 파일 내용은 분석하지 않아요.' }]);
-                          setAttachments([]);
-                        }
-                        if (input.trim()) send(input);
-                      }}
+                      onPress={submitComposer}
                       style={[s.send, !input.trim() && attachments.length === 0 && s.disabled]}
                     >
                       <ArrowUp size={22} color={input.trim() || attachments.length ? c.white : c.muted} />
@@ -1128,30 +1146,32 @@ function usePassState() {
     setChatError('');
   }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors) => {
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors, fresh?: ChatSession) => {
     if (!ready || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
+      // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
+      const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
       const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
       const noHistory = emptyPersonalization();
-      const requestSession = operation === 'turn' ? personalizeSession(session, noHistory, text, undefined, !useAdvisors).session
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, noHistory, '', patch.recipients, !useAdvisors).session
-          : session;
+      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients, !useAdvisors).session
+          : baseSession;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
       const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
       const turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agentMode, agents)
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
           : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
-          : await serverChat.view(session, controller.signal, agentMode, agents)
+          : await serverChat.view(baseSession, controller.signal, agentMode, agents)
         : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
-      if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(session)) setSession(turn.session);
+      if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(baseSession)) setSession(turn.session);
       if (operation !== 'view') {
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
@@ -1174,7 +1194,9 @@ function usePassState() {
   const resetChat = () => {
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
-    setSession(chatService.createSession()); setMessages([]);
+    const next = chatService.createSession();
+    setSession(next); setMessages([]);
+    return next;
   };
   useEffect(() => {
     let mounted = true;
@@ -1259,7 +1281,7 @@ function usePassState() {
     changeAgentMode,
     agentConnected: Boolean(serverChat),
     chatError,
-    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
+    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => runChat('turn', text, undefined, true, source, undefined, fresh),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
     disabledAdvisors,
     toggleAdvisor: (advisor: string, enabled: boolean) => {
