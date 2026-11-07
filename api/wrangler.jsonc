@@ -2,11 +2,14 @@
   "name": "pass-recommendation-api",
   "main": "worker.mjs",
   "compatibility_date": "2026-10-10",
+  // LangGraph (agent mode) needs AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XlhsG0VhBso-EFxXF8ZfFg_lR3DBUok",
     "APP_ORIGINS": "https://temporary-prompt-sable-s15js3l.vercel.app",
-    "GEMINI_MODEL": "gemini-3.6-flash"
+    "GEMINI_MODEL": "gemini-3.6-flash",
+    "AGENTS_MODE": "off"
   },
   "ratelimits": [
     {

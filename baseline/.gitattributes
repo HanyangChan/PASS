@@ -1,0 +1,2 @@
+# Vendor snapshots are hash-checked; keep LF on every platform.
+src/vendor/*.mjs text eol=lf
