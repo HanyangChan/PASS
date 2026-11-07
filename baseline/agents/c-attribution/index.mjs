@@ -1,16 +1,22 @@
 import { createAgentRunner } from '../runtime.mjs';
+import { createInterpreter } from './interpreter.mjs';
 
-/** Starter only: implement 주는 사람과 받는 사람의 조건 귀속 및 대화 계획 here. */
-export async function interpretMessage({ text, state }) {
-  // text and state are data. Return confirmed condition changes only.
-  // Put provider calls, prompts and internal modules in this directory.
-  return {
-    patch: {},
-    questions: ['이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.'],
-    unresolved: true,
-  };
-}
+export { createInterpreter, DEFAULT_TIMEOUT_MS } from './interpreter.mjs';
+export { PROMPT_VERSION } from './prompts.mjs';
 
-export function createAgent({ interpret = interpretMessage } = {}) {
-  return { id: 'c-attribution', runTurn: createAgentRunner({ interpret }) };
+/**
+ * Default interpreter: giver/recipient attribution by rules only. It never calls the network.
+ * Anything the rules cannot decide becomes unresolved:true with one template question.
+ */
+export const interpretMessage = createInterpreter();
+
+/**
+ * createAgent() → rules-only agent (used by the common tests and demo).
+ * createAgent({interpret}) → uses the injected interpreter unchanged.
+ * createAgent({llm, mixedPolicy, timeoutMs, onStats}) → attribution interpreter with an injected llm.
+ */
+export function createAgent({ interpret, llm, ...options } = {}) {
+  const useDefault = interpret === undefined && llm === undefined && Object.values(options).every(v => v === undefined);
+  const chosen = interpret ?? (useDefault ? interpretMessage : createInterpreter({ llm: llm ?? null, ...options }));
+  return { id: 'c-attribution', runTurn: createAgentRunner({ interpret: chosen }) };
 }
