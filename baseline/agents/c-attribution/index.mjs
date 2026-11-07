@@ -1,15 +1,18 @@
 import { createAgentRunner } from '../runtime.mjs';
+import { attribute } from './attribute.mjs';
 
-/** Starter only: implement 주는 사람과 받는 사람의 조건 귀속 및 대화 계획 here. */
-export async function interpretMessage({ text, state }) {
-  // text and state are data. Return confirmed condition changes only.
-  // Put provider calls, prompts and internal modules in this directory.
-  return {
-    patch: {},
-    questions: ['이 에이전트의 자유 발화 해석은 아직 구현 전입니다. 조건 편집으로 입력해 주세요.'],
-    unresolved: true,
+/**
+ * Interpreter port for the common core: whose condition is it? Only the recipient's facts and
+ * gift-level facts are returned as the patch; the giver's own tastes are reported, not applied.
+ * Pass `llm` (see gemini.mjs) to interpret clauses the rules do not understand.
+ */
+export function createInterpreter({ llm } = {}) {
+  return async ({ text, state }) => {
+    const out = await attribute({ text, state, llm });
+    return { patch: out.patch, questions: out.questions, unresolved: out.unresolved, attribution: out.items };
   };
 }
+export const interpretMessage = createInterpreter();
 
 export function createAgent({ interpret = interpretMessage } = {}) {
   return { id: 'c-attribution', runTurn: createAgentRunner({ interpret }) };

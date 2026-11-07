@@ -2,6 +2,8 @@
   "name": "pass-recommendation-api",
   "main": "worker.mjs",
   "compatibility_date": "2026-10-10",
+  // LangGraph (agent mode) needs AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "CHAT_AGENT": "a-router",
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
@@ -13,7 +15,8 @@
     "LLM_MODEL": "deepseek-v4-flash",
     "LLM_CHAT_PATH": "chat/completions",
     "LLM_RESPONSE_FORMAT": "json_object",
-    "A_ROUTER_LLM_MODE": "single"
+    "A_ROUTER_LLM_MODE": "single",
+    "AGENTS_MODE": "off"
   },
   "ratelimits": [
     {

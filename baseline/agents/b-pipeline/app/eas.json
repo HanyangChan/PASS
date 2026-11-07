@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 16.0.0"
+  },
+  "build": {
+    "production": {
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XlhsG0VhBso-EFxXF8ZfFg_lR3DBUok",
+        "EXPO_PUBLIC_CHAT_API_URL": "https://pass-recommendation-api.a73342776.workers.dev"
+      }
+    },
+    "preview": {
+      "extends": "production",
+      "environment": "preview",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "development": {
+      "extends": "preview",
+      "environment": "development",
+      "developmentClient": true
+    }
+  }
+}

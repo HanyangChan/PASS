@@ -23,3 +23,10 @@ LLM_API_KEY=
 A_ROUTER_LLM_MODE=single
 
 # Luna experiment: LLM_MODEL=gpt-5.6-luna and LLM_REASONING_ENABLED=false
+AGENTS_MODE=off
+AGENTS_MODEL=gemini-3.5-flash-lite
+# Agent attribution LLM: deepseek or gemini. DEEPSEEK_BASE_URL only for an OpenAI-compatible proxy.
+AGENTS_LLM=
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=
+DEEPSEEK_MODEL=deepseek-chat

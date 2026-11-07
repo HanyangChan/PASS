@@ -2,6 +2,7 @@ import { validateState } from '../../../lib/llm.mjs';
 import type { ChatSession, ChatMessage, ConditionPatch } from '../domain';
 import type { createLocalChatService } from './chatService';
 import type { ChatAgentMode } from '../chatAgentModes';
+import type { AgentPayload } from '../AgentPanel';
 type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
 export function resolveChatUrl(value?: string) {
@@ -12,7 +13,9 @@ export function resolveChatUrl(value?: string) {
   return `${url.origin}/api/chat`;
 }
 export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch) {
-  async function request(body: object, signal?: AbortSignal, agentMode?: ChatAgentMode) {
+  // `agents` is the optional agent-mode request field (api/README.md); without it the classic path answers.
+async function request(body: { session: ChatSession; [key: string]: unknown }, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: object) {
+  if (agents) body = { ...body, agents };
     const { data, error } = await auth.getSession();
     if (error || data.session?.user.id !== owner) throw new Error('다시 로그인해주세요.');
     const controller = new AbortController(); let timedOut = false;
@@ -38,13 +41,13 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
       if (agentMode && turn.agent !== agentMode) throw new Error('선택한 응답 방식을 적용하지 못했어요. 다시 시도해주세요.');
       try { validateState(turn.session?.state); } catch { throw new Error('추천 서버 응답 형식을 확인해주세요.'); }
       if (!Array.isArray(turn.session.issues) || turn.session.issues.some((v: unknown) => typeof v !== 'string') || typeof turn.message !== 'string' ||
-        !['rules', 'rules_fast', 'llm'].includes(turn.mode) || !turn.view || !Array.isArray(turn.view.result?.items) ||
+        !['rules', 'rules_fast', 'llm', 'agents'].includes(turn.mode) || (turn.mode === 'agents' && (!turn.agents || !['attribution', 'opinions', 'suggestions', 'memoryProposals'].every(k => Array.isArray(turn.agents[k])))) || !turn.view || !Array.isArray(turn.view.result?.items) ||
         !Array.isArray(turn.view.comparison?.alternatives) || !Array.isArray(turn.view.question?.choices) ||
         typeof turn.view.question?.text !== 'string' || typeof turn.view.result?.message !== 'string' ||
         turn.view.result.items.some((p: { id: unknown; name: unknown; total: unknown }) => typeof p.id !== 'string' || typeof p.name !== 'string' || !Number.isFinite(p.total))) throw new Error('추천 서버 응답 형식을 확인해주세요.');
       const latest = await auth.getSession();
       if (latest.data.session?.user.id !== owner || controller.signal.aborted) throw new Error('계정이 변경되거나 요청이 취소되었어요.');
-      return turn as { session: ChatSession; message: string; view: View; mode: 'rules' | 'rules_fast' | 'llm' };
+      return turn as { session: ChatSession; message: string; view: View; mode: 'rules' | 'rules_fast' | 'llm' | 'agents'; agents?: AgentPayload };
     } catch (error) {
       if (timedOut) throw new Error('추천 응답 시간이 초과됐어요. 다시 시도해주세요.');
       if (error instanceof TypeError) throw new Error('추천 서버 연결을 확인해주세요.');
@@ -52,12 +55,12 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   return {
-    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ChatAgentMode) {
-      return request({ operation: 'turn', session, text: text.trim(), history: history.slice(-6).map(message => ({ ...message, text: message.text.slice(0, 1200) })), source }, signal, agentMode);
+    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: object) {
+      return request({ operation: 'turn', session, text: text.trim(), history: history.slice(-6).map(message => ({ ...message, text: message.text.slice(0, 1200) })), source }, signal, agentMode, agents);
     },
-    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ChatAgentMode) {
-      return request({ operation: 'conditions', session, patch, clearIssues }, signal, agentMode);
+    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: object) {
+      return request({ operation: 'conditions', session, patch, clearIssues }, signal, agentMode, agents);
     },
-    view(session: ChatSession, signal?: AbortSignal, agentMode?: ChatAgentMode) { return request({ operation: 'view', session }, signal, agentMode); },
+    view(session: ChatSession, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: object) { return request({ operation: 'view', session }, signal, agentMode, agents); },
   };
 }

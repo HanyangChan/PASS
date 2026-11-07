@@ -1,13 +1,18 @@
 import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
-import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
-import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
-import { apply, recommend, RANKING_POLICY } from '../lib/engine.mjs';
-import { budgetAlternatives } from '../lib/counterfactual.mjs';
+
 import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
 import { prototypeFullChatTurn, FullChatError } from './full-chat-agent.mjs';
 import { createAgent as createFeedbackAgent } from '../baseline/agents/full-chat-feedback/index.mjs';
 import { resolveLlm } from '../lib/llm-provider.mjs';
+import { validateRequest, validateState, llmTurn, geminiFailure } from '../lib/llm.mjs';
+import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, publicState } from '../lib/single-gift.mjs';
+import { apply, recommend, RANKING_POLICY } from '../lib/engine.mjs';
+import { budgetAlternatives } from '../lib/counterfactual.mjs';
+import { CATEGORIES } from '../lib/catalog.mjs';
+import { ALLERGEN_NAMES } from '../lib/allergens.mjs';
+import { createGeminiAttributor, DEFAULT_MODEL } from '../baseline/agents/c-attribution/gemini.mjs';
+import { createDeepSeekAttributor, DEEPSEEK_MODEL } from '../baseline/agents/c-attribution/deepseek.mjs';
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 async function readJson(request) {
@@ -50,6 +55,27 @@ function inputOf(raw) {
     return { ...raw, session, state: session.state, issues: session.issues };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
+const AGENT_NAMES = ['occasion', 'spending', 'taste', 'relationship'];
+const shortList = (value, allowed, max = 50) => Array.isArray(value) && value.length <= max && value.every(v => typeof v === 'string' && (allowed ? allowed.includes(v) : v.length > 0 && v.length <= 120));
+/** Optional C + D agent request: the current recipient's on-device memory, purchases and calendar. */
+function agentsOf(raw) {
+  if (raw === undefined) return null;
+  try {
+    const { enabled, disabled = [], memory = null, purchases = [], calendar = [] } = raw;
+    if (enabled !== true || !shortList(disabled, AGENT_NAMES, 4)) throw Error();
+    if (memory !== null && (typeof memory !== 'object' || !shortList(memory.preferences ?? [], null) || !shortList(memory.excluded_categories ?? [], CATEGORIES) || !shortList(memory.excluded_ingredients ?? [], ALLERGEN_NAMES))) throw Error();
+    if (!Array.isArray(purchases) || purchases.length > 100 || purchases.some(p => !p || !CATEGORIES.includes(p.category) || !Number.isSafeInteger(p.price_krw) || p.price_krw < 0 || p.price_krw > 1e8 || !['unknown', 'liked', 'disliked'].includes(p.feedback))) throw Error();
+    if (!Array.isArray(calendar) || calendar.length > 100 || calendar.some(e => !e || typeof e.title !== 'string' || !e.title || e.title.length > 60 || !/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(e.date) || !['birthday', 'anniversary', 'etc'].includes(e.kind))) throw Error();
+    return {
+      disabled,
+      memory: memory && { preferences: memory.preferences ?? [], excluded_categories: memory.excluded_categories ?? [], excluded_ingredients: memory.excluded_ingredients ?? [] },
+      purchases: purchases.map(({ category, price_krw, feedback }) => ({ category, price_krw, feedback })),
+      calendar: calendar.map(({ title, date, kind }) => ({ title, date, kind })),
+    };
+  } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
+}
+const lazyAgentTurn = async args => (await import('../baseline/agents/d-langgraph/orchestrator.mjs')).runAgentTurn(args);
+const NO_AGENTS = { attribution: [], opinions: [], suggestions: [], memoryProposals: [], autoApplied: [], trace: { provider: 'rules', llmCalls: 0 } };
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
 function defaultCatalog(fetcher) {
   let rows = null;
@@ -63,7 +89,8 @@ export function recommendationView(session, products) {
   const state = engineState(session.state);
   return { question: singleQuestion(session), result: recommend(products, state), comparison: budgetAlternatives(products, state) };
 }
-export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), onDiagnostic } = {}) {
+// head에서는 extract의 기본값이 없고 main에서는 extract의 기본값이 llmTurn인데 일단 기본값 없는걸로 함.. 
+export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), onDiagnostic, agentTurn = lazyAgentTurn } = {}) {
   return {
     async fetch(request, env) {
       const origin = request.headers.get('origin');
@@ -115,8 +142,26 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         if (!fullChat && env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
         if (!fullChat && env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
         const input = inputOf(raw);
+        const agents = agentsOf(raw.agents);
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
+        if (agents && env.AGENTS_MODE === 'on') {
+          // The graph sees the app's one-gift conditions as the common engine state.
+          const session = { id: 'app', version: 0, state: engineState(input.state) };
+          const request = input.operation === 'turn' ? { kind: 'message', text: input.text, expectedVersion: 0 }
+            : input.operation === 'conditions' ? { kind: 'patch', patch: engineState(input.patch), expectedVersion: 0 } : { kind: 'view', expectedVersion: 0 };
+          // AGENTS_LLM picks the attribution model; by default DeepSeek when its key is set, else Gemini.
+          const provider = env.AGENTS_LLM || (env.DEEPSEEK_API_KEY ? 'deepseek' : 'gemini');
+          const llm = provider === 'deepseek' && env.DEEPSEEK_API_KEY
+            ? createDeepSeekAttributor({ apiKey: env.DEEPSEEK_API_KEY, model: env.DEEPSEEK_MODEL || DEEPSEEK_MODEL, ...(env.DEEPSEEK_BASE_URL ? { baseUrl: env.DEEPSEEK_BASE_URL.replace(/\/$/, '') } : {}), fetcher })
+            : provider === 'gemini' && env.GEMINI_API_KEY ? createGeminiAttributor({ apiKey: env.GEMINI_API_KEY, model: env.AGENTS_MODEL || DEFAULT_MODEL, fetcher }) : undefined;
+          const out = await agentTurn({ session, request, products, llm, disabled: agents.disabled, context: { today: todayKst(), memory: agents.memory, purchases: agents.purchases, calendar: agents.calendar } });
+          // An attribution question ends the turn before the advisors run; keep it as the open issue.
+          const issues = out.agents ? [] : [out.question];
+          const evaluated = out.evaluatedState ?? out.session.state;
+          const view = { question: singleQuestion({ state: publicState(evaluated), issues }), result: recommend(products, evaluated), comparison: budgetAlternatives(products, evaluated) };
+          return json({ session: { state: publicState(out.session.state), issues }, message: view.question.key ? view.question.text : view.result.message, view, mode: 'agents', agents: out.agents ?? NO_AGENTS, catalog: CATALOG_ID });
+        }
         let turn, mode = 'rules';
         if (fullChat) {
           const feedback=chatAgent!=='full-chat';

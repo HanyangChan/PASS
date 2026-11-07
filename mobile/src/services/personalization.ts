@@ -3,7 +3,7 @@ import { CATEGORY_NAMES, CATEGORIES } from '../../../lib/catalog.mjs';
 import { validateState } from '../../../lib/llm.mjs';
 import { decodeGifts } from '../storage.ts';
 import { extract, initial } from '../../../lib/engine.mjs';
-import type { ChatSession, Conditions, Gift } from '../domain.ts';
+import type { CalendarEvent, ChatSession, Conditions, Gift } from '../domain.ts';
 
 export type RecipientMemory = {
   recipient: string;
@@ -51,8 +51,12 @@ export function rememberConditions(data: Personalization, state: Conditions, now
 }
 const categoryKeys: Record<string, string> = { ...Object.fromEntries(Object.entries(CATEGORY_NAMES).map(([key, label]) => [label, key])), 과일: 'food', 한과: 'snack', 견과류: 'food', 차: 'coffee_tea', 커피: 'coffee_tea', 오일: 'food', 기름: 'food', 전통차: 'coffee_tea', '신선 과일': 'food', fruit: 'food', hangwa: 'snack', nuts: 'food', tea: 'coffee_tea', coffee: 'coffee_tea', oil: 'food' };
 // Current explicit preferences outrank inferred purchase preferences. Never infer allergies from purchases.
-export function personalizeSession(session: ChatSession, data: Personalization, text = '', recipientsOverride?: string[]) {
-  const mentioned = recipientsInText(text);
+// clientInference=false (agent mode) leaves reading tastes from the message and from liked purchases to
+// the server: its attribution knows whose taste a phrase is, a whole-message extract does not. It also leaves
+// messages naming several people ("아빠랑 엄마 중에 한 분이…") to the server instead of switching recipients.
+export function personalizeSession(session: ChatSession, data: Personalization, text = '', recipientsOverride?: string[], clientInference = true) {
+  const found = recipientsInText(text);
+  const mentioned = clientInference || found.length <= 1 ? found : [];
   const recipients = canonicalRecipients(recipientsOverride ?? (mentioned.length ? mentioned : session.state.recipients));
   const recall = JSON.stringify(recipients) !== JSON.stringify(canonicalRecipients(session.state.recipients));
   const prepared = switchRecipient(session, recipients);
@@ -69,8 +73,8 @@ export function personalizeSession(session: ChatSession, data: Personalization, 
     reasons.push(`${recipient}의 저장된 선호·제외 조건을 반영했어요.`);
   }
   const explicit = (extract(text, initial()).patch as Partial<Conditions>).preferences;
-  if (explicit?.length) state.preferences = explicit;
-  if (recall && !state.preferences.length) {
+  if (clientInference && explicit?.length) state.preferences = explicit;
+  if (clientInference && recall && !state.preferences.length) {
     const liked = data.purchases.filter(p => canonicalRecipient(p.recipient) === recipient && p.feedback === 'liked');
     const preferences = unique(liked.map(p => categoryKeys[p.gift.category] ?? ((CATEGORIES as readonly string[]).includes(p.gift.category) ? p.gift.category : '')).filter(Boolean));
     if (preferences.length) {
@@ -150,4 +154,21 @@ export function assertSameRecipient(request: ChatSession, response: ChatSession)
   if (request.state.recipients.length && JSON.stringify(canonicalRecipients(request.state.recipients)) !== JSON.stringify(canonicalRecipients(response.state.recipients))) {
     throw new Error('받는 분을 정확히 확인하지 못했어요. 조건 편집에서 받는 분을 지정한 뒤 다시 시도해주세요.');
   }
+}
+
+// Agent mode sends only the current recipient's records: their memory, purchases and calendar entries.
+export function agentContext(data: Personalization, recipients: string[], events: CalendarEvent[]) {
+  if (recipients.length !== 1) return { memory: null, purchases: [], calendar: [] };
+  const recipient = canonicalRecipient(recipients[0]);
+  const names = Object.entries(recipientAliases).filter(([, value]) => value === recipient).map(([name]) => name);
+  const memory = data.memories.find(m => canonicalRecipient(m.recipient) === recipient);
+  const purchases = data.purchases.filter(p => canonicalRecipient(p.recipient) === recipient).flatMap(p => {
+    const category = categoryKeys[p.gift.category] ?? ((CATEGORIES as readonly string[]).includes(p.gift.category) ? p.gift.category : '');
+    return category && Number.isSafeInteger(p.gift.price) ? [{ category, price_krw: p.gift.price, feedback: p.feedback }] : [];
+  });
+  return {
+    memory: memory ? { preferences: memory.preferences, excluded_categories: memory.excluded_categories, excluded_ingredients: memory.excluded_ingredients } : null,
+    purchases,
+    calendar: events.filter(e => names.some(name => e.title.includes(name))).map(({ title, date, kind }) => ({ title: title.slice(0, 60), date, kind })),
+  };
 }
