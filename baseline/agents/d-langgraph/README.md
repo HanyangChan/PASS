@@ -1,32 +1,7 @@
-# LangGraph 작업 공간 (C + D)
+# LangGraph 귀속·자문
 
-받는 사람 정보 귀속(C, `../c-attribution`)과 자문 에이전트 4개(명절·기념일, 소비, 취향, 관계 예절)를 LangGraph 그래프로 묶었다. 설계는 [DESIGN.md](DESIGN.md)를 따른다.
+채팅 슬라이더의 B(`langgraph-advisors`)는 수령인 귀속 판단에 이어 명절·기념일, 소비, 취향, 관계의 규칙 자문을 병렬 실행합니다. 그래프의 진입점은 `runAgentTurn`이며 API에서 요청별로 선택합니다. 자동 선호는 평가용 복제 상태에만 추가합니다. 조건·가격·순위는 공통 엔진을 사용합니다.
 
-```sh
-# baseline/agents/d-langgraph 기준
-npm install          # @langchain/langgraph 1.6.0, @langchain/core 1.3.4
-npm test             # 이 폴더 테스트
-npm run eval         # 합성 시나리오 평가 (eval/README.md)
-```
+저장소 루트에서 `npm run setup`으로 그래프를 설치합니다. 전용 검증은 `npm --prefix baseline/agents/d-langgraph test`입니다. 모델 호출이 필요한 귀속은 서버의 공유 LLM 전송을 사용합니다. [API 실행과 모드 선택](../../../api/README.md#채팅-화면의-abcd-선택)
 
-이 폴더를 설치하지 않아도 `baseline/`의 공통 `npm test`는 통과한다. 그래프 테스트만 건너뛴다.
-
-| 파일 | 역할 |
-| --- | --- |
-| `orchestrator.mjs` | 그래프: attribute(C) → 자문 4개 병렬(`Send`) → merge(병합·엔진 평가·제안 미리보기·기억 제안) |
-| `advisors.mjs` | 규칙 자문 4개. 의견·제안·약한 자동 선호만 반환하고 순위는 계산하지 않음 |
-| `tables.mjs` | 기념일·설·추석 날짜표, 관계 그룹표 (팀 검토용 초안) |
-| `index.mjs` | 레지스트리용 `createAgent`(C 해석기 포트) + 지연 로딩 `runAgentTurn` |
-
-```js
-import { runAgentTurn } from './index.mjs';
-const out = await runAgentTurn({
-  session, request, products,                       // 공통 runTurn과 같은 계약
-  context: { today: '2026-11-05', memory, purchases, calendar },
-  disabled: ['taste'],                              // 사용자가 끈 에이전트
-  llm,                                              // 선택: c-attribution/gemini.mjs
-});
-// out = 공통 runTurn 결과 + out.agents { attribution, opinions, suggestions, memoryProposals, autoApplied, trace }
-```
-
-공통 엔진·검증은 `src/index.mjs`의 `runTurn`을 그대로 쓴다. 사용자가 말한 조건만 세션에 저장하고, 취향 에이전트의 자동 선호는 평가용 복제본에만 적용한다. 브랜치: `codex/architecture-d-langgraph`.
+합성 시나리오는 `npm --prefix baseline/agents/d-langgraph run eval`로 실행합니다. 기억·구매 이력을 사용하는 그래프 동작은 [합성 평가](eval/README.md)에서 재현할 수 있습니다. [로컬 웹 데모](e2e/README.md)에서는 채팅에 연결된 네 모드를 시험할 수 있습니다.

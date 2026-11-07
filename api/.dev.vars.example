@@ -1,13 +1,26 @@
-# Local development only. Copy to .dev.vars and never commit real keys.
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_me
-APP_ORIGINS=http://127.0.0.1:8766
+# Local development only. npm run setup:local creates this without overwriting existing files.
+# Blank Supabase values inherit mobile/.env.local public settings.
+# Blank APP_ORIGINS allows localhost/127.0.0.1 ports 8766, 8081, 19006 in the Node dev server.
+# API_PORT=8788
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+APP_ORIGINS=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.6-flash
-AGENTS_MODE=off
-AGENTS_MODEL=gemini-3.5-flash-lite
-# Agent attribution LLM: deepseek or gemini. DEEPSEEK_BASE_URL only for an OpenAI-compatible proxy.
-AGENTS_LLM=
-DEEPSEEK_API_KEY=
-DEEPSEEK_BASE_URL=
-DEEPSEEK_MODEL=deepseek-chat
+
+# a-router: rules first; full-chat: C, every chat uses a model action loop; legacy: original path.
+# full-chat requires openai-compatible, a server LLM_API_KEY, and json_object or text responses.
+# full-chat-feedback-1 / full-chat-feedback-2: C plus bounded action review/revision.
+CHAT_AGENT=a-router
+LLM_PROVIDER=openai-compatible
+LLM_BASE_URL=https://llm.ai.hy.miwork.ai
+LLM_MODEL=gpt-5.6-luna
+LLM_REASONING_ENABLED=false
+LLM_CHAT_PATH=chat/completions
+LLM_RESPONSE_FORMAT=json_object
+LLM_API_KEY=
+
+# single (default) or supervised multi-agent interpretation
+A_ROUTER_LLM_MODE=single
+
+# langgraph-advisors: B, rule attribution with optional Luna plus four advisors.

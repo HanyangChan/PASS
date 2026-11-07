@@ -51,20 +51,19 @@ test('agent mode leaves liked-purchase inference to the server but keeps remembe
   assert.deepEqual(personalizeSession(session, emptyPersonalization(), '엄마 선물', undefined, false).session.state.preferences, []);
 });
 
-test('the server chat service sends the agent field and accepts the agent response', { skip: graph ? false : 'npm install in baseline/agents/d-langgraph' }, async () => {
+test('live chat sends calendar and advisor toggles without saved history', { skip: graph ? false : 'npm install in baseline/agents/d-langgraph' }, async () => {
   const rows = JSON.parse(readFileSync(new URL('../../supabase/seed/products-amazon.json', import.meta.url)));
   const products = rows.map(r => toEngineProduct(r, todayKst()));
   const api = createApi({ catalog: async () => products, fetcher: async () => Response.json({ id: 'owner', role: 'authenticated' }) });
-  const env = { SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: '', AGENTS_MODE: 'on', IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) } };
+  const env = { SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: '', IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) } };
   const auth = { getSession: async () => ({ data: { session: { access_token: 'test.jwt', user: { id: 'owner' } } }, error: null }) };
   let posted;
   const service = createServerChatService('https://api.example/api/chat', auth, 'owner', async (url, options) => { posted = JSON.parse(options.body); return api.fetch(new Request(url, options), env); });
   const start = { state: { ...singleInitial(), recipients: ['어머니'], budget: { amount_krw: 50000, shipping_included: true } }, issues: [] };
-  const turn = await service.send(start, '나는 과자 좋아하는데 엄마는 우유 알레르기가 있어', [], 'typed', undefined, { enabled: true, disabled: ['relationship'], ...agentContext(data, ['어머니'], events) });
-  assert.deepEqual(posted.agents.disabled, ['relationship']);
-  assert.equal(posted.agents.purchases.length, 1);
+  const turn = await service.send(start, '나는 과자 좋아하는데 엄마는 우유 알레르기가 있어', [], 'typed', undefined, 'langgraph-advisors', { disabled: ['relationship'], ...agentContext(data, ['어머니'], events) });
+  assert.deepEqual(posted.agents, { disabled: ['relationship'], calendar: [{ title: '엄마 생일', date: '11-17', kind: 'birthday' }] });
   assert.equal(turn.mode, 'agents');
   assert.deepEqual(turn.session.state.excluded_ingredients, ['우유']);
-  assert.ok(turn.agents.opinions.some(o => o.agent === 'taste'));
+  assert.ok(turn.agents.opinions.every(o => !['memory', 'purchase_history'].includes(o.source)));
   assert.ok(turn.agents.opinions.find(o => o.agent === 'relationship')?.enabled === false);
 });

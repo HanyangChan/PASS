@@ -27,10 +27,11 @@ async function attributeNode({ input }) {
       : { ...rules, items: [], provider: 'rules', llmCalls: 0 };
   }
   if (attribution.unresolved) {
-    const output = { session, kind: 'question', question: attribution.questions[0], trace: [{ stage: 'attribute', provider: attribution.provider }] };
+    const output = { session, kind: 'question', question: attribution.questions[0], trace: [{ stage: 'attribute', provider: attribution.provider, llmCalls: attribution.llmCalls }] };
     return { attribution, output };
   }
-  const patch = request.kind === 'message' ? attribution.patch : request.kind === 'patch' ? request.patch : {};
+  const proposed = request.kind === 'message' ? attribution.patch : request.kind === 'patch' ? request.patch : {};
+  const patch = input.preparePatch?.(session.state, proposed) ?? proposed;
   const persisted = Object.keys(patch).length
     ? await runTurn({ session, products, request: { kind: 'patch', expectedVersion: request.expectedVersion, patch } })
     : await runTurn({ session, products, request: { kind: 'view', expectedVersion: request.expectedVersion } });
@@ -95,12 +96,12 @@ const graph = new StateGraph(Turn)
  * common runTurn, plus `context` ({today, memory, purchases, calendar} for the current
  * recipient), `disabled` agent names and an optional `llm` attributor.
  */
-export async function runAgentTurn({ session, request, products, context = {}, disabled = [], llm }) {
+export async function runAgentTurn({ session, request, products, context = {}, disabled = [], llm, preparePatch }) {
   if (request?.kind === 'what_if_budget') return runTurn({ session, request, products });
   if (typeof context.today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(context.today)) throw new TypeError('context.today must be YYYY-MM-DD');
   const unknown = disabled.filter(a => !AGENTS.includes(a));
   if (unknown.length) throw new RangeError(`Unknown agents: ${unknown.join(', ')}`);
-  const { output } = await graph.invoke({ input: { session, request, products, context, disabled, llm } });
+  const { output } = await graph.invoke({ input: { session, request, products, context, disabled, llm, preparePatch } });
   return output;
 }
 export const agentNames = AGENTS;

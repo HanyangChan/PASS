@@ -1,0 +1,175 @@
+{
+  "generatedAt": "2026-11-05T03:07:14.817Z",
+  "timezone": "Asia/Seoul",
+  "agent": "a-router",
+  "model": "deepseek-v4-flash",
+  "scope": "Synthetic sessions/catalog and mocked auth through the actual Worker handler; real configured LLM for one case; no browser UI or real Supabase auth exercised.",
+  "passed": 10,
+  "total": 10,
+  "ok": true,
+  "realLlmHttpCalls": 1,
+  "results": [
+    {
+      "id": "rules",
+      "label": "명확한 조건을 규칙으로 처리",
+      "ok": true,
+      "latencyMs": 22,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "rules",
+        "llmCalls": 0
+      },
+      "topProduct": "tea"
+    },
+    {
+      "id": "exclusions",
+      "label": "선호·제외 조건 반영",
+      "ok": true,
+      "latencyMs": 3,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "rules",
+        "llmCalls": 0
+      },
+      "excludedIngredients": [
+        "견과류"
+      ]
+    },
+    {
+      "id": "explain",
+      "label": "추천 이유를 엔진 사실로 설명",
+      "ok": true,
+      "latencyMs": 1,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "explain",
+        "route": "rules",
+        "llmCalls": 0
+      }
+    },
+    {
+      "id": "what_if",
+      "label": "예산 가정 비교가 현재 상태를 바꾸지 않음",
+      "ok": true,
+      "latencyMs": 1,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "compare_budget",
+        "route": "rules",
+        "llmCalls": 0
+      },
+      "currentBudget": 50000,
+      "hypotheticalBudget": 70000
+    },
+    {
+      "id": "apply_budget",
+      "label": "명시적 요청 후에만 예산 변경",
+      "ok": true,
+      "latencyMs": 0,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "rules",
+        "llmCalls": 0
+      },
+      "appliedBudget": 70000
+    },
+    {
+      "id": "conflict",
+      "label": "충돌 예산은 질문하고 기존 조건 보존",
+      "ok": true,
+      "latencyMs": 1,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "clarification",
+        "llmCalls": 0
+      }
+    },
+    {
+      "id": "recipient",
+      "label": "수령인 변경 시 이전 선호·제외 분리",
+      "ok": true,
+      "latencyMs": 0,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "rules",
+        "llmCalls": 0
+      }
+    },
+    {
+      "id": "allergy_question",
+      "label": "미확정 알레르기는 비교·추천보다 확인 우선",
+      "ok": true,
+      "latencyMs": 1,
+      "httpLlmCalls": 0,
+      "routing": {
+        "agent": "a-router",
+        "intent": "compare_budget",
+        "route": "clarification",
+        "llmCalls": 0
+      }
+    },
+    {
+      "id": "real_llm",
+      "label": "미해석 자유 발화를 실제 선택한 LLM으로 보완",
+      "ok": true,
+      "latencyMs": 5325,
+      "httpLlmCalls": 1,
+      "routing": {
+        "agent": "a-router",
+        "intent": "conditions",
+        "route": "llm",
+        "llmCalls": 1
+      },
+      "model": "deepseek-v4-flash",
+      "usage": {
+        "prompt_tokens": 1227,
+        "completion_tokens": 407,
+        "total_tokens": 1634
+      },
+      "budget": 50000
+    },
+    {
+      "id": "provider_failure",
+      "label": "모의 공급자 오류가 503이며 변경 상태를 반환하지 않음",
+      "ok": true,
+      "latencyMs": 1,
+      "httpLlmCalls": 0,
+      "simulated": true,
+      "status": 503
+    }
+  ],
+  "implementationCommit": "f8d66e573e83e6b79811ce1ae23368b44cf3f904",
+  "automatedSuites": [
+    {
+      "command": "npm run test:router",
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "command": "npm --prefix baseline test",
+      "passed": 39,
+      "failed": 0
+    }
+  ],
+  "liveServer": {
+    "status": 200,
+    "ok": true,
+    "agent": "a-router",
+    "provider": "openai-compatible",
+    "model": "deepseek-v4-flash",
+    "products": 3376,
+    "unauthenticatedStatus": 401
+  }
+}

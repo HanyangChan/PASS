@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { CATEGORY_NAMES } from '../../lib/catalog.mjs';
 import { colors as c } from './theme';
@@ -35,13 +35,9 @@ type Props = {
   busy: boolean;
   onToggle: (agent: string, on: boolean) => void;
   onSuggest: (patch: Record<string, unknown>, label: string) => void;
-  onRemember: () => void;
 };
-export function AgentPanel({ agents, disabled, busy, onToggle, onSuggest, onRemember }: Props) {
-  const [dismissed, setDismissed] = useState('');
+export function AgentPanel({ agents, disabled, busy, onToggle, onSuggest }: Props) {
   const facts = agents.attribution.filter(a => a.holder !== 'gift');
-  const proposal = agents.memoryProposals[0];
-  const proposalText = proposal && [...proposal.preferences.map(v => factLabel('preferences', v)), ...proposal.excluded_categories.map(v => factLabel('excluded_categories', v)), ...proposal.excluded_ingredients.map(v => factLabel('excluded_ingredients', v))].join(', ');
   const shown = AGENTS.filter(a => agents.opinions.some(o => o.agent === a));
   return (
     <View style={s.panel} accessibilityLabel="에이전트 의견">
@@ -91,15 +87,6 @@ export function AgentPanel({ agents, disabled, busy, onToggle, onSuggest, onReme
           ))}
         </View>
       )}
-      {proposal && proposalText && dismissed !== proposalText && (
-        <View style={[s.block, s.memory]}>
-          <Text style={s.text}>{proposal.recipient}: {proposalText}{'\n'}다음 대화에서도 기억할까요?</Text>
-          <View style={s.actions}>
-            <Pressable accessibilityRole="button" disabled={busy} onPress={onRemember} style={s.action}><Text style={s.actionText}>기억하기</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={() => setDismissed(proposalText)} style={s.action}><Text style={s.mutedText}>이번만</Text></Pressable>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -119,8 +106,4 @@ const s = StyleSheet.create({
   mutedText: { color: c.muted },
   suggestion: { borderWidth: 1, borderColor: c.primary, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, gap: 2 },
   suggestionText: { fontSize: 13, fontWeight: '600', color: c.primary },
-  memory: { backgroundColor: c.tint, borderRadius: 10, padding: 10 },
-  actions: { flexDirection: 'row', gap: 16 },
-  action: { paddingVertical: 6 },
-  actionText: { color: c.primary, fontWeight: '600' },
 });

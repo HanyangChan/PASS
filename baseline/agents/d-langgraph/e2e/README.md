@@ -1,22 +1,24 @@
 # 로컬 E2E (배포·운영 계정 없이 실제 앱 화면으로 확인)
 
-실제 앱 웹 빌드 + 실제 Worker 코드 + LangGraph 그래프 + 실제 Gemini를 localhost에서 연결한다. Supabase만 페이지 안 대역(`mock-supabase.js`, `https://pass-mock.test`)으로 바꾼다. 운영 Supabase·Cloudflare에는 아무것도 보내지 않는다.
+로컬 웹 빌드를 실제 추천 Worker에 연결한다. 데모 계정은 페이지 안 대역(`mock-supabase.js`)을 사용하고 상품은 저장소에 포함된 카탈로그를 읽는다.
 
 ```sh
 # 저장소 루트 기준
+npm run setup
+npm run setup:local
 # 1) 앱 웹 빌드 (환경 변수를 바꾼 뒤에는 --clear로 캐시를 지운다)
 cd mobile && EXPO_PUBLIC_SUPABASE_URL=https://pass-mock.test EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_demo \
-  EXPO_PUBLIC_CHAT_API_URL=http://127.0.0.1:8788 EXPO_PUBLIC_AGENTS_MODE=on \
+  EXPO_PUBLIC_CHAT_API_URL=http://127.0.0.1:8788 \
   npx expo export -p web --clear --output-dir ../baseline/agents/d-langgraph/e2e/web && cd ..
-# 2) 로컬 API (AGENTS_MODE on). GEMINI_API_KEY가 없으면 규칙만 쓴다.
-node --env-file=<GEMINI_API_KEY가 든 .env> baseline/agents/d-langgraph/e2e/local-api.mjs
+# 2) 로컬 데모 API. 모델 호출은 api/.dev.vars의 LLM 설정을 사용한다.
+node baseline/agents/d-langgraph/e2e/local-api.mjs
 # 3) 앱 서버 → http://127.0.0.1:8767/chat
 node baseline/agents/d-langgraph/e2e/serve.mjs
 ```
 
-`mock-supabase.js`는 데모 계정(`demo-user`) 세션, 어머니 구매 기록 2건(뷰티 만족, 과자 불만족), 10일 뒤 "엄마 생일" 캘린더를 브라우저 저장소에 넣는다. 캘린더는 비어 있을 때만 넣으므로, 다시 넣으려면 개발자 도구에서 `pass.calendar-events.v1`을 지운다. `e2e/web/`은 Git에서 제외한다.
+`mock-supabase.js`는 데모 계정과 캘린더를 브라우저에 준비한다. 채팅의 A~D 슬라이더에서 B를 선택하면 귀속과 자문을 확인할 수 있다. 기존 예시 구매 이력은 분석용으로 남긴다. C와 D를 시험하려면 [공유 LLM 설정](../../../../api/README.md#로컬-시험)에 따라 유효한 모델 키를 지정한다. `e2e/web/`은 Git에서 제외한다.
 
-## 2026-11-05 확인 결과
+## 2026-11-05 이전 데모 검증 기록
 
 | 시나리오 | 결과 |
 | --- | --- |

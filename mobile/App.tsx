@@ -5,6 +5,7 @@ import React, {
   useRef,
   useMemo,
   useState,
+  useCallback,
 } from 'react';
 import { useRouter } from 'expo-router';
 import {
@@ -40,7 +41,6 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronRight,
-  ArrowLeftRight,
   Star,
   Calendar as CalendarIcon,
   X,
@@ -49,11 +49,12 @@ import SearchIcon from './assets/figma/search.svg';
 import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
-import { AttachmentPicker } from './src/AttachmentPicker';
-import { PersonalizationPanel } from './src/PersonalizationPanel';
-import { usePersonalization } from './src/usePersonalization';
-import { personalizeSession, protectRememberedAllergies, assertSameRecipient, agentContext, rememberConditions } from './src/services/personalization';
+import { ChatPendingIndicator } from './src/ChatPendingIndicator';
+import { AgentModeControl } from './src/AgentModeControl';
 import { AgentPanel, type AgentPayload } from './src/AgentPanel';
+import type { ChatAgentMode } from './src/chatAgentModes';
+import { AttachmentPicker } from './src/AttachmentPicker';
+import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
@@ -75,13 +76,12 @@ import {
   won,
 } from './src/components';
 let chatConfigurationError = '';
-// Agent mode (C + D graph) is opt-in on both sides: this flag here and AGENTS_MODE on the API.
-const agentsMode = process.env.EXPO_PUBLIC_AGENTS_MODE === 'on';
 const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
 type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
+const conditionComparisonEnabled = false;
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
   { key: 'chat', label: 'AI 추천', Icon: Sparkles },
@@ -140,15 +140,14 @@ export function AppContent({
     retrySave,
     recommendation,
     chatPending,
+    agentMode,
+    changeAgentMode,
+    agentConnected,
     chatError,
     sendChat,
-    personalization,
-    appliedMemory,
     changeChatConditions,
-    agentsOn,
-    disabledAgents,
-    toggleAgent,
-    rememberAgentProposal,
+    disabledAdvisors,
+    toggleAdvisor,
     resetChat,
     heroFailed,
     setHeroFailed,
@@ -220,7 +219,8 @@ export function AppContent({
     } else close('/');
   };
   const setResultsOpen = (open: boolean) => {
-    if (open) router.push('/results');
+    if (open && conditionComparisonEnabled) router.push('/results');
+    else if (open) return;
     else close('/chat');
   };
   useEffect(() => {
@@ -499,7 +499,7 @@ export function AppContent({
                 {question.key ? question.text : result.message}
               </Text>
               {!question.key && cards(result.items.map(toGift), true)}
-              {!question.key && (
+              {!question.key && conditionComparisonEnabled && (
                 <View style={s.comparison}>
                   <Text style={s.sectionTitle}>조건을 바꿔보면?</Text>
                   <Text style={s.subtitle}>{comparison.message}</Text>
@@ -763,11 +763,9 @@ export function AppContent({
                   }
                   keyboardShouldPersistTaps="handled"
                 >
-                  {chatPending && <Text style={s.demoNote}>추천을 확인하고 있어요…</Text>}
                   <Text style={s.assistant}>
                     선물을 함께 골라볼게요. 누구에게 드릴 선물인가요?
                   </Text>
-                  <PersonalizationPanel store={personalization} conditions={session.state} issues={session.issues} recent={recent} applied={appliedMemory} chatPending={chatPending} />
                   {!!chatError && <Text accessibilityRole="alert" style={s.note}>{chatError}</Text>}
                   {messages.map((m, i) => (
                     <Text
@@ -799,30 +797,20 @@ export function AppContent({
                           </View>;
                         })}
                       </ScrollView>
-                      <View style={s.resultButton}>
-                        <Pressable accessibilityRole="button" accessibilityLabel="조건을 바꾸면 추천이 어떻게 달라지는지 비교해보기" onPress={() => setResultsOpen(true)} style={s.compareButton}>
-                          <View style={s.compareIcon}><ArrowLeftRight size={18} color={c.white}/></View>
-                          <View style={s.flex}>
-                            <Text style={s.compareTitle}>조건을 바꾸면 어떻게 달라질까요?</Text>
-                            <Text style={s.compareSubtitle}>예산·조건별 추천 비교해보기</Text>
-                          </View>
-                          <ChevronRight size={20} color={c.primary}/>
-                        </Pressable>
-                      </View>
                     </>
                   )}
-                  {agentsOn && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                    <View style={s.resultButton}>
+                  {agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
+                    <View style={s.advisorPanel}>
                       <AgentPanel
                         agents={recommendation.agents}
-                        disabled={disabledAgents}
-                        busy={chatPending || personalization.busy}
-                        onToggle={toggleAgent}
+                        disabled={disabledAdvisors}
+                        busy={chatPending}
+                        onToggle={toggleAdvisor}
                         onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                        onRemember={rememberAgentProposal}
                       />
                     </View>
                   )}
+                  {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
                   <ScrollView
@@ -839,6 +827,7 @@ export function AppContent({
                     ))}
                   </ScrollView>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
+                  <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={s.inputShell}>
@@ -1095,8 +1084,6 @@ function usePassState() {
   }, [catalogAttempt]);
   const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
-  const personalization = usePersonalization(owner ?? null);
-  const [appliedMemory, setAppliedMemory] = useState<string[]>([]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
@@ -1128,53 +1115,46 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const [disabledAgents, setDisabledAgents] = useState<string[]>([]);
-  const disabledRef = useRef<string[]>([]);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
-  const agentsOn = agentsMode && serverChat !== null;
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
+  const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
+  const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
+  const changeAgentMode = useCallback((next: ChatAgentMode) => {
+    if (chatFlight.current.controller) return;
+    setAgentMode(next);
+    setChatError('');
+  }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed') => {
-    if (!personalization.ready) { setChatError(personalization.error || '개인화 기록을 불러오고 있어요. 잠시 후 다시 시도해주세요.'); return false; }
-    if (!ready || personalization.busy || chatFlight.current.controller) return false;
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors) => {
+    if (!ready || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     try {
-      const recalled = operation === 'turn' ? personalizeSession(session, personalization.data, text, undefined, !agentsOn)
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, personalization.data, '', patch.recipients, !agentsOn)
-          : { session, reasons: appliedMemory };
-      const requestSession = recalled.session;
+      const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
+      const noHistory = emptyPersonalization();
+      const requestSession = operation === 'turn' ? personalizeSession(session, noHistory, text, undefined, !useAdvisors).session
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(session, noHistory, '', patch.recipients, !useAdvisors).session
+          : session;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
-      // Agent mode sends the current recipient's on-device records and the switched-off agents.
-      const agents = agentsOn ? { enabled: true, disabled: disabledRef.current, ...agentContext(personalization.data, requestSession.state.recipients, events) } : undefined;
-      let turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agents)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agents)
-          : await serverChat.view(session, controller.signal, agents)
+      const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
+      const turn = serverChat
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === session.state.recipients.join() ? messages : [], source, controller.signal, agentMode, agents)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
+          : await serverChat.view(session, controller.signal, agentMode, agents)
         : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
-      const protectedSession = protectRememberedAllergies(turn.session, personalization.data);
-      if (JSON.stringify(protectedSession) !== JSON.stringify(turn.session)) {
-        const safe = serverChat
-          ? await serverChat.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false, controller.signal)
-          : chatService.updateConditions(turn.session, { recipients: protectedSession.state.recipients, excluded_ingredients: protectedSession.state.excluded_ingredients }, false);
-        assertSameRecipient(requestSession, safe.session);
-        if (JSON.stringify(protectRememberedAllergies(safe.session, personalization.data)) !== JSON.stringify(safe.session)) throw new Error('저장한 제외 조건을 적용하지 못했어요. 다시 시도해주세요.');
-        turn = { ...safe, message: `저장한 알레르기 제외 조건을 유지했어요.\n${safe.message}` };
-      }
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(session)) setSession(turn.session);
       if (operation !== 'view') {
         setSession(turn.session);
-        setAppliedMemory(recalled.reasons);
-        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: [...recalled.reasons, turn.message].join('\n') }]);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
       if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
@@ -1190,11 +1170,11 @@ function usePassState() {
     if (ready && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, serverChat, personalization.ready]);
+  }, [ready, serverChat]);
   const resetChat = () => {
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
-    setSession(chatService.createSession()); setMessages([]); setAppliedMemory([]);
+    setSession(chatService.createSession()); setMessages([]);
   };
   useEffect(() => {
     let mounted = true;
@@ -1275,20 +1255,19 @@ function usePassState() {
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
     recommendation,
     chatPending,
+    agentMode,
+    changeAgentMode,
+    agentConnected: Boolean(serverChat),
     chatError,
-    personalization,
-    appliedMemory,
     sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed') => runChat('turn', text, undefined, true, source),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
-    agentsOn,
-    disabledAgents,
-    // Switching an agent recomputes from the stored conditions; the server makes no LLM call for a view.
-    toggleAgent: (agent: string, on: boolean) => {
-      const next = on ? disabledRef.current.filter(a => a !== agent) : [...new Set([...disabledRef.current, agent])];
-      disabledRef.current = next; setDisabledAgents(next);
-      void runChat('view', '');
+    disabledAdvisors,
+    toggleAdvisor: (advisor: string, enabled: boolean) => {
+      const next = enabled ? disabledAdvisors.filter(name => name !== advisor) : [...new Set([...disabledAdvisors, advisor])];
+      void runChat('view', '', undefined, true, 'typed', next).then(applied => {
+        if (applied) setDisabledAdvisors(next);
+      });
     },
-    rememberAgentProposal: () => { void personalization.update(old => rememberConditions(old, session.state, new Date().toISOString(), session.issues)); },
     resetChat,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
@@ -1686,11 +1665,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  resultButton: { marginHorizontal: 16, marginVertical: 4 },
-  compareButton: { backgroundColor: c.white, borderWidth: 1.5, borderColor: c.primary, borderRadius: 16, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  compareIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' },
-  compareTitle: { fontFamily: f.bold, fontSize: 14, color: c.text, marginBottom: 2 },
-  compareSubtitle: { fontFamily: f.regular, fontSize: 12, color: c.muted },
+  advisorPanel: { marginHorizontal: 16, marginVertical: 4 },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },

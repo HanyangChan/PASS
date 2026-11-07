@@ -1,16 +1,29 @@
 # PASS 추천 API
 
-공통 엔진과 Gemini 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 상품은 Supabase `products`의 활성 상품을 공개 키로 읽어 Worker 인스턴스마다 10분 캐시합니다. 갱신에 실패하면 이전 캐시를 쓰고, 캐시도 없으면 503 `catalog_unavailable`을 반환합니다.
+공통 엔진과 선택한 LLM의 조건 추출을 사용하는 독립 Cloudflare Worker입니다. Expo 네이티브 앱과 모바일 웹이 같은 API와 엔진 규칙을 사용합니다. 상품은 Supabase `products`의 활성 상품을 공개 키로 읽어 Worker 인스턴스마다 10분 캐시합니다. 갱신에 실패하면 이전 캐시를 쓰고, 캐시도 없으면 503 `catalog_unavailable`을 반환합니다.
 
 ## 로컬 시험
 
-Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑터는 **동일한 Worker 핸들러**를 127.0.0.1:8788에 연결합니다. 기존 `mobile/.env.local`의 공개 Supabase 설정을 읽습니다. 키는 출력하지 않습니다.
+Node 22.13 이상을 사용합니다. **저장소 루트**에서 다음 순서로 실행하세요.
 
-- 모바일 `.env.local`: `EXPO_PUBLIC_CHAT_API_URL=http://127.0.0.1:8788`. 환경 변수 변경 뒤 웹 export/앱 재시작이 필요합니다.
-- 서버 `.dev.vars`: 필요한 경우 `GEMINI_API_KEY=...`, `GEMINI_MODEL=...`. 이 파일은 Git에서 제외됩니다. 모델은 프로젝트에서 사용 가능한 Gemini 모델 ID로 지정합니다. 저장 후 API를 재시작합니다.
-- 키가 비어 있으면 서버 규칙 기반 추천으로 동작하고 앱에 그 방식을 표시합니다. 키가 존재할 때 Gemini가 실패하면 503을 반환하며 로컬 해석으로 바꿔 처리하지 않습니다.
-- `GET /health`(`catalog: amazon-kaggle-v1`, `products`: 활성 상품 수), `POST /api/chat` 및 웹 CORS 사전 요청 `OPTIONS /api/chat`를 제공합니다. POST는 Supabase access token의 Bearer 인증이 필요합니다.
-- 실기기에서 127.0.0.1은 해당 기기입니다. 실기기 시험에는 HTTPS 서버 주소를 사용합니다. HTTP 예외는 로컬 웹 시험의 localhost/127.0.0.1만 허용합니다.
+```sh
+npm run setup
+npm run setup:local
+npm run dev:api
+# 다른 터미널, 저장소 루트
+npm --prefix mobile run web -- --port 8766
+```
+
+`setup`은 의존성을 설치합니다. `setup:local`은 공개 예제를 바탕으로 `mobile/.env.local`과 `api/.dev.vars`를 만들고 모바일 API 주소를 `http://127.0.0.1:8788`로 지정합니다. 기존 파일은 덮어쓰지 않으므로 기존 API 주소가 운영 주소라면 직접 수정한 뒤 웹/앱을 재시작하세요. 실제 Supabase 프로젝트를 따로 쓰려면 본인의 공개 URL/Publishable key를 설정하고 상품 테이블/인증을 준비하세요. 예제에 들어 있는 공개 프로젝트는 해당 프로젝트의 접근 정책과 가용성에 따릅니다.
+
+- API 폴더 안에서는 `npm run dev`입니다. `npm run dev:api`는 저장소 루트 명령입니다.
+- 앱과 로컬 API의 기본 방식은 A입니다. 모델 키 없이 명확한 규칙 요청을 검토할 수 있습니다. 미해석 문장은 확인 질문으로 처리합니다. C/D는 서버의 `LLM_PROVIDER=openai-compatible`, 유효한 `LLM_API_KEY`와 사용 가능한 모델이 필요합니다. 명시적인 모델 선택이 실패해도 A로 몰래 전환하지 않습니다.
+- `api/.dev.vars`의 빈 값/예제용 Supabase 값은 `mobile/.env.local`의 정상 공개 설정을 덮어쓰지 않습니다. 실제 값은 서버 파일 → 프로세스 환경 변수 순으로 우선합니다. 비밀 키를 `EXPO_PUBLIC_*`에 넣지 마세요.
+- 로컬 Node 서버의 `APP_ORIGINS`가 비어 있으면 localhost/127.0.0.1의 8766, 8081, 19006 포트만 허용합니다. 다른 웹 주소는 실제 origin을 명시하세요. Worker 운영 환경에는 이 개발용 기본값을 적용하지 않습니다.
+- 기본 API 포트는 8788입니다. 사용 중이면 이전 서버를 종료하거나 `API_PORT=8789 npm run dev:api`처럼 바꾸고 모바일 API 주소도 맞추세요. 서버는 기본적으로 127.0.0.1에 바인딩합니다. 실기기에는 접근 가능한 HTTPS API가 필요합니다.
+- 시작 시 필수 Supabase/모드 설정 오류를 검사합니다. `curl http://127.0.0.1:8788/health`에서 `ok:true`, 상품 수와 `availableAgents`를 확인하세요. 카탈로그 로드 실패는 HTTP 503입니다. 이 검사는 모델 키 자체의 유효성/모델 응답까지 시험하지는 않습니다.
+- 채팅은 **Supabase 로그인**이 필요합니다. API 주소만 열거나 access token 없이 POST하면 인증 오류가 정상입니다. 로그인·키 없이 코드 검토는 `npm test`, 실제 모델 연결 확인은 서버 키 설정 후 `npm run smoke:llm`을 사용하세요.
+- 설정 파일은 Git에서 제외됩니다. 로컬의 Luna 설정은 PR을 받은 사람에게 자동 전달되지 않습니다. Luna 실험은 `LLM_MODEL=gpt-5.6-luna`, `LLM_REASONING_ENABLED=false`를 설정하며 같은 게이트웨이에서 해당 모델을 사용할 권한이 필요합니다.
 
 ## 배포
 
@@ -29,16 +42,6 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 
 검증: Worker 보안/입력/추천 테스트 7개와 모바일 서버 전송/계정 전환/취소 테스트 5개. 실제 Supabase 테스트 계정으로 서버 추천·빠른 응답·조건 편집, 서버 중단 시 상태 보존 및 복구 후 재전송을 확인했습니다. 추가로 실제 Gemini 키를 서버에서 로드하여 “덜 달고 차 종류, 배송비 포함 6만원” 조건 추출과 차 선물 추천을 웹에서 확인했습니다. 키는 Git에서 제외된 서버 파일에만 있으며 공개 Cloudflare 배포와 Vercel 운영 웹 연결을 완료했습니다.
 
-## 에이전트 모드 (C + D, 기본 꺼짐)
-
-서버 변수 `AGENTS_MODE=on`이고 앱 요청에 `agents.enabled: true`가 있을 때만 [C + D 그래프](../baseline/agents/d-langgraph/README.md)를 실행합니다. 둘 중 하나라도 없으면 기존 경로와 완전히 같습니다.
-
-- 요청 `agents`: `disabled`(끈 에이전트: occasion, spending, taste, relationship), 현재 받는 사람의 `memory`, `purchases`(카테고리·금액·만족도), `calendar`(MM-DD 일정). 서버는 검증만 하고 저장하지 않습니다.
-- 응답: 기존 `session`, `view`, `message`에 `mode: 'agents'`, `agents`(귀속, 의견, 제안, 기억 제안)를 덧붙입니다. 제안은 앱이 `conditions` 요청으로 적용할 때만 반영됩니다.
-- 귀속 LLM은 규칙으로 이해하지 못한 발화에만 턴당 최대 1회 호출합니다. `AGENTS_LLM=deepseek|gemini`(기본: `DEEPSEEK_API_KEY`가 있으면 DeepSeek). DeepSeek은 OpenAI 호환 주소 `DEEPSEEK_BASE_URL`과 `DEEPSEEK_MODEL`을 씁니다. 예: 한양대 AI부트캠프 프록시 `https://llm.ai.hy.miwork.ai/v1`, `deepseek-v4-flash`. Gemini는 `AGENTS_MODEL`(기본 `gemini-3.5-flash-lite`). 실패하면 조건을 유지하고 질문합니다. 구매·캘린더는 LLM에 보내지 않습니다. 키는 `.dev.vars`나 Cloudflare secret에만 둡니다.
-- LangGraph는 `nodejs_compat` 플래그가 필요합니다. `npm run deploy`/`build`/`dev:worker`가 먼저 `baseline/agents/d-langgraph`를 설치합니다. Node 테스트는 `npm --prefix ../baseline/agents/d-langgraph ci` 후 `tests/agents.test.mjs`까지 실행합니다(미설치 시 해당 테스트 건너뜀).
-- 2026-11-05 검증: 로컬 workerd(`wrangler dev --local`, `nodejs_compat`)에서 그래프 실행, dry-run 번들 gzip 591KiB.
-
 ## 현재 운영 배포
 
 - 웹: https://temporary-prompt-sable-s15js3l.vercel.app
@@ -48,3 +51,42 @@ Node 22.13 이상에서 `cd api && npm run dev`를 실행합니다. Node 어댑�
 - `.vercelignore`는 API 서버 파일, DB 파일, 로컬 환경 변수와 생성 파일을 웹 업로드에서 제외합니다.
 - 2026-10-11 검증: 공개 웹의 더미 계정 로그인, 기존 찜·최근 기록 복원, 새 대화의 차 선물/배송비 포함 6만원 조건 해석 및 추천. API 비로그인 401, 허용 origin OPTIONS 204, 다른 origin 403.
 - 현재 웹 배포는 CLI 운영 배포입니다. GitHub 자동 배포 연결은 별도로 확인해야 합니다.
+
+## A안 Router 구현 (2026-11-05, 개발 브랜치)
+
+로컬 `npm run dev`는 기본 `CHAT_AGENT=a-router`로 동작한다. Worker 설정에도 같은 값을 추가했다. 운영 배포는 별도이며 위의 과거 운영 검증 기록이 새 Router 배포를 뜻하지 않는다. `CHAT_AGENT=legacy`는 기존 Gemini 우선 경로를 유지한다.
+
+Router는 명확한 조건·추천·이유 설명·가상 예산 비교를 규칙으로 처리하고, 미해석 문장만 설정된 추출기로 넘긴다. 키가 없으면 질문하며, 공급자 실패는 상태를 바꾸지 않고 503으로 반환한다. 기존 `session/message/view/mode` 응답을 유지하고 `agent/routing` 진단 정보를 추가했다. 현재는 아래의 허용된 A/B/C/D 선택을 요청별로 지원하며 모델·공급자·키는 서버 설정을 사용한다. 게스트 기기 엔진과 음성·첨부 UI는 그대로다.
+
+`npm run test:router`(저장소 루트)로 에이전트·API 통합 검사를 실행한다. 모델 키는 서버 `.dev.vars` 또는 Cloudflare secret에만 둔다. [처리 경로·한계·버전 관리 범위](../baseline/agents/a-router/README.md)를 참고한다.
+
+## 플랫폼 LLM / DeepSeek
+
+`LLM_PROVIDER=openai-compatible`, `LLM_BASE_URL=https://llm.ai.hy.miwork.ai`, `LLM_MODEL=deepseek-v4-flash`를 지원한다. 서버 `LLM_API_KEY`를 사용하며 기존 Gemini 키와 혼용하지 않는다. `npm run smoke:llm`(저장소 루트)으로 합성 조건의 실제 추출을 시험한다. 2026-11-05 `/chat/completions` + JSON 모드로 실제 호출을 확인했다. [설정·재시험·오류 안내](../docs/llm-platform.md).
+
+앞의 Gemini 운영 기록은 과거 배포 기준이다. 이번 플랫폼 연결은 개발 브랜치의 코드·로컬 설정이며 운영 배포는 수행하지 않았다.
+
+## Supervisor·서브 에이전트 모드
+
+`A_ROUTER_LLM_MODE=single|subagents`로 A안 해석기를 선택한다. 기본값은 `single`이다. `subagents`는 OpenAI 호환 공급자에서 Supervisor → 필요한 역할 병렬 실행 → 종합 판단을 수행한다. 규칙 경로는 모델을 호출하지 않는다. 현재 앱 응답 계약은 유지하며 `routing.subagents`에 안전한 단계 진단을 추가한다. `GET /health`의 `llmMode`로 선택을 확인한다. 상세 실행·제한은 [A안 안내](../baseline/agents/a-router/README.md)를 따른다.
+
+`LLM_REASONING_ENABLED=false`를 명시하면 호환 전송에 `reasoning.enabled=false`를 전달한다. A 단일 모드와 C/D의 DeepSeek 단계는 생략 시 비사고 설정을 사용하고, 서브 모드의 DeepSeek 단계는 짧은 JSON 분석을 위해 기본적으로 비사고 설정을 사용한다. 공급자 지원이 필요하며 다른 모델로 자동 전환하지 않는다.
+
+## 채팅 화면의 A/B/C/D 선택
+
+로그인한 채팅의 드래그 바는 다음 요청의 방식을 고릅니다.
+
+| 위치 | API `agentMode` | 흐름 |
+|---|---|---|
+| A | `a-router` | 규칙 우선과 필요 시 모델 해석 |
+| B | `langgraph-advisors` | 수령인 귀속 판단과 LangGraph의 네 자문 |
+| C | `full-chat` | 모델이 매 메시지의 행동 선택 |
+| D | `full-chat-feedback-2` | 기존 피드백 모드. 행동당 최대 2회 검토 |
+
+앱의 기본은 A입니다. `agentMode`가 생략된 API 요청에는 서버 `CHAT_AGENT`가 적용됩니다. 앱은 응답의 `agent`를 확인합니다. 채팅·조건 편집·조회에 동일한 선택을 보내고 응답 중에는 드래그 바를 잠급니다.
+
+B는 현재 수령인의 캘린더와 비활성 자문 목록을 서버에 전달합니다. 채팅 API는 기억·구매 이력을 추천에 사용하지 않습니다. 귀속 규칙으로 해석하기 어려울 때만 같은 서버의 Luna 설정으로 모델을 호출합니다. 모델에는 발화와 현재 조건을 보내며, 제안을 누르면 조건 변경 요청을 보냅니다. B의 규칙과 자문은 모델 키 없이 실행할 수 있습니다.
+
+`npm run setup`은 LangGraph를 포함해 설치합니다. API 시작은 기존 `npm run dev:api`를 사용합니다. Luna 비교 설정은 서버의 `LLM_MODEL=gpt-5.6-luna`, `LLM_REASONING_ENABLED=false`입니다. 벤치마크는 저장소 루트에서 `node api/benchmarks/luna-advisors-comparison.mjs`로 실행합니다.
+
+2026-11-07 비교 결과는 순위 개편을 함께 시험하던 시점의 기록입니다. 현재 앱은 `main`의 순위 정책으로 동작합니다. [당시 벤치마크 결과](../docs/verification/luna-advisors-comparison-2026-11-07.json)

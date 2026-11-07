@@ -16,8 +16,8 @@ const FILLER = /선물|추천|해줘|싶어\s*하|하고|하는|하셔|하세요
 // Parts the rules or other agents already cover: names, money, occasions (the occasion agent's job).
 const COVERED = /(?:직장 상사|어머니|아버지|엄마|아빠|부모님|처가|교수님|상사|동료|친구들?|동창)(?:은|는|이|가|께서|께|도|의|에게|한테)?|\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원)|이하|이내|예산|배송비\s*(?:포함|별도)|상품값|세트당|생일|생신|기념일|명절|추석|한가위|설날|어버이날|스승의\s*날|어린이날|발렌타인데이|화이트데이|빼빼로데이|크리스마스|성탄절?|드리려고|드리고|드릴까/g;
 
-const canonical = name => ALIASES[name] ?? name;
-const people = text => [...new Set([...text.matchAll(PEOPLE)].map(m => canonical(m[1])))];
+export const canonicalPerson = name => Object.hasOwn(ALIASES, name) ? ALIASES[name] : name;
+const people = text => [...new Set([...text.matchAll(PEOPLE)].map(m => canonicalPerson(m[1])))];
 const clauses = text => text.split(SPLIT).map(c => c?.trim()).filter(Boolean);
 const meaningful = clause => clause.replace(COVERED, '').replace(FILLER, '').replace(/[^가-힣a-zA-Z]/g, '').length >= 2;
 
@@ -69,7 +69,7 @@ export function attributeRules(text, state) {
 
 /**
  * Full C step: rules first, then at most one LLM call for clauses the rules did not understand.
- * `llm({text,state})` returns the same shape as attributeRules (see gemini.mjs).
+ * `llm({text,state})` returns the same shape as attributeRules (see output.mjs).
  */
 export async function attribute({ text, state, llm }) {
   const rules = attributeRules(text, state);

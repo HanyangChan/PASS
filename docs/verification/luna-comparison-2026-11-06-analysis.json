@@ -1,0 +1,549 @@
+{
+  "analysis": {
+    "a-router": {
+      "name": "A 규칙 우선",
+      "overall": {
+        "runs": 72,
+        "passed": 63,
+        "taskAccuracy": 0.875,
+        "atomicPassed": 1074,
+        "atomicTotal": 1086,
+        "meanLatencyMs": 447.7347517361075,
+        "medianLatencyMs": 38.07474999997066,
+        "p95LatencyMs": 1491.2711249999702,
+        "meanSuccessfulLatencyMs": 300.6582771269798,
+        "requests": 84,
+        "meanRequestLatencyMs": 381.9845372738137,
+        "medianRequestLatencyMs": 31.41229100000055,
+        "p95RequestLatencyMs": 1482.0787500000006,
+        "httpErrors": 0,
+        "llmCalls": 21,
+        "httpAttempts": 21,
+        "totalTokens": 26073
+      },
+      "original": {
+        "runs": 60,
+        "passed": 54,
+        "taskAccuracy": 0.9,
+        "atomicPassed": 840,
+        "atomicTotal": 846,
+        "meanLatencyMs": 450.24182914999517,
+        "medianLatencyMs": 33.461125000030734,
+        "p95LatencyMs": 1480.7368749999441,
+        "meanSuccessfulLatencyMs": 341.01292977777206,
+        "requests": 66,
+        "meanRequestLatencyMs": 407.95408843939487,
+        "medianRequestLatencyMs": 30.456875000032596,
+        "p95RequestLatencyMs": 1480.7085840000072,
+        "httpErrors": 0,
+        "llmCalls": 18,
+        "httpAttempts": 18,
+        "totalTokens": 22332
+      },
+      "business": {
+        "runs": 66,
+        "passed": 63,
+        "taskAccuracy": 0.9545454545454546,
+        "atomicPassed": 1014,
+        "atomicTotal": 1020,
+        "meanLatencyMs": 358.137736121208,
+        "medianLatencyMs": 33.461125000030734,
+        "p95LatencyMs": 1483.8472500000062,
+        "meanSuccessfulLatencyMs": 300.6582771269798,
+        "requests": 78,
+        "meanRequestLatencyMs": 301.1181608717998,
+        "medianRequestLatencyMs": 30.68537500000093,
+        "p95RequestLatencyMs": 1482.0787500000006,
+        "httpErrors": 0,
+        "llmCalls": 15,
+        "httpAttempts": 15,
+        "totalTokens": 18834
+      },
+      "fragrance": {
+        "runs": 12,
+        "passed": 9,
+        "taskAccuracy": 0.75,
+        "atomicPassed": 234,
+        "atomicTotal": 240,
+        "meanLatencyMs": 435.1993646666694,
+        "medianLatencyMs": 46.11045799998101,
+        "p95LatencyMs": 1828.2139169999864,
+        "meanSuccessfulLatencyMs": 58.53036122222612,
+        "requests": 18,
+        "meanRequestLatencyMs": 286.7628496666827,
+        "medianRequestLatencyMs": 35.792459000018425,
+        "p95RequestLatencyMs": 1822.3987089999719,
+        "httpErrors": 0,
+        "llmCalls": 3,
+        "httpAttempts": 3,
+        "totalTokens": 3741
+      },
+      "failures": [
+        {
+          "task": "greeting",
+          "label": "인사에 인사로 답하기",
+          "failed": 3,
+          "outOf": 3,
+          "checks": [
+            "conversation"
+          ],
+          "examples": [
+            {
+              "text": "안녕",
+              "response": {
+                "state": {
+                  "occasion": null,
+                  "recipients": [],
+                  "preferences": [],
+                  "excluded_categories": [],
+                  "excluded_ingredients": [],
+                  "brand": null,
+                  "delivery_by": null,
+                  "packaging": null,
+                  "budget": {
+                    "amount_krw": null,
+                    "shipping_included": null
+                  }
+                },
+                "issues": [
+                  "어떤 분께 어떤 occasion의 선물을 준비하시나요?"
+                ],
+                "question": {
+                  "key": "issue",
+                  "text": "어떤 분께 어떤 occasion의 선물을 준비하시나요?",
+                  "choices": []
+                },
+                "message": "어떤 분께 어떤 occasion의 선물을 준비하시나요?",
+                "productIds": [
+                  "amz-B071Z8M4KX",
+                  "amz-B000P22TIY",
+                  "amz-B0725GYNG6"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "task": "thanks",
+          "label": "감사에 응답하기",
+          "failed": 3,
+          "outOf": 3,
+          "checks": [
+            "conversation"
+          ],
+          "examples": [
+            {
+              "text": "고마워",
+              "response": {
+                "state": {
+                  "occasion": null,
+                  "recipients": [
+                    "어머니"
+                  ],
+                  "preferences": [],
+                  "excluded_categories": [],
+                  "excluded_ingredients": [],
+                  "brand": null,
+                  "delivery_by": null,
+                  "packaging": null,
+                  "budget": {
+                    "amount_krw": 50000,
+                    "shipping_included": true
+                  }
+                },
+                "issues": [],
+                "question": {
+                  "key": null,
+                  "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+                  "choices": [
+                    "덜 단 상품으로",
+                    "견과류는 빼줘"
+                  ]
+                },
+                "message": "선호·예산대·상품 다양성을 함께 고려했어요.",
+                "productIds": [
+                  "amz-B0788DFR6C",
+                  "amz-B09929SH6X",
+                  "amz-B08KRMRKQM"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "task": "f_accept",
+          "label": "향 제외·추천 제안에 짧은 동의",
+          "failed": 3,
+          "outOf": 3,
+          "checks": [
+            "state.preferences",
+            "no_unnecessary_question"
+          ],
+          "examples": [
+            {
+              "text": "어",
+              "response": {
+                "state": {
+                  "occasion": null,
+                  "recipients": [
+                    "어머니"
+                  ],
+                  "preferences": [],
+                  "excluded_categories": [
+                    "food",
+                    "snack",
+                    "coffee_tea",
+                    "health"
+                  ],
+                  "excluded_ingredients": [],
+                  "brand": null,
+                  "delivery_by": null,
+                  "packaging": null,
+                  "budget": {
+                    "amount_krw": 50000,
+                    "shipping_included": true
+                  }
+                },
+                "issues": [
+                  "향이 강한 제품도 제외할까요?"
+                ],
+                "question": {
+                  "key": "issue",
+                  "text": "향이 강한 제품도 제외할까요?",
+                  "choices": []
+                },
+                "message": "향이 강한 제품도 제외할까요?",
+                "productIds": [
+                  "amz-B09929SH6X",
+                  "amz-B08KRMRKQM",
+                  "amz-B0188K43T2"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "toolCalls": 0,
+      "feedbackRevisions": 0,
+      "budgetExhaustions": 0
+    },
+    "full-chat": {
+      "name": "B 풀 에이전트",
+      "overall": {
+        "runs": 72,
+        "passed": 64,
+        "taskAccuracy": 0.8888888888888888,
+        "atomicPassed": 1051,
+        "atomicTotal": 1062,
+        "meanLatencyMs": 3440.462498763889,
+        "medianLatencyMs": 2863.504415999996,
+        "p95LatencyMs": 10182.790458000003,
+        "meanSuccessfulLatencyMs": 3204.820005765624,
+        "requests": 84,
+        "meanRequestLatencyMs": 2946.710519309525,
+        "medianRequestLatencyMs": 2829.3554159999767,
+        "p95RequestLatencyMs": 4650.079708000005,
+        "httpErrors": 2,
+        "llmCalls": 160,
+        "httpAttempts": 160,
+        "totalTokens": 273842
+      },
+      "original": {
+        "runs": 60,
+        "passed": 55,
+        "taskAccuracy": 0.9166666666666666,
+        "atomicPassed": 814,
+        "atomicTotal": 822,
+        "meanLatencyMs": 2900.515701299999,
+        "medianLatencyMs": 2831.810750000004,
+        "p95LatencyMs": 4366.25858299993,
+        "meanSuccessfulLatencyMs": 2952.193731709089,
+        "requests": 66,
+        "meanRequestLatencyMs": 2635.052354090908,
+        "medianRequestLatencyMs": 2774.356541000001,
+        "p95RequestLatencyMs": 4364.244375000009,
+        "httpErrors": 2,
+        "llmCalls": 115,
+        "httpAttempts": 115,
+        "totalTokens": 182457
+      },
+      "business": {
+        "runs": 66,
+        "passed": 58,
+        "taskAccuracy": 0.8787878787878788,
+        "atomicPassed": 985,
+        "atomicTotal": 996,
+        "meanLatencyMs": 3625.224139424243,
+        "medianLatencyMs": 2922.221749999997,
+        "p95LatencyMs": 10182.790458000003,
+        "meanSuccessfulLatencyMs": 3390.6892010344823,
+        "requests": 78,
+        "meanRequestLatencyMs": 3065.0708952564123,
+        "medianRequestLatencyMs": 2856.115708,
+        "p95RequestLatencyMs": 4705.4917499999865,
+        "httpErrors": 2,
+        "llmCalls": 154,
+        "httpAttempts": 154,
+        "totalTokens": 265811
+      },
+      "fragrance": {
+        "runs": 12,
+        "passed": 9,
+        "taskAccuracy": 0.75,
+        "atomicPassed": 237,
+        "atomicTotal": 240,
+        "meanLatencyMs": 6140.196486083337,
+        "medianLatencyMs": 4642.166415999993,
+        "p95LatencyMs": 10980.309000000008,
+        "meanSuccessfulLatencyMs": 4748.647236111115,
+        "requests": 18,
+        "meanRequestLatencyMs": 4089.457125111121,
+        "medianRequestLatencyMs": 2913.0618749999558,
+        "p95RequestLatencyMs": 10978.112333000056,
+        "httpErrors": 0,
+        "llmCalls": 45,
+        "httpAttempts": 45,
+        "totalTokens": 91385
+      },
+      "failures": [
+        {
+          "task": "giver",
+          "label": "주는 사람 취향을 수령인에 적용하지 않음",
+          "failed": 3,
+          "outOf": 3,
+          "checks": [
+            "state.preferences",
+            "clarification"
+          ],
+          "examples": [
+            {
+              "text": "나는 커피를 좋아해",
+              "response": {
+                "state": {
+                  "occasion": null,
+                  "recipients": [
+                    "어머니"
+                  ],
+                  "preferences": [
+                    "category:coffee_tea",
+                    "type:coffee"
+                  ],
+                  "excluded_categories": [],
+                  "excluded_ingredients": [],
+                  "brand": null,
+                  "delivery_by": null,
+                  "packaging": null,
+                  "budget": {
+                    "amount_krw": 50000,
+                    "shipping_included": true
+                  }
+                },
+                "issues": [],
+                "question": {
+                  "key": null,
+                  "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+                  "choices": [
+                    "덜 단 상품으로",
+                    "견과류는 빼줘"
+                  ]
+                },
+                "message": "이렇게 이해했어요: 어머니 · 선물 하나 예산 50,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요.",
+                "productIds": [
+                  "amz-B074SZJGTY",
+                  "amz-B000VOFU0K",
+                  "amz-B085W4CKB4"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "task": "natural_preferences",
+          "label": "자연어 차 선호·우유 회피·기존 제외 유지",
+          "failed": 2,
+          "outOf": 3,
+          "checks": [
+            "http"
+          ],
+          "examples": [
+            {
+              "text": "받는 분은 커피보다 차를 즐기고, 우유가 들어간 음식은 피하고 싶대요. 지금 정한 예산과 배송비 조건은 그대로 해주세요.",
+              "response": {},
+              "code": "agent_unavailable"
+            }
+          ]
+        },
+        {
+          "task": "f_cancel",
+          "label": "향 규칙만 취소하고 음식 제외 유지",
+          "failed": 3,
+          "outOf": 3,
+          "checks": [
+            "state.preferences"
+          ],
+          "examples": [
+            {
+              "text": "향 제품 제외 취소",
+              "response": {
+                "state": {
+                  "occasion": null,
+                  "recipients": [
+                    "어머니"
+                  ],
+                  "preferences": [],
+                  "excluded_categories": [
+                    "food",
+                    "snack",
+                    "coffee_tea",
+                    "health"
+                  ],
+                  "excluded_ingredients": [],
+                  "brand": null,
+                  "delivery_by": null,
+                  "packaging": null,
+                  "budget": {
+                    "amount_krw": 50000,
+                    "shipping_included": true
+                  }
+                },
+                "issues": [],
+                "question": {
+                  "key": null,
+                  "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+                  "choices": [
+                    "덜 단 상품으로",
+                    "견과류는 빼줘"
+                  ]
+                },
+                "message": "이렇게 이해했어요: 어머니 · 선물 하나 예산 50,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요.",
+                "productIds": [
+                  "amz-B09929SH6X",
+                  "amz-B08KRMRKQM",
+                  "amz-B0188K43T2"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "toolCalls": 84,
+      "feedbackRevisions": 0,
+      "budgetExhaustions": 0
+    },
+    "full-chat-feedback-2": {
+      "name": "C 피드백 최대 2회",
+      "overall": {
+        "runs": 72,
+        "passed": 72,
+        "taskAccuracy": 1,
+        "atomicPassed": 1086,
+        "atomicTotal": 1086,
+        "meanLatencyMs": 6075.698906791668,
+        "medianLatencyMs": 5381.894084000029,
+        "p95LatencyMs": 14000.812166000018,
+        "meanSuccessfulLatencyMs": 6075.698906791668,
+        "requests": 84,
+        "meanRequestLatencyMs": 5205.34105361904,
+        "medianRequestLatencyMs": 5276.653667000006,
+        "p95RequestLatencyMs": 7811.644499999995,
+        "httpErrors": 0,
+        "llmCalls": 313,
+        "httpAttempts": 313,
+        "totalTokens": 427302
+      },
+      "original": {
+        "runs": 60,
+        "passed": 60,
+        "taskAccuracy": 1,
+        "atomicPassed": 846,
+        "atomicTotal": 846,
+        "meanLatencyMs": 5417.628255516667,
+        "medianLatencyMs": 5087.589999999967,
+        "p95LatencyMs": 8212.062416,
+        "meanSuccessfulLatencyMs": 5417.628255516667,
+        "requests": 66,
+        "meanRequestLatencyMs": 4923.156857393932,
+        "medianRequestLatencyMs": 5190.265249999997,
+        "p95RequestLatencyMs": 7459.783791999973,
+        "httpErrors": 0,
+        "llmCalls": 236,
+        "httpAttempts": 236,
+        "totalTokens": 315094
+      },
+      "business": {
+        "runs": 66,
+        "passed": 66,
+        "taskAccuracy": 1,
+        "atomicPassed": 1020,
+        "atomicTotal": 1020,
+        "meanLatencyMs": 6378.099928000002,
+        "medianLatencyMs": 5436.550833999994,
+        "p95LatencyMs": 14000.812166000018,
+        "meanSuccessfulLatencyMs": 6378.099928000002,
+        "requests": 78,
+        "meanRequestLatencyMs": 5394.271448782044,
+        "medianRequestLatencyMs": 5319.634291000024,
+        "p95RequestLatencyMs": 8209.987874999992,
+        "httpErrors": 0,
+        "llmCalls": 301,
+        "httpAttempts": 301,
+        "totalTokens": 414120
+      },
+      "fragrance": {
+        "runs": 12,
+        "passed": 12,
+        "taskAccuracy": 1,
+        "atomicPassed": 240,
+        "atomicTotal": 240,
+        "meanLatencyMs": 9366.052163166672,
+        "medianLatencyMs": 7185.089750000043,
+        "p95LatencyMs": 14000.812166000018,
+        "meanSuccessfulLatencyMs": 9366.052163166672,
+        "requests": 18,
+        "meanRequestLatencyMs": 6240.01643977777,
+        "medianRequestLatencyMs": 5395.968584000017,
+        "p95RequestLatencyMs": 13999.018958,
+        "httpErrors": 0,
+        "llmCalls": 77,
+        "httpAttempts": 77,
+        "totalTokens": 112208
+      },
+      "failures": [],
+      "toolCalls": 68,
+      "feedbackRevisions": 12,
+      "budgetExhaustions": 0
+    }
+  },
+  "wireSettings": {
+    "full-chat": {
+      "model": "gpt-5.6-luna",
+      "temperature": 0,
+      "reasoning": "omitted",
+      "reasoningEffort": "none",
+      "maxTokens": 900,
+      "responseModels": {
+        "gpt-5.6-luna": 160
+      }
+    },
+    "full-chat-feedback-2": {
+      "model": "gpt-5.6-luna",
+      "temperature": 0,
+      "reasoning": "omitted",
+      "reasoningEffort": "none",
+      "maxTokens": 900,
+      "responseModels": {
+        "gpt-5.6-luna": 313
+      }
+    },
+    "a-router": {
+      "model": "gpt-5.6-luna",
+      "temperature": 0,
+      "reasoning": "omitted",
+      "reasoningEffort": "none",
+      "maxTokens": 1600,
+      "responseModels": {
+        "gpt-5.6-luna": 21
+      }
+    }
+  }
+}

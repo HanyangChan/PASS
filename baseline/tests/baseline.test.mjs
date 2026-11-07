@@ -8,7 +8,7 @@ import {products} from '../examples/catalog.mjs';
 const patch={recipients:['어머니'],quantity:1,same_product:true,budget:{amount_krw:50000,scope:'per_set',shipping_included:true}};
 const turn=(session,request,extra={})=>runTurn({session,products,request:{expectedVersion:session.version,...request},...extra});
 const ready=async()=> (await turn(createSession('test'),{kind:'patch',patch})).session;
-test('shared engine snapshot remains frozen',async()=>{
+test('shared engine matches its versioned snapshot',async()=>{
  const manifest=JSON.parse(await readFile(new URL('../src/vendor/provenance.json',import.meta.url)));
  for(const [name,hash] of Object.entries(manifest.sha256)) assert.equal(createHash('sha256').update(await readFile(new URL(`../src/vendor/${name}`,import.meta.url))).digest('hex'),hash);
 });

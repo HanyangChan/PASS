@@ -1,13 +1,16 @@
 import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
-import { validateRequest, validateState, llmTurn, geminiFailure } from '../lib/llm.mjs';
-import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, publicState } from '../lib/single-gift.mjs';
+import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
+import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
 import { apply, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
-import { CATEGORIES } from '../lib/catalog.mjs';
-import { ALLERGEN_NAMES } from '../lib/allergens.mjs';
-import { createGeminiAttributor, DEFAULT_MODEL } from '../baseline/agents/c-attribution/gemini.mjs';
-import { createDeepSeekAttributor, DEEPSEEK_MODEL } from '../baseline/agents/c-attribution/deepseek.mjs';
+import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
+import { prototypeFullChatTurn, FullChatError } from './full-chat-agent.mjs';
+import { createAgent as createFeedbackAgent } from '../baseline/agents/full-chat-feedback/index.mjs';
+import { resolveLlm } from '../lib/llm-provider.mjs';
+import { LANGGRAPH_AGENT, prototypeLangGraphTurn, readAdvisorContext } from './langgraph-agent.mjs';
+
+const selectableAgents = ['a-router', LANGGRAPH_AGENT, 'full-chat', 'full-chat-feedback-2'];
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 async function readJson(request) {
@@ -43,33 +46,13 @@ function inputOf(raw) {
       if (raw.patch.budget !== undefined && (!raw.patch.budget || Array.isArray(raw.patch.budget) || typeof raw.patch.budget !== 'object' || Object.keys(raw.patch.budget).some(key => !['amount_krw', 'shipping_included'].includes(key)))) throw Error();
       const patch = normalizeConditions(apply(session.state, raw.patch)).state;
       validateState(patch);
-      raw = { ...raw, patch };
+      const routerPatch = Object.fromEntries(Object.keys(raw.patch).map(key => [key, key === 'budget' ? Object.fromEntries(Object.keys(raw.patch.budget).map(k => [k, patch.budget[k]])) : patch[key]]));
+      raw = { ...raw, patch, routerPatch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
     return { ...raw, session, state: session.state, issues: session.issues };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
-const AGENT_NAMES = ['occasion', 'spending', 'taste', 'relationship'];
-const shortList = (value, allowed, max = 50) => Array.isArray(value) && value.length <= max && value.every(v => typeof v === 'string' && (allowed ? allowed.includes(v) : v.length > 0 && v.length <= 120));
-/** Optional C + D agent request: the current recipient's on-device memory, purchases and calendar. */
-function agentsOf(raw) {
-  if (raw === undefined) return null;
-  try {
-    const { enabled, disabled = [], memory = null, purchases = [], calendar = [] } = raw;
-    if (enabled !== true || !shortList(disabled, AGENT_NAMES, 4)) throw Error();
-    if (memory !== null && (typeof memory !== 'object' || !shortList(memory.preferences ?? [], null) || !shortList(memory.excluded_categories ?? [], CATEGORIES) || !shortList(memory.excluded_ingredients ?? [], ALLERGEN_NAMES))) throw Error();
-    if (!Array.isArray(purchases) || purchases.length > 100 || purchases.some(p => !p || !CATEGORIES.includes(p.category) || !Number.isSafeInteger(p.price_krw) || p.price_krw < 0 || p.price_krw > 1e8 || !['unknown', 'liked', 'disliked'].includes(p.feedback))) throw Error();
-    if (!Array.isArray(calendar) || calendar.length > 100 || calendar.some(e => !e || typeof e.title !== 'string' || !e.title || e.title.length > 60 || !/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(e.date) || !['birthday', 'anniversary', 'etc'].includes(e.kind))) throw Error();
-    return {
-      disabled,
-      memory: memory && { preferences: memory.preferences ?? [], excluded_categories: memory.excluded_categories ?? [], excluded_ingredients: memory.excluded_ingredients ?? [] },
-      purchases: purchases.map(({ category, price_krw, feedback }) => ({ category, price_krw, feedback })),
-      calendar: calendar.map(({ title, date, kind }) => ({ title, date, kind })),
-    };
-  } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
-}
-const lazyAgentTurn = async args => (await import('../baseline/agents/d-langgraph/orchestrator.mjs')).runAgentTurn(args);
-const NO_AGENTS = { attribution: [], opinions: [], suggestions: [], memoryProposals: [], autoApplied: [], trace: { provider: 'rules', llmCalls: 0 } };
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
 function defaultCatalog(fetcher) {
   let rows = null;
@@ -83,25 +66,32 @@ export function recommendationView(session, products) {
   const state = engineState(session.state);
   return { question: singleQuestion(session), result: recommend(products, state), comparison: budgetAlternatives(products, state) };
 }
-export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaultCatalog(fetcher), agentTurn = lazyAgentTurn } = {}) {
+export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), onDiagnostic } = {}) {
   return {
     async fetch(request, env) {
       const origin = request.headers.get('origin');
       const allowed = (env.APP_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
       const headers = { 'Cache-Control': 'no-store', Vary: 'Origin', 'X-Request-ID': crypto.randomUUID() };
       const json = (body, status = 200) => Response.json(body, { status, headers });
+      const diagnose = (code,status,routing) => { try { onDiagnostic?.({event:'recommendation_request_failed',requestId:headers['X-Request-ID'],code,status,...(routing?{routing}:{})}); } catch {} };
       if (origin && !allowed.includes(origin)) return json({ error: '허용되지 않은 요청입니다.', code: 'origin_denied' }, 403);
       if (origin) Object.assign(headers, { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' });
       const path = new URL(request.url).pathname;
       if (path === '/health' && request.method === 'GET') {
         let count = null;
         try { count = (await catalog(env)).length; } catch {}
-        return json({ ok: count !== null, provider: env.GEMINI_API_KEY ? 'gemini' : 'rules', catalog: CATALOG_ID, products: count ?? 0 });
+        let llm;
+        try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
+        const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
+        if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
+        const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, products: count ?? 0 },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
       if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.', code: 'method' }, 405);
       try {
+        if (env.CHAT_AGENT && ![...selectableAgents, 'full-chat-feedback-1', 'legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
         if (!env.IP_LIMITER || !env.USER_LIMITER || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') || new URL(env.SUPABASE_URL).protocol !== 'https:') throw new ApiError(503, 'configuration', '서버 연결 설정이 필요합니다.');
         // Never use a client-supplied owner ID or decoded-but-unverified JWT claims.
         const ip = request.headers.get('CF-Connecting-IP') ?? 'native-local';
@@ -119,41 +109,51 @@ export function createApi({ fetcher = fetch, extract = llmTurn, catalog = defaul
         if (!user.id || user.role !== 'authenticated') throw new ApiError(401, 'unauthorized', '다시 로그인해주세요.');
         if (!(await env.USER_LIMITER.limit({ key: user.id })).success) throw new ApiError(429, 'rate_limit', '요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
         const raw = await readJson(request);
+        if (raw?.agentMode !== undefined && !selectableAgents.includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
+        const chatAgent = raw?.agentMode ?? env.CHAT_AGENT;
+        let llm;
+        try { llm = resolveLlm(env, {extract,fetcher}); } catch { throw new ApiError(503,'configuration','LLM 연결 설정을 확인해주세요.'); }
+        const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(chatAgent);
+        if (fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) throw new ApiError(503,'configuration','전체 채팅 Agent는 서버의 OpenAI 호환 LLM 설정과 키가 필요합니다.');
+        if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
+        if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
         const input = inputOf(raw);
-        const agents = agentsOf(raw.agents);
+        let advisorContext;
+        if (chatAgent === LANGGRAPH_AGENT) {
+          try { advisorContext = readAdvisorContext(raw.agents); }
+          catch { throw new ApiError(400, 'invalid_request', '자문에 사용할 조건을 확인해주세요.'); }
+        }
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
-        if (agents && env.AGENTS_MODE === 'on') {
-          // The graph sees the app's one-gift conditions as the common engine state.
-          const session = { id: 'app', version: 0, state: engineState(input.state) };
-          const request = input.operation === 'turn' ? { kind: 'message', text: input.text, expectedVersion: 0 }
-            : input.operation === 'conditions' ? { kind: 'patch', patch: engineState(input.patch), expectedVersion: 0 } : { kind: 'view', expectedVersion: 0 };
-          // AGENTS_LLM picks the attribution model; by default DeepSeek when its key is set, else Gemini.
-          const provider = env.AGENTS_LLM || (env.DEEPSEEK_API_KEY ? 'deepseek' : 'gemini');
-          const llm = provider === 'deepseek' && env.DEEPSEEK_API_KEY
-            ? createDeepSeekAttributor({ apiKey: env.DEEPSEEK_API_KEY, model: env.DEEPSEEK_MODEL || DEEPSEEK_MODEL, ...(env.DEEPSEEK_BASE_URL ? { baseUrl: env.DEEPSEEK_BASE_URL.replace(/\/$/, '') } : {}), fetcher })
-            : provider === 'gemini' && env.GEMINI_API_KEY ? createGeminiAttributor({ apiKey: env.GEMINI_API_KEY, model: env.AGENTS_MODEL || DEFAULT_MODEL, fetcher }) : undefined;
-          const out = await agentTurn({ session, request, products, llm, disabled: agents.disabled, context: { today: todayKst(), memory: agents.memory, purchases: agents.purchases, calendar: agents.calendar } });
-          // An attribution question ends the turn before the advisors run; keep it as the open issue.
-          const issues = out.agents ? [] : [out.question];
-          const evaluated = out.evaluatedState ?? out.session.state;
-          const view = { question: singleQuestion({ state: publicState(evaluated), issues }), result: recommend(products, evaluated), comparison: budgetAlternatives(products, evaluated) };
-          return json({ session: { state: publicState(out.session.state), issues }, message: view.question.key ? view.question.text : view.result.message, view, mode: 'agents', agents: out.agents ?? NO_AGENTS, catalog: CATALOG_ID });
-        }
         let turn, mode = 'rules';
-        if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
+        if (advisorContext) {
+          turn = await prototypeLangGraphTurn(input, products, { env, fetcher, signal: request.signal, advisorContext });
+          mode = turn.mode;
+        } else if (fullChat) {
+          const feedback=chatAgent!=='full-chat';
+          turn = await prototypeFullChatTurn(input,products,{env,fetcher,signal:request.signal,...(feedback?{agentFactory:createFeedbackAgent,maxReviews:Number(chatAgent.slice(-1))}:{})});
+          mode = turn.mode;
+        } else if (chatAgent === 'a-router') {
+          turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options, llmMode: env.A_ROUTER_LLM_MODE || 'single', signal: request.signal });
+          mode = turn.mode;
+        } else if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
         else if (input.operation === 'conditions') turn = finishSingle(input.state, apply(input.state, input.patch), input.clearIssues === false ? input.issues : [], products);
         else {
           turn = fastRuleTurn(input, products);
           if (turn) mode = 'rules_fast';
-          else if (env.GEMINI_API_KEY) {
-            try { turn = await extract(input, products, { apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || 'gemini-3.6-flash', fetcher }); mode = 'llm'; }
-            catch (error) { const failure = geminiFailure(error); return json({ error: failure.error, code: failure.code }, 503); }
+          else if (llm.options.apiKey) {
+            try { turn = await llm.extract(input, products, llm.options); mode = 'llm'; }
+            catch (error) { const failure = geminiFailure(error); diagnose(failure.code,503); return json({ error: failure.error, code: failure.code }, 503); }
           } else turn = singleTurn({ state: input.state, issues: input.issues }, input.text, products);
         }
-        return json({ ...turn, view: recommendationView(turn.session, products), mode, catalog: CATALOG_ID });
+        const usedModel = mode === 'llm' || mode === 'agents' && turn.routing.llmCalls > 0;
+        return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products), mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: CATALOG_ID });
       } catch (error) {
-        if (error instanceof ApiError) { if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
+        if (error instanceof FullChatError) { const code=error.code==='configuration'?'configuration':'agent_unavailable';diagnose(code,503,error.routing);return json({error:'전체 채팅 Agent가 요청을 완료하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code,routing:error.routing},503); }
+        if (error instanceof RouterInterpretationError) { diagnose('interpretation_unavailable',503,error.routing); return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503); }
+        if (error?.code === 'ERR_MODULE_NOT_FOUND') { diagnose('agent_unavailable',503); return json({error:'LangGraph 의존성을 설치해주세요. 저장소 루트에서 npm run setup을 실행하세요.',code:'agent_unavailable'},503); }
+        if (error instanceof ApiError) { if(error.status>=500)diagnose(error.code,error.status); if (error.status === 429) headers['Retry-After'] = '60'; return json({ error: error.message, code: error.code }, error.status); }
+        diagnose(['invalid_input','invalid_interpretation','version_conflict'].includes(error?.code)?error.code:'unavailable',503);
         // Keep tokens, input and upstream response bodies out of logs and errors.
         return json({ error: '서버 응답을 처리하지 못했어요. 다시 시도해주세요.', code: 'unavailable' }, 503);
       }

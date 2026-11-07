@@ -7,7 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "setup": "npm --prefix mobile ci && npm --prefix api ci",
+    "setup": "npm --prefix mobile ci && npm --prefix api ci && npm --prefix baseline/agents/d-langgraph ci",
     "dev": "npm --prefix mobile start",
     "web": "npm --prefix mobile run web",
     "android": "npm --prefix mobile run android",
@@ -16,8 +16,22 @@
     "lint": "npm --prefix mobile run lint",
     "typecheck": "npm --prefix mobile run typecheck",
     "test:core": "node --test tests/*.test.mjs",
-    "test": "npm run test:core && npm --prefix mobile test && npm --prefix mobile run test:db && node --test api/tests/*.test.mjs",
+    "test": "npm run test:core && npm --prefix mobile test && npm --prefix mobile run test:db && node --test api/tests/*.test.mjs && npm --prefix baseline test",
+    "setup:local": "node api/setup-local.mjs",
     "dev:api": "npm --prefix api run dev",
-    "deploy:api": "npm --prefix api run deploy"
+    "deploy:api": "npm --prefix api run deploy",
+    "test:router": "node --test baseline/agents/a-router/tests/*.test.mjs api/tests/router-agent.test.mjs",
+    "smoke:llm": "node api/smoke-llm.mjs",
+    "audit:router": "node api/audit-router.mjs",
+    "smoke:subagents": "node api/smoke-subagents.mjs",
+    "test:subagents": "node --test baseline/agents/a-router/tests/subagents.test.mjs api/tests/subagents.test.mjs",
+    "test:full-chat": "node --test baseline/agents/full-chat/tests/*.test.mjs api/tests/full-chat-agent.test.mjs",
+    "demo:full-chat": "node baseline/agents/full-chat/demo.mjs",
+    "smoke:full-chat": "node api/smoke-full-chat.mjs",
+    "dev:api:full-chat": "CHAT_AGENT=full-chat npm --prefix api run dev",
+    "benchmark:agents": "node api/benchmarks/agent-comparison.mjs",
+    "benchmark:feedback": "node api/benchmarks/feedback-tradeoff.mjs",
+    "test:feedback": "node --test baseline/agents/full-chat-feedback/tests/*.test.mjs api/tests/feedback-agent.test.mjs",
+    "demo:feedback": "node baseline/agents/full-chat-feedback/demo.mjs"
   }
 }

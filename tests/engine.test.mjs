@@ -12,7 +12,7 @@ test('empty results and allergen exclusion with notice',()=>{
 test('new category words map to the catalog vocabulary',()=>{
  assert.deepEqual(extract('과자는 빼줘',initial()).patch.excluded_categories,['snack']);
  assert.deepEqual(extract('견과류는 빼줘',initial()).patch.excluded_ingredients,['견과류']);
- assert.deepEqual(extract('차로 할게',initial()).patch.preferences,['category:coffee_tea']);
+ assert.deepEqual(extract('차로 할게',initial()).patch.preferences,['category:coffee_tea','type:tea']);
 });
 test('exact date, category and formal packaging filters',()=>{const s=apply(initial(),{delivery_by:'2026-09-21',packaging:'formal',excluded_categories:['nuts'],budget:{amount_krw:60000,scope:'per_set'}});const r=recommend(products,s);assert.ok(r.items.length);for(const p of r.items){assert.ok(p.arrival_date<=s.delivery_by);assert.equal(p.packaging,'formal');assert.notEqual(p.category,'nuts');assert.ok(p.price_krw<=60000)}});
 test('diff includes nested changes without mutating previous state',()=>{const a=initial(),b=apply(a,{budget:{amount_krw:50000}});assert.equal(a.budget.amount_krw,null);assert.deepEqual(differences(a,b),[{field:'budget.amount_krw',before:null,after:50000}])});

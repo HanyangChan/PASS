@@ -23,4 +23,4 @@
 
 권장 브랜치 이름: `codex/architecture-a-router`, `codex/architecture-b-pipeline`, `codex/architecture-c-attribution`, `codex/architecture-d-langgraph`, `codex/architecture-e-tiered`.
 
-현재 GitHub 저장소 루트는 프로토타입 앱이고, `baseline/`에 공통 코어를 함께 둔다. 이전 구현과 과거 산출물은 정리했다. 베이스라인은 앱에 아직 연결하지 않았다. 공통 코드 검토 후 앱과 베이스라인을 함께 포함한 공통 커밋에서 각 브랜치를 분기한다. 베이스라인은 저장소 바깥 소스에 의존하지 않아 단독 실행도 가능하다.
+현재 GitHub 저장소 루트는 프로토타입 앱이고, `baseline/`에 공통 코어를 함께 둔다. 이전 구현과 과거 산출물은 정리했다. `a-router`는 서버 설정으로 기존 앱 채팅 API에 연결했다. 나머지 에이전트와 화면 선택 기능은 연결 전이다. 공통 코드 검토 후 앱과 베이스라인을 함께 포함한 공통 커밋에서 각 브랜치를 분기한다. 베이스라인은 저장소 바깥 소스에 의존하지 않아 단독 실행도 가능하다.

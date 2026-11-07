@@ -72,7 +72,7 @@ export function personalizeSession(session: ChatSession, data: Personalization, 
     if (!state.preferences.length) state.preferences = [...remembered.preferences];
     reasons.push(`${recipient}의 저장된 선호·제외 조건을 반영했어요.`);
   }
-  const explicit = (extract(text, initial()).patch as Partial<Conditions>).preferences;
+  const explicit = clientInference ? (extract(text, initial()).patch as Partial<Conditions>).preferences : undefined;
   if (clientInference && explicit?.length) state.preferences = explicit;
   if (clientInference && recall && !state.preferences.length) {
     const liked = data.purchases.filter(p => canonicalRecipient(p.recipient) === recipient && p.feedback === 'liked');
@@ -156,11 +156,17 @@ export function assertSameRecipient(request: ChatSession, response: ChatSession)
   }
 }
 
-// Agent mode sends only the current recipient's records: their memory, purchases and calendar entries.
+export function recipientCalendar(recipients: string[], events: CalendarEvent[]) {
+  if (recipients.length !== 1) return [];
+  const recipient = canonicalRecipient(recipients[0]);
+  const names = Object.entries(recipientAliases).filter(([, value]) => value === recipient).map(([name]) => name);
+  return events.filter(e => names.some(name => e.title.includes(name))).slice(0, 40).map(({ title, date, kind }) => ({ title: title.slice(0, 60), date, kind }));
+}
+
+// Historical context for analysis. Live chat uses only recipientCalendar.
 export function agentContext(data: Personalization, recipients: string[], events: CalendarEvent[]) {
   if (recipients.length !== 1) return { memory: null, purchases: [], calendar: [] };
   const recipient = canonicalRecipient(recipients[0]);
-  const names = Object.entries(recipientAliases).filter(([, value]) => value === recipient).map(([name]) => name);
   const memory = data.memories.find(m => canonicalRecipient(m.recipient) === recipient);
   const purchases = data.purchases.filter(p => canonicalRecipient(p.recipient) === recipient).flatMap(p => {
     const category = categoryKeys[p.gift.category] ?? ((CATEGORIES as readonly string[]).includes(p.gift.category) ? p.gift.category : '');
@@ -168,7 +174,7 @@ export function agentContext(data: Personalization, recipients: string[], events
   });
   return {
     memory: memory ? { preferences: memory.preferences, excluded_categories: memory.excluded_categories, excluded_ingredients: memory.excluded_ingredients } : null,
-    purchases,
-    calendar: events.filter(e => names.some(name => e.title.includes(name))).map(({ title, date, kind }) => ({ title: title.slice(0, 60), date, kind })),
+    purchases: purchases.slice(-40),
+    calendar: recipientCalendar(recipients, events),
   };
 }

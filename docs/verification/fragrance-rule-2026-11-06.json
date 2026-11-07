@@ -1,0 +1,544 @@
+{
+  "generatedAt": "2026-11-06T12:05:48.810Z",
+  "passed": true,
+  "catalogSize": 3376,
+  "fragranceNameMatches": 93,
+  "runs": [
+    {
+      "mode": "a-router",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?\n상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": "shipping",
+          "routing": {
+            "agent": "a-router",
+            "intent": "conditions",
+            "route": "rules",
+            "llmCalls": 0
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "a-router",
+            "intent": "conditions",
+            "route": "rules",
+            "llmCalls": 0
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "예산 7만원으로 바꿔줘",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 70000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "a-router",
+            "intent": "conditions",
+            "route": "rules",
+            "llmCalls": 0
+          },
+          "productIds": [
+            "amz-B07HGTXF95",
+            "amz-B0060OUV5Y",
+            "amz-B007NNU2WI"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "full-chat",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?\n상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": "shipping",
+          "routing": {
+            "agent": "full-chat",
+            "route": "agent",
+            "llmCalls": 1,
+            "toolCalls": 1,
+            "httpAttempts": 1,
+            "usage": {
+              "prompt_tokens": 1437,
+              "completion_tokens": 39,
+              "total_tokens": 1476
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              }
+            ],
+            "stopReason": "missing_condition"
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "full-chat",
+            "route": "agent",
+            "llmCalls": 2,
+            "toolCalls": 1,
+            "httpAttempts": 2,
+            "usage": {
+              "prompt_tokens": 3679,
+              "completion_tokens": 30,
+              "total_tokens": 3709
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              },
+              {
+                "action": "respond",
+                "type": "result"
+              }
+            ],
+            "intent": "recommend",
+            "stopReason": "complete"
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "예산 7만원으로 바꿔줘",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 70000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "full-chat",
+            "route": "agent",
+            "llmCalls": 2,
+            "toolCalls": 1,
+            "httpAttempts": 2,
+            "usage": {
+              "prompt_tokens": 3902,
+              "completion_tokens": 37,
+              "total_tokens": 3939
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              },
+              {
+                "action": "respond",
+                "type": "result"
+              }
+            ],
+            "intent": "recommend",
+            "stopReason": "complete"
+          },
+          "productIds": [
+            "amz-B07HGTXF95",
+            "amz-B0060OUV5Y",
+            "amz-B007NNU2WI"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "full-chat-feedback-2",
+      "turns": [
+        {
+          "text": "향이 강한 제품은 빼고, 먹는 것도 제외해줘.",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": null
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하.\n예산에 배송비도 포함할까요?\n상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": "shipping",
+          "routing": {
+            "agent": "full-chat-feedback-2",
+            "route": "agent",
+            "llmCalls": 2,
+            "toolCalls": 1,
+            "httpAttempts": 2,
+            "usage": {
+              "prompt_tokens": 2399,
+              "completion_tokens": 54,
+              "total_tokens": 2453
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              }
+            ],
+            "stopReason": "missing_condition",
+            "feedback": {
+              "maxReviews": 2,
+              "maxCalls": 10,
+              "actorCalls": 1,
+              "reviewCalls": 1,
+              "revisions": 0,
+              "limitReached": false,
+              "reviews": [
+                {
+                  "action": "update_conditions",
+                  "round": 1,
+                  "verdict": "pass",
+                  "issues": []
+                }
+              ]
+            }
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "배송비 포함",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 100000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 100,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "full-chat-feedback-2",
+            "route": "agent",
+            "llmCalls": 4,
+            "toolCalls": 1,
+            "httpAttempts": 4,
+            "usage": {
+              "prompt_tokens": 6315,
+              "completion_tokens": 60,
+              "total_tokens": 6375
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              },
+              {
+                "action": "respond",
+                "type": "result"
+              }
+            ],
+            "intent": "recommend",
+            "stopReason": "complete",
+            "feedback": {
+              "maxReviews": 2,
+              "maxCalls": 10,
+              "actorCalls": 2,
+              "reviewCalls": 2,
+              "revisions": 0,
+              "limitReached": false,
+              "reviews": [
+                {
+                  "action": "update_conditions",
+                  "round": 1,
+                  "verdict": "pass",
+                  "issues": []
+                },
+                {
+                  "action": "respond",
+                  "round": 1,
+                  "verdict": "pass",
+                  "issues": []
+                }
+              ]
+            }
+          },
+          "productIds": [
+            "amz-B00SNPCSUY",
+            "amz-B07PFFMP9P",
+            "amz-B07G19ZXWB"
+          ]
+        },
+        {
+          "text": "예산 7만원으로 바꿔줘",
+          "status": 200,
+          "passed": true,
+          "state": {
+            "occasion": "생일",
+            "recipients": [
+              "친구"
+            ],
+            "preferences": [
+              "avoid_fragrance"
+            ],
+            "excluded_categories": [
+              "food",
+              "snack",
+              "coffee_tea",
+              "health"
+            ],
+            "excluded_ingredients": [],
+            "brand": null,
+            "delivery_by": null,
+            "packaging": null,
+            "budget": {
+              "amount_krw": 70000,
+              "shipping_included": true
+            }
+          },
+          "message": "이렇게 이해했어요: 친구 · 선물 하나 예산 70,000원 이하 · 배송비 포함.\n선호·예산대·상품 다양성을 함께 고려했어요. 상품명 기준으로 향수·방향제·디퓨저·향초 등 향 제품을 제외했어요. 실제 향의 강도는 상품 상세 정보에서 확인해 주세요.",
+          "question": null,
+          "routing": {
+            "agent": "full-chat-feedback-2",
+            "route": "agent",
+            "llmCalls": 4,
+            "toolCalls": 1,
+            "httpAttempts": 4,
+            "usage": {
+              "prompt_tokens": 6768,
+              "completion_tokens": 67,
+              "total_tokens": 6835
+            },
+            "steps": [
+              {
+                "action": "update_conditions"
+              },
+              {
+                "action": "respond",
+                "type": "result"
+              }
+            ],
+            "intent": "recommend",
+            "stopReason": "complete",
+            "feedback": {
+              "maxReviews": 2,
+              "maxCalls": 10,
+              "actorCalls": 2,
+              "reviewCalls": 2,
+              "revisions": 0,
+              "limitReached": false,
+              "reviews": [
+                {
+                  "action": "update_conditions",
+                  "round": 1,
+                  "verdict": "pass",
+                  "issues": []
+                },
+                {
+                  "action": "respond",
+                  "round": 1,
+                  "verdict": "pass",
+                  "issues": []
+                }
+              ]
+            }
+          },
+          "productIds": [
+            "amz-B07HGTXF95",
+            "amz-B0060OUV5Y",
+            "amz-B007NNU2WI"
+          ]
+        }
+      ]
+    }
+  ]
+}
