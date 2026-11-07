@@ -459,7 +459,7 @@ test('T1-44 a validate rejection records which rule failed', async () => {
     [claim('단 걸 안 싫어해', 'sweetness', 'less_sweet', 'allow'), 'sweetness_value'],
     [claim('없는 문장', 'sweetness', null, 'allow'), 'span'],
     [{ ...claim('단 걸', 'sweetness', null, 'allow'), extra: 1 }, 'claim_keys'],
-    [claim('단 걸', 'ingredient', '견과류', 'allow', 'weak'), 'strength'],
+    [claim('단 걸', 'ingredient', '견과류', 'maybe'), 'polarity'], // 2026-11-08: F2 normalizes strength, so the strength case moved to T1-64
   ];
   for (const [bad, reason] of cases) {
     const stats = [];

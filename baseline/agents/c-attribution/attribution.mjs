@@ -18,10 +18,24 @@ const reject = reason => { throw new InvalidLlmOutput(reason); };
 
 export const isOwnerFree = c => OWNER_FREE_KINDS.includes(c.kind);
 
-function checkClaim(c, text) {
+/**
+ * F2: strength is normalized instead of rejected (kind, value and polarity stay strict):
+ * not 'avoid' → null; 'avoid' with a missing or unknown strength → 'weak' (leads to a confirmation, never an exclusion).
+ */
+function normalizeStrength(c, note) {
+  const set = value => { if (c.strength !== value) { c.strength = value; note(); } };
+  if (isOwnerFree(c)) return set(null);
+  if (!POLARITIES.includes(c.polarity)) return undefined; // left for the strict polarity check
+  if (c.kind === 'sweetness') return STRENGTHS.includes(c.strength) || c.strength === null ? undefined : set(null);
+  if (c.polarity !== 'avoid') return set(null);
+  return STRENGTHS.includes(c.strength) ? undefined : set('weak');
+}
+
+function checkClaim(c, text, note) {
   if (!isObject(c) || !keysAre(c, CLAIM_KEYS)) reject('claim_keys');
   if (typeof c.span !== 'string' || !c.span.trim() || c.span.length > 200 || !text.includes(c.span.trim())) reject('span');
   if (!CLAIM_KINDS.includes(c.kind)) reject('kind');
+  normalizeStrength(c, note);
   if (isOwnerFree(c)) {
     if (c.value !== null || c.polarity !== null || c.strength !== null) reject('owner_free_fields');
     return;
@@ -38,9 +52,9 @@ function checkClaim(c, text) {
 }
 
 /** validate callback for the extraction step: {claims:[...]} only. */
-export function validateExtraction(data, text) {
+export function validateExtraction(data, text, onNormalize = () => {}) {
   if (!isObject(data) || !keysAre(data, 'claims') || !Array.isArray(data.claims) || data.claims.length > MAX_CLAIMS) reject('extraction_shape');
-  for (const c of data.claims) checkClaim(c, text);
+  for (const c of data.claims) checkClaim(c, text, onNormalize);
   return true;
 }
 

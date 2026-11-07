@@ -15,6 +15,7 @@ const SWEET_WORD = /설탕|(?<![가-힣])단\s*(?:것|거|걸|건|게|음식|간
 const AVOID_STRONG = /알레르기|알러지|못\s*(?:먹|드)|먹으면\s*안|드시면\s*안|빼|제외|피하|피해|안\s*(?:돼|되)|넣지\s*마/;
 const AVOID_WEAK = /싫|별로|안\s*좋아|꺼려|줄이|줄여|안\s*드|안\s*먹/;
 const PREFER = /좋아|선호|즐겨/;
+const CRAB_CONTEXT = /(?<![가-힣])게(?:\s*(?:알레르기|알러지)|(?:를|는|도|만)\s*(?:못|안|빼|피|제외|싫|별로|좋아))|게살|꽃게|대게/;
 const INSTRUCTION = /빼\s*(?:줘|주세요|줄래|주라|줘요|고)|제외(?:해)?\s*(?:줘|주세요)|넣지\s*마/;
 const FILLER = /추천해\s*(?:줘|주세요)|골라\s*(?:줘|주세요)|추천|선물|부탁(?:해|드려요)?|해\s*줘|[\s.,!?~]/g;
 // Gift conditions, recognised before tastes. Kept narrow ("비싼" etc. go to the LLM).
@@ -61,6 +62,8 @@ export function extractClause(clause) {
       : { span: clause, kind: 'sweetness', value: null, polarity: tone.polarity, strength: null });
   }
   for (const name of mentionedAllergens(rest)) {
+    // "게"(crab) is also the common noun ending "…는 게"; count it only in an ingredient context.
+    if (name === '게' && !CRAB_CONTEXT.test(rest)) continue;
     if (!tone) return null;
     claims.push({ span: clause, kind: 'ingredient', value: name, ...tone });
   }
@@ -92,6 +95,16 @@ export function ruleOwner(clause, state, quoted) {
 }
 
 /** Whole-message rule pass. complete=false means at least one clause needs the LLM extractor. */
+// F1: past, recovery and negation markers (a subset of NEEDS_LLM). Current-change markers (요즘·작년·올해·부터,
+// and "예전부터" = since long ago until now) are not included.
+const PAST_MARKER = /안\s*싫|싫지\s*않|아니|없|예전(?!부터)|전에는|였는데|었는데|았는데|했는데|나았|나으|괜찮/;
+/** F1: does the message describe a past, recovered or negated fact? Value phrases such as "단맛 없는" do not count. */
+export function hasPastMarker(text) {
+  const marked = PAST_MARKER.test(text.replace(UNSWEETENED, ' '));
+  UNSWEETENED.lastIndex = 0;
+  return marked;
+}
+
 /**
  * R1: tense/negation markers are checked on the whole message (after removing unsweetened phrases such as
  * "단맛 없는"), because splitting at "는데"/"고" can cut a marker like "였는데" off its clause.

@@ -2,10 +2,10 @@
 // Output contract of the common interpret port: {patch, questions, unresolved}.
 import { LlmError } from '../../llm/index.mjs';
 import { checkedPatch } from '../../src/contracts.mjs';
-import { analyze, bestClause, hasSubjectMarker, otherSubjectOnly, ownerForSpan } from './rules.mjs';
+import { analyze, bestClause, hasPastMarker, hasSubjectMarker, otherSubjectOnly, ownerForSpan } from './rules.mjs';
 
 const squash = s => s.replace(/\s+/g, '');
-import { isOwnerFree, routeClaims, validateClassification, validateExtraction } from './attribution.mjs';
+import { claimPatchValue, isOwnerFree, routeClaims, validateClassification, validateExtraction } from './attribution.mjs';
 import { PROMPT_VERSION, classificationMessages, extractionMessages } from './prompts.mjs';
 import { CONDITION_KINDS, MIXED_POLICIES, QUESTIONS } from './vocabulary.mjs';
 
@@ -84,7 +84,7 @@ export function createInterpreter({ llm = null, mixedPolicy = 'ask_first', timeo
 
   return async function interpret({ text, state, signal } = {}) {
     const started = performance.now();
-    const stats = { promptVersion: PROMPT_VERSION, llmCalls: 0, latencyMs: 0, usage: {}, timedOut: false, timeoutSource: null, path: ['rules'], claims: [], calls: [], skipped: null };
+    const stats = { promptVersion: PROMPT_VERSION, llmCalls: 0, latencyMs: 0, usage: {}, timedOut: false, timeoutSource: null, path: ['rules'], claims: [], calls: [], skipped: null, strengthNormalized: 0 };
     const controller = new AbortController();
     let timer;
     const deadline = new Promise((_, reject) => {
@@ -149,7 +149,7 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     const hasCondition = claims.some(c => CONDITION_KINDS.includes(c.kind));
     if (hasCondition && (mixedPolicy === 'ask_first' || !llm)) { stats.skipped = 'condition_found_by_rules'; return copy(CONDITION); }
     if (!llm) return copy(GENERIC);
-    const data = await ask('extract', { messages: extractionMessages({ text, state }), validate: d => validateExtraction(d, text) });
+    const data = await ask('extract', { messages: extractionMessages({ text, state }), validate: d => validateExtraction(d, text, () => { stats.strengthNormalized++; }) });
     let extracted = data.claims.map(c => ({ ...c, ...ownerForSpan(c.span, analysis, state), clause: bestClause(c.span, analysis) }));
     // R1 (general principle): when rules and the LLM judge the same target differently, confirm neither.
     const ruleClaims = analysis.claims.map(c => ({ ...c, clause: bestClause(c.span, analysis) }));
@@ -197,6 +197,10 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     pending.forEach((c, i) => { c.owner = owners.get(ids[i]); c.reason = 'llm'; });
     // C1 supplementary defense: a recipient answer is not trusted when only another person is the subject.
     for (const c of pending) if (c.owner === 'recipient' && otherSubjectOnly(c.span, analysis, state)) { c.owner = 'unknown'; c.reason = 'other_subject_guard'; }
+  }
+  // F1: in a past, recovery or negation sentence nothing is confirmed from the LLM's reading; ask instead.
+  if (hasPastMarker(text)) {
+    for (const c of claims) if (!c.conflict && c.owner === 'recipient' && claimPatchValue(c)) Object.assign(c, { conflict: true, reason: 'past_marker_confirm' });
   }
   // Kinds decided before owner carry no owner in diagnostics (it was never judged for them).
   stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person, conflict }) => conflict
