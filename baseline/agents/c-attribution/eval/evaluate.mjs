@@ -45,7 +45,7 @@ export function scoreRun(item, { result, stats = {}, error } = {}) {
     wrongConfirm, exact: effectivePatch !== null && canonical(effectivePatch) === canonical(item.expected_patch),
     questionOk: item.expect_question === null ? !error : asked === item.expect_question,
     effectivePatch, error: error ?? null, timedOut: Boolean(stats.timedOut),
-    llmCalls: stats.llmCalls ?? 0, latencyMs: stats.latencyMs ?? 0, totalTokens: stats.usage?.total_tokens ?? 0,
+    llmCalls: stats.llmCalls ?? 0, latencyMs: stats.latencyMs ?? 0, totalTokens: stats.usage?.total_tokens ?? 0, outputTokens: stats.usage?.completion_tokens ?? 0,
     predictedClaims: predicted, calls: stats.calls ?? [],
   };
 }
@@ -81,7 +81,9 @@ function aggregate(runs) {
     timeouts: runs.filter(r => r.timedOut).length,
     llmCalls: sum('llmCalls'),
     meanLatencyMs: ratio(sum('latencyMs'), runs.length),
+    maxLatencyMs: runs.reduce((m, r) => Math.max(m, r.latencyMs), 0),
     totalTokens: sum('totalTokens'),
+    outputTokens: sum('outputTokens'),
   };
 }
 

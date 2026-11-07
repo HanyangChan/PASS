@@ -38,17 +38,25 @@ export function scoreBreakdown(product, state) {
       components.push({ source: 'preference', key: pref, points: SWEET_POINTS[product.sweetness], text: `${SWEET_WORDS[product.sweetness]} ${SWEET_POINTS[product.sweetness]}점` });
   }
   const total = components.reduce((n, c) => n + c.points, 0);
-  const text = components.length ? `${components.map(c => c.text).join(', ')}, 합계 ${total}점이에요.` : '어울리는 종류나 말씀하신 선호에 해당하지 않아 0점이에요.';
+  // With no stated preferences, a zero only means the category does not suit the recipient group.
+  const zero = state.preferences.length
+    ? '어울리는 종류나 말씀하신 선호에 해당하지 않아 0점이에요.'
+    : `${state.recipients.length ? `${recipientPhrase(state.recipients)} ` : ''}어울리는 종류가 아니라 0점이에요.`;
+  const text = components.length ? `${components.map(c => c.text).join(', ')}, 합계 ${total}점이에요.` : zero;
   return { total, components, text };
 }
 
-/** reason: why the top card, with its score components. In a what-if it states the budget is hypothetical. */
-function reasonOf(products, cards, state, hypothetical) {
+/**
+ * reason: why the top card. Score details are stated once: in contrastive when it has a breakdown,
+ * otherwise here (one candidate, or a contrast whose basis could not be determined).
+ * In a what-if it states the budget is hypothetical.
+ */
+function reasonOf(products, cards, state, hypothetical, contrastive) {
   if (!cards.length) return null;
   const top = cards[0];
   const product = products.find(p => p.id === top.id);
   const notes = state.preferences.filter(p => SWEET_NOTES[p]).map(p => SWEET_NOTES[p]);
-  const score = product ? `${particle(top.name, '은')} ${scoreBreakdown(product, state).text}` : null;
+  const score = product && !contrastive?.breakdown ? `${particle(top.name, '은')} ${scoreBreakdown(product, state).text}` : null;
   const head = hypothetical
     ? `${scopeLabel(state)} 상한을 ${won(hypothetical.budget_krw)}으로 ${hypothetical.budget_krw > hypothetical.current_budget_krw ? '올린' : hypothetical.budget_krw < hypothetical.current_budget_krw ? '내린' : '그대로 둔'}다면 1위는 ${top.name}(적용 비용 ${won(top.budget_cost_krw)})예요. 지금 적용된 ${scopeLabel(state)} 상한은 ${won(hypothetical.current_budget_krw)} 그대로예요.`
     : top.explanation;
@@ -65,16 +73,17 @@ function contrastiveOf(products, state, cards) {
   const [pa, pb] = ranked;
   const breakdown = [pa, pb].map(p => ({ productId: p.id, ...scoreBreakdown(p, state) }));
   const base = { productIds: [a.id, b.id], scores: [pa.score, pb.score], breakdown };
+  // The score details of both products are stated here (and not repeated in reason).
+  const details = `${particle(a.name, '은')} ${breakdown[0].text} ${particle(b.name, '은')} ${breakdown[1].text}`;
   if (pa.score !== pb.score)
-    return { ...base, basis: 'score', text: `${particle(a.name, '은')} ${breakdown[0].text} ${particle(b.name, '은')} ${breakdown[1].text} 점수가 더 높은 ${particle(a.name, '을')} 먼저 추천했어요.` };
-  const both = `${particle(a.name, '과')} ${b.name} 모두 추천 점수가 ${pa.score}점으로 같아요.`;
+    return { ...base, basis: 'score', text: `${details} 점수가 더 높은 ${particle(a.name, '을')} 먼저 추천했어요.` };
   if (morePopular(pa, pb) !== 0) {
     const which = pa.category === pb.category ? '같은 종류 안에서 리뷰가 더 많은' : '각자 종류 안에서 인기도가 더 높은';
-    return { ...base, basis: 'popularity', text: `${both} ${which} ${particle(a.name, '을')} 먼저 추천했어요(리뷰 ${pa.rating_count}개, ${b.name} 리뷰 ${pb.rating_count}개).` };
+    return { ...base, basis: 'popularity', text: `${details} 점수가 같아서 ${which} ${particle(a.name, '을')} 먼저 추천했어요(리뷰 ${pa.rating_count}개, ${b.name} 리뷰 ${pb.rating_count}개).` };
   }
   if (pa.price_krw !== pb.price_krw)
-    return { ...base, basis: 'price', text: `${both} 인기도도 같아서 상품값이 더 낮은 ${particle(a.name, '을')} 먼저 추천했어요(${won(pa.price_krw)}, ${b.name} ${won(pb.price_krw)}).` };
-  return { ...base, basis: 'id_order', text: `${both} 인기도와 상품값도 같아서 정해진 상품 순서대로 놓았어요.` };
+    return { ...base, basis: 'price', text: `${details} 점수와 인기도가 같아서 상품값이 더 낮은 ${particle(a.name, '을')} 먼저 추천했어요(${won(pa.price_krw)}, ${b.name} ${won(pb.price_krw)}).` };
+  return { ...base, basis: 'id_order', text: `${details} 점수·인기도·상품값이 모두 같아서 정해진 상품 순서대로 놓았어요.` };
 }
 
 /** counterfactual: re-ranked budget alternative. case a: first changes/appears, b: first stays, c: nothing new. */
@@ -105,8 +114,8 @@ export function explain({ products, state, result, currentBudget }) {
   const cards = result?.cards ?? [];
   const hypothetical = Number.isSafeInteger(currentBudget) && currentBudget !== state.budget.amount_krw
     ? { budget_krw: state.budget.amount_krw, current_budget_krw: currentBudget } : null;
-  const reason = reasonOf(products, cards, state, hypothetical);
   const contrastive = contrastiveOf(products, state, cards);
+  const reason = reasonOf(products, cards, state, hypothetical, contrastive);
   const counterfactual = counterfactualOf(products, state, hypothetical);
   const facts = [];
   if (reason) {

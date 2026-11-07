@@ -104,3 +104,40 @@ test('T3-20 a what-if explanation says the budget is hypothetical and the sessio
   assert.equal(rec.explanation.hypothetical, null);
   for (const text of texts(rec.explanation)) assert.doesNotMatch(text, /올린다면|내린다면|가정/, text);
 });
+
+test('T3-21 with no stated preferences the zero-point sentence does not mention preferences', async () => {
+  const plain = await evaluate(products, {});
+  const snack = products.find(p => p.id === 'snack');
+  assert.equal(scoreBreakdown(snack, plain.state).text, '어머니께 어울리는 종류가 아니라 0점이에요.');
+  for (const text of texts(explain(plain))) assert.doesNotMatch(text, /말씀하신/, text);
+  const withPref = await evaluate(products, { preferences: ['unsweetened'] });
+  assert.equal(scoreBreakdown(snack, withPref.state).text, '어울리는 종류나 말씀하신 선호에 해당하지 않아 0점이에요.');
+});
+
+test('T3-22 the score details appear once: in contrastive, or in reason when there is no contrast', async () => {
+  const session = await readySession();
+  const agent = createPlannedAgent();
+  const cases = [
+    await evaluate(products, {}), await evaluate(products, { preferences: ['less_sweet'] }),
+    await evaluate(products, { budget: { ...READY_PATCH.budget, amount_krw: 70000 } }),
+    await evaluate([item('x', 'coffee_tea', 20000, 50), item('y', 'coffee_tea', 25000, 50)], {}),
+  ];
+  for (const input of cases) {
+    const e = explain(input);
+    assert.ok(e.contrastive?.breakdown, 'expected a contrast');
+    for (const b of e.contrastive.breakdown) {
+      assert.ok(e.contrastive.text.includes(b.text), `${e.contrastive.basis}: ${b.text}`);
+      assert.equal(e.reason.text.includes(b.text), false, `reason repeats: ${b.text}`);
+    }
+  }
+  const single = await evaluate(products, { excluded_ingredients: ['견과류'] });
+  const one = explain(single);
+  assert.equal(one.contrastive, null);
+  assert.ok(one.reason.text.includes(scoreBreakdown(products.find(p => p.id === 'tea'), single.state).text));
+  const what = await agent.runTurn({ session, request: { kind: 'what_if_budget', amount_krw: 70000, expectedVersion: 1 }, products });
+  for (const b of what.explanation.contrastive.breakdown) assert.equal(what.explanation.reason.text.includes(b.text), false);
+  assert.match(what.explanation.reason.text, /70,000원으로 올린다면/);
+  const swapped = explain({ ...cases[0], result: { ...cases[0].result, cards: [...cases[0].result.cards].reverse() } });
+  assert.equal(swapped.contrastive.basis, null);
+  assert.match(swapped.reason.text, /합계|0점/);
+});

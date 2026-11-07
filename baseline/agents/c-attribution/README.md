@@ -98,8 +98,8 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/try-att
 # 발화 하나(조립된 에이전트 경유)
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-live.mjs "엄마는 견과류는 좀 그렇대"
 
-# 평가셋 전체(B층): 결과는 eval/results/에 모델·PROMPT_VERSION·날짜·평가셋 해시와 함께 저장
-node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mjs --repeat 5
+# 평가셋 전체(B층, 기본 reasoning off): 결과는 eval/results/에 모델·PROMPT_VERSION·reasoning·날짜·평가셋 해시와 함께 저장
+node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mjs --repeat 2
 ```
 
 ## 확정 결정
@@ -190,5 +190,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 - 남은 일: 담당자의 `live-demo.mjs` 실제 실행, B층 평가 실행, 팀 결정 항목 6개.
 - **설명 보완 (2026-11-08)**: 점수를 수령인 그룹 적합과 말씀하신 선호로 나누고, 문장에서 내부 키를 빼서 `basis`·`case` 필드로 옮겼다. 조사는 받침에 따라 고르고, 비교 설명은 가정 예산임을 밝힌다. 데모에 분류 LLM이 필요한 7·8턴을 추가했다.
 - 남은 일: 8턴 데모 실제 실행, `maxTurns` 기본값과 계산 방식은 팀 결정.
+- **2026-11-08 (2)**: 8턴 실제 데모 결과를 기록했다(T6-09, LLM 2회·출력 34토큰). 선호가 없을 때 0점 문장에서 "말씀하신 선호"를 뺐다. 점수 내역은 대조 설명에만 쓰고, 후보가 1개면 이유에 쓴다.
+- 평가 실행기 요약에 날짜·reasoning·출력 토큰·최대 지연을 추가했다. 다음은 B층 평가 실행(`--repeat 2`)이다.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.

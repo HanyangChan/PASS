@@ -51,7 +51,7 @@ test('T1-B2 the runner works end to end with the no-network interpreter', async 
   const runs = await runEval({ items, repeat: 1, createInterpret: onStats => createInterpreter({ onStats }) });
   assert.equal(runs.length, items.length);
   const summary = summarize(items, runs);
-  for (const key of ['ownerAccuracy', 'giverLeakRate', 'unknownQuestionRate', 'wrongConfirmRate', 'exactPatchRate', 'llmCalls', 'meanLatencyMs'])
+  for (const key of ['ownerAccuracy', 'giverLeakRate', 'unknownQuestionRate', 'wrongConfirmRate', 'exactPatchRate', 'errors', 'llmCalls', 'meanLatencyMs', 'maxLatencyMs', 'totalTokens', 'outputTokens'])
     assert.equal(typeof summary[key], 'number', key);
   assert.equal(summary.llmCalls, 0);
   assert.equal(summary.giverLeakRate, 0);
