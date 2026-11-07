@@ -72,14 +72,14 @@ test('T3-05 counterfactual first_match counts as (a)', async () => {
 
 test('T3-06~09 contrastive criteria follow the engine sort order', async () => {
   const score = explain(await evaluate(products, {}));
-  assert.equal(score.contrastive.criterion, 'score'); assert.deepEqual(score.contrastive.scores, [1, 0]);
+  assert.equal(score.contrastive.basis, 'score'); assert.deepEqual(score.contrastive.scores, [1, 0]);
   const popularity = explain(await evaluate(products, { budget: { ...READY_PATCH.budget, amount_krw: 70000 } }));
-  assert.equal(popularity.contrastive.criterion, 'popularity');
+  assert.equal(popularity.contrastive.basis, 'popularity');
   const priceInput = await evaluate([item('x', 'coffee_tea', 20000, 50), item('y', 'coffee_tea', 25000, 50)], {});
   const price = explain(priceInput);
-  assert.equal(price.contrastive.criterion, 'price'); assert.match(price.contrastive.text, /20,000원/); assertAmounts(priceInput, price);
+  assert.equal(price.contrastive.basis, 'price'); assert.match(price.contrastive.text, /20,000원/); assertAmounts(priceInput, price);
   const tie = explain(await evaluate([item('y', 'coffee_tea', 20000, 50), item('x', 'coffee_tea', 20000, 50)], {}));
-  assert.equal(tie.contrastive.criterion, 'id_order'); assert.deepEqual(tie.contrastive.productIds, ['x', 'y']);
+  assert.equal(tie.contrastive.basis, 'id_order'); assert.deepEqual(tie.contrastive.productIds, ['x', 'y']);
 });
 
 test('T3-10 one candidate gives no contrast; no result gives no reason', async () => {
@@ -104,16 +104,16 @@ test('T3-14 when the engine order does not match the cards, only facts are state
   const input = await evaluate(products, {});
   const swapped = { ...input, result: { ...input.result, cards: [...input.result.cards].reverse() } };
   const e = explain(swapped);
-  assert.equal(e.contrastive.criterion, null); assert.match(e.contrastive.text, /견과 간식 세트/); assert.match(e.contrastive.text, /차 선물 세트/);
+  assert.equal(e.contrastive.basis, null); assert.match(e.contrastive.text, /견과 간식 세트/); assert.match(e.contrastive.text, /차 선물 세트/);
 });
 
 test('T3-15 the planned agent attaches explanation to recommendations and comparisons only', async () => {
   const session = await readySession();
   const agent = createPlannedAgent();
   const rec = await agent.runTurn({ session, request: { kind: 'view', expectedVersion: session.version }, products });
-  assert.ok(rec.explanation?.reason); assert.equal(rec.explanation.contrastive.criterion, 'score');
+  assert.ok(rec.explanation?.reason); assert.equal(rec.explanation.contrastive.basis, 'score');
   const cmp = await agent.runTurn({ session, request: { kind: 'what_if_budget', amount_krw: 70000, expectedVersion: session.version }, products });
-  assert.equal(cmp.explanation.counterfactual.case, 'c'); assert.equal(cmp.explanation.contrastive.criterion, 'popularity');
+  assert.equal(cmp.explanation.counterfactual.case, 'c'); assert.equal(cmp.explanation.contrastive.basis, 'popularity');
   const fresh = createSession('p3');
   const q = await agent.runTurn({ session: fresh, request: { kind: 'view', expectedVersion: 0 }, products });
   assert.equal(Object.hasOwn(q, 'explanation'), false);

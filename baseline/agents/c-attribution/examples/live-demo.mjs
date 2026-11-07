@@ -1,4 +1,4 @@
-// P5 live demo: the six-turn conversation through the assembled agent with the REAL LLM.
+// P5 live demo: the eight-turn conversation through the assembled agent with the REAL LLM.
 // Not part of npm test (name/folder do not match test patterns). Run manually from the repository root:
 //   node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/live-demo.mjs
 // Prints per turn: kind, applied conditions, question/notice, top cards, explanation, plan, LLM calls·tokens·latency.
@@ -16,12 +16,17 @@ const TURNS = [
   { text: '견과류는 별로야' },
   { text: '응 엄마가 견과류 알레르기 있어' },
   { whatIf: 70000 },
+  // Turns 7–8 need the LLM classification step (quoted speech), so the real LLM path is exercised.
+  { text: '엄마가 "나는 차를 좋아해"라고 하셨어' },
+  { text: '엄마가 "나는 과자는 안 좋아해"라고 하셨어' },
 ];
+// The default maxTurns (8) would apply the turn limit on turn 8; 10 keeps the LLM-dependent question visible.
+const MAX_TURNS = 10;
 
 let turnStats = [];
 let agent;
 try {
-  agent = createConfiguredAgent(process.env, { onStats: s => turnStats.push(s) });
+  agent = createConfiguredAgent(process.env, { maxTurns: MAX_TURNS, onStats: s => turnStats.push(s) });
 } catch (error) {
   console.error(JSON.stringify({ ok: false, code: error?.code ?? 'error' }));
   process.exit(1);
@@ -58,8 +63,9 @@ for (const [i, turn] of TURNS.entries()) {
     cards: (out.result?.cards ?? []).slice(0, 3).map(c => `${c.id}:${c.budget_cost_krw}`),
     explanation: out.explanation ? {
       reason: out.explanation.reason?.text ?? null,
-      contrastive: out.explanation.contrastive ? `${out.explanation.contrastive.criterion}: ${out.explanation.contrastive.text}` : null,
-      counterfactual: out.explanation.counterfactual ? `(${out.explanation.counterfactual.case}) ${out.explanation.counterfactual.text}` : null,
+      contrastive: out.explanation.contrastive ? { text: out.explanation.contrastive.text, basis: out.explanation.contrastive.basis } : null,
+      counterfactual: out.explanation.counterfactual ? { text: out.explanation.counterfactual.text, case: out.explanation.counterfactual.case } : null,
+      hypothetical: out.explanation.hypothetical,
     } : null,
     plan: {
       action: out.plan.action, field: out.plan.field, turnLimitReached: out.plan.turnLimitReached, error: out.plan.error,

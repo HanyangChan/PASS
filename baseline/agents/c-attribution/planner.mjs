@@ -176,7 +176,7 @@ export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, on
     };
     // P3: engine-fact explanation for recommendations and comparisons (comparison uses the hypothetical state).
     if (withExplanation && (output.kind === 'recommendation' || output.kind === 'comparison'))
-      response.explanation = explain({ products, state: output.evaluatedState, result: output.result });
+      response.explanation = explain({ products, state: output.evaluatedState, result: output.result, currentBudget: output.session.state.budget.amount_krw });
     return response;
   }
   return { id: 'c-attribution-planned', runTurn };

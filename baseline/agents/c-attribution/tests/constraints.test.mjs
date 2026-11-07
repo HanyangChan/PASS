@@ -6,7 +6,11 @@ import { budgetAlternatives, createSession } from '../../../src/index.mjs';
 import { validateCatalog, validateState } from '../../../src/contracts.mjs';
 import { ALLERGEN_NAMES } from '../../../src/vendor/allergens.mjs';
 import { CATEGORIES } from '../../../src/vendor/catalog.mjs';
+import { scoreBreakdown } from '../explain.mjs';
 import { createPlannedAgent } from '../planner.mjs';
+
+const INTERNAL = /\b(score|popularity|price|id_order|basis|first_match|top_changed|eligible_only|top_three_changed|no_alternative|less_sweet|unsweetened|category)\b|[A-Za-z_]+:|\([abc]\)/;
+const BRACKETED_PARTICLE = /\(으\)|\(이\)|이\(가\)|을\(를\)|은\(는\)/;
 
 /** mulberry32: tiny seeded PRNG, written here so the test needs no package. */
 function mulberry32(seed) {
@@ -79,6 +83,8 @@ test('T5-01~06 random catalogs and conditions never break constraints through th
       cards++;
       const product = catalog.find(p => p.id === card.id);
       assert.deepEqual(violations(card, product, state), [], `case ${n} card ${card.id}`);
+      // T3-17: score components add up to the engine score of every card.
+      assert.equal(scoreBreakdown(product, state).total, card.score, `case ${n} card ${card.id} score`);
     }
     // T5-06: every amount in the explanation is an engine number.
     const allowed = new Set([state.budget.amount_krw]);
@@ -88,4 +94,15 @@ test('T5-01~06 random catalogs and conditions never break constraints through th
       for (const [, raw] of text.matchAll(/([\d,]+)원/g)) assert.ok(allowed.has(Number(raw.replaceAll(',', ''))), `case ${n}: ${raw}원 in "${text}"`);
   }
   assert.ok(cards > 100, `too few cards checked: ${cards}`);
+});
+
+test('T3-18/19 random explanations have no internal keys or bracketed particles', async () => {
+  const agent = createPlannedAgent();
+  for (const [n, { catalog, patch }] of generate(SEED).entries()) {
+    const out = await agent.runTurn({ session: createSession(`t5w-${n}`), request: { kind: 'patch', expectedVersion: 0, patch }, products: catalog });
+    for (const text of [out.explanation?.reason?.text, out.explanation?.contrastive?.text, out.explanation?.counterfactual?.text].filter(Boolean)) {
+      assert.doesNotMatch(text, INTERNAL, `case ${n}: ${text}`);
+      assert.doesNotMatch(text, BRACKETED_PARTICLE, `case ${n}: ${text}`);
+    }
+  }
 });

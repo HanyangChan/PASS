@@ -313,6 +313,10 @@
 | T3-14 | 재계산 불일치(카드 순서를 바꾼 결과) | 대조 `criterion:null`, 사실 문장만 | A | 구현 (수정 2026-11-07: null 대신 "사실만") |
 | T3-15 | P2 오케스트레이터 연결 | 추천·비교 응답에 `explanation`, 질문·오류에는 없음. `plan`·`explanation`을 뺀 응답은 공통 결과와 같음 | A | 구현 (추가 2026-11-07) |
 | T3-16 | 단맛 선호 적용 | reason에 "덜 단 상품을 우선했어요" 포함, "제외" 단어 없음(점수 조정 명시) | A | 구현 (추가 2026-11-07) |
+| T3-17 | 점수 구성 요소 | `scoreBreakdown`이 수령인 그룹 적합(+1)과 말씀하신 선호(카테고리 +3, 단맛 2/1/0)를 나누고, 각 값과 합계가 엔진 `rankProducts` 점수와 같음(무작위 300세트 포함). 문장에 "선호 점수"라는 말 없이 "어머니께 어울리는 종류(커피·차)라서 1점, 단맛이 없어 2점, 합계 3점" 형태 | A | 구현 (추가 2026-11-08) |
+| T3-18 | 내부 표시 제거 | 사용자 문장에 영문 내부 키(`score`, `popularity`, `less_sweet` 등), `키:` 형태, `(a)`·`(b)`·`(c)`가 없음. 기준은 `contrastive.basis`, 경우는 `counterfactual.case` 필드로만 | A | 구현 (추가 2026-11-08, `criterion` → `basis`로 이름 변경) |
+| T3-19 | 조사 | 받침 있는 이름(홍삼, 꿀)과 없는 이름(녹차)에서 "으로/로", "이/가", "을/를", "은/는"을 골라 씀. 문장에 "(으)로", "이(가)" 같은 병기 표기가 없음 | A | 구현 (추가 2026-11-08) |
+| T3-20 | 비교(what_if) 설명 | 가정 예산 기준임을 명시: "…70,000원으로 올린다면 …", "지금 적용된 … 50,000원 그대로예요". `explanation.hypothetical`에 두 금액. 세션 예산은 50,000원 그대로, 공통 카드 문구("예산 상한 70,000원 이하입니다")를 설명에 쓰지 않음. 일반 추천 설명에는 "올린다면" 없음. 예산을 내리는 가정은 "내린다면" | A | 구현 (추가 2026-11-08) |
 
 ## P4 메모리 — A층 (`tests/memory.test.mjs`)
 
@@ -353,7 +357,7 @@
 
 ## 다턴 시나리오와 조립 — C층 (`tests/scenario.test.mjs`, P5)
 
-D7 해결(2026-11-07): 지시된 6턴을 쓴다. 실행 경로는 `createConfiguredAgent(env, {fetcher, memory})`(P1 해석기 + P2 플래너 + P3 설명 + P4 기억)이고, 테스트에서는 모의 fetcher를 쓴다. `recipientId`는 `demo-recipient-1`, 상품은 `examples/catalog.mjs`다. 6턴 모두 규칙·주어 가드로 처리되므로 기대 LLM 호출은 0회다.
+D7 해결(2026-11-07): 지시된 6턴을 쓴다. 실행 경로는 `createConfiguredAgent(env, {fetcher, memory})`(P1 해석기 + P2 플래너 + P3 설명 + P4 기억)이고, 테스트에서는 모의 fetcher를 쓴다. `recipientId`는 `demo-recipient-1`, 상품은 `examples/catalog.mjs`다. 1~6턴은 규칙·주어 가드로 처리되어 LLM 0회이고, 7·8턴(2026-11-08 추가)은 인용문이라 분류 LLM을 1회씩 쓴다.
 
 | 턴 | 요청 | kind | 버전 | 적용 조건 변화 | 질문(`plan.question`) | cards | 설명·기억 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -363,6 +367,8 @@ D7 해결(2026-11-07): 지시된 6턴을 쓴다. 실행 경로는 `createConfigu
 | 4 | "견과류는 별로야" | question | 2 | 없음(주어 가드) | "견과류는 받는 분이 피하시는 건가요?" | – | – |
 | 5 | "응 엄마가 견과류 알레르기 있어" | recommendation | 3 | `excluded_ingredients:['견과류']` | 없음 | tea | 제안 `견과류`(sensitive) |
 | 6 | what_if_budget 70000 | comparison | 3 | 없음(가정 예산은 `evaluatedState`에만) | 없음 | premium, tea | 대조 `popularity`, 반사실 (c) |
+| 7 | 엄마가 "나는 차를 좋아해"라고 하셨어 | recommendation | 4 | `preferences`에 `category:coffee_tea` | 없음 | tea | 점수 합계 6점, 제안 `category:coffee_tea`, 분류 LLM 1회 |
+| 8 | 엄마가 "나는 과자는 안 좋아해"라고 하셨어 | question | 4 | 없음 | "과자·간식 상품을 추천에서 빼 드릴까요?" | – | 분류 LLM 1회 |
 
 | ID | 검증 내용 | 층 | 상태 |
 | --- | --- | --- | --- |
@@ -375,6 +381,7 @@ D7 해결(2026-11-07): 지시된 6턴을 쓴다. 실행 경로는 `createConfigu
 | T6-07 | 조립 경로 오류: `auth_failed`(401), `quota_exceeded`(429), `request_rejected`(400), `network_error`, `invalid_response`, `timeout`(해석기 제한), `configuration`(키 없음) → `kind:'error'`, 코드별 안내, 세션 불변 | A | 구현 |
 | T6-08 | `createConfiguredAgent`는 키를 `env` 인자로만 받고, 규칙으로 끝나는 턴은 키가 없어도 동작(네트워크 0) | A | 구현 |
 | T6-09 | 실제 LLM 데모 `examples/live-demo.mjs`(담당자 실행) | C(실제) | 계획(담당자 실행 대기) |
+| T6-10 | 7턴 '엄마가 "나는 차를 좋아해"라고 하셨어', 8턴 '엄마가 "나는 과자는 안 좋아해"라고 하셨어'(모의 분류: recipient) | 7턴: recommendation v4, `category:coffee_tea` 추가, tea, 설명에 "합계 6점", 기억 제안. 8턴: question v4, "과자·간식 상품을 추천에서 빼 드릴까요?". 분류 LLM 2회(전송 2회), 질문 반복 0 | C(모의) | 구현 (추가 2026-11-08: 조립 경로의 LLM 사용을 데모로 검증. 기본 `maxTurns` 8이면 8턴째에 턴 제한이 적용되어 질문 대신 추천이 나오므로, 데모와 테스트는 `maxTurns: 10`을 명시함) |
 
 ## 완료 체크
 

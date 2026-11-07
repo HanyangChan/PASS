@@ -59,6 +59,21 @@ const hasFinalConsonant = word => {
 export const josa = (word, withFinal, withoutFinal) => `${word}${hasFinalConsonant(word) ? withFinal : withoutFinal}`;
 export const categoryName = id => CATEGORY_NAMES[id] ?? id;
 
+/**
+ * particle(word, base) → word + the right particle by its final consonant.
+ * base: '이'(이/가), '을'(을/를), '은'(은/는), '과'(과/와), '으로'(으로/로; ㄹ 받침은 '로').
+ * A word not ending in Hangul is treated as having no final consonant.
+ */
+export function particle(word, base) {
+  const code = word.charCodeAt(word.length - 1);
+  const final = code >= 0xac00 && code <= 0xd7a3 ? (code - 0xac00) % 28 : 0;
+  const has = final !== 0;
+  const pairs = { 이: ['이', '가'], 을: ['을', '를'], 은: ['은', '는'], 과: ['과', '와'] };
+  if (base === '으로') return `${word}${has && final !== 8 ? '으로' : '로'}`;
+  if (!pairs[base]) throw new RangeError(`unknown particle: ${base}`);
+  return `${word}${has ? pairs[base][0] : pairs[base][1]}`;
+}
+
 /** All user-facing questions are code templates. The LLM never writes them. */
 export const QUESTIONS = Object.freeze({
   generic: '받는 분의 취향이나 피해야 할 성분을 짧게 알려주시거나, 조건 편집으로 입력해 주세요.',

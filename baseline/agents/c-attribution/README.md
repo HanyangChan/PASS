@@ -68,7 +68,10 @@ const live = createConfiguredAgent(process.env);   // 서버에서만. 키는 en
 
 - `plan`: `{action, field, question, notice, unapplied, turn, maxTurns, turnLimitReached, error, attribution, llm, memory?, plannerState}`. 화면에는 `plan.question`(최대 1개)이나 `plan.notice`를 보여준다.
 - `kind:'error'`는 LLM 오류다. `plan.error.code`와 안내(`ERROR_NOTICES.retry`는 잠시 후 재시도, `ERROR_NOTICES.operator`는 운영자 확인)가 있고, `session`은 입력 그대로다. 자동 재시도는 없다. `version_conflict` 같은 공통 오류는 그대로 던진다.
-- `explanation`: `{reason, contrastive, counterfactual, facts}`. 추천·비교 응답에만 붙는다(비교는 가정 예산 기준).
+- `explanation`: `{reason, contrastive, counterfactual, facts, hypothetical}`. 추천·비교 응답에만 붙는다.
+  - 사용자 문장은 `reason.text`, `contrastive.text`, `counterfactual.text`뿐이다. 영문 내부 키나 `(a)` 같은 표시는 문장에 넣지 않고, 기준은 `contrastive.basis`(`score`/`popularity`/`price`/`id_order`), 반사실 경우는 `counterfactual.case`(`a`/`b`/`c`), 점수 구성은 `contrastive.breakdown`에 둔다.
+  - 점수는 수령인 그룹에 어울리는 종류(+1)와 말씀하신 선호(카테고리 +3, 단맛 2/1)로 나눠 쓴다(`scoreBreakdown`, 합계는 엔진 점수와 같음).
+  - 비교(what_if)는 "…원으로 올린다면 … 지금 적용된 … 그대로예요"처럼 가정 예산임을 밝히고, `hypothetical`에 가정·현재 금액을 둔다.
 - 기억: `createMemoryStore()` 저장소를 넘기고, `runTurn`에 호스트의 안정적인 `recipientId`(표시 이름이 아님)를 주면 사용한다. 저장 제안은 `plan.memory.proposals`로 나오고, 호스트가 사용자 확인 후 `memory.confirm(id)`을 호출해야 저장된다.
 
 ## 환경 변수 (서버, 값은 `baseline/llm/.env`에만)
@@ -86,7 +89,7 @@ npm --prefix baseline run demo:agent -- c-attribution
 아래 명령은 **실제 LLM을 호출한다.** 담당자가 직접 실행하고 비용·토큰을 확인한다.
 
 ```sh
-# P5 6턴 데모: 턴마다 kind, 적용 조건, 질문, 상위 카드, 설명, plan, LLM 호출·토큰·지연
+# P5 8턴 데모(7·8턴은 분류 LLM 1회씩, maxTurns 10): 턴마다 kind, 적용 조건, 질문, 상위 카드, 설명, plan, LLM 호출·토큰·지연
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/live-demo.mjs
 
 # 문장 시험(진단·요약). --only, --repeat=N, --reasoning=off|low|none(기본 off), --max-tokens
@@ -166,7 +169,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 2. D8: 확정 조건 대기 보관과 짧은 답 연결(아래 메모)
 3. 기억의 영속 저장소·`recipientId` 발급·보존 기간(`staleDays` 기본 180일은 임시값)과 사용자 동의 화면
 4. 오류 안내 문구와 코드 분류(`invalid_response`·`provider_unavailable`을 "재시도"로 분류함)
-5. 턴 제한 `maxTurns` 기본값 8(근거 없는 임시값)
+5. 턴 제한 `maxTurns` 기본값 8(근거 없는 임시값). 대화가 잘 진행돼도 모든 턴을 세므로, 8턴 데모에서도 8턴째에 걸린다(데모는 10으로 지정). 미해결 질문만 세는 방식도 검토 필요
 6. 앱 `/api/chat` 연결 방식과 `plan`·`explanation`을 화면에 보여주는 방식
 
 ## 설계 메모: 확정 조건 "대기" 보관(D8, 구현하지 않음)
@@ -185,5 +188,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 - 저장소는 프로세스 메모리뿐이라 영속 저장(DB)은 호스트 몫이다(`snapshot`·`facts`로 주고받음). 다음은 P5 조립과 데모다.
 - **P5 (2026-11-07)**: `createConfiguredAgent`가 실제 LLM 해석기·플래너·설명·기억을 묶는다. 6턴 시나리오는 모의 전송기로 고정 검사하고(LLM 0회), 조립 경로의 오류 코드별 상태 보존도 검사한다.
 - 남은 일: 담당자의 `live-demo.mjs` 실제 실행, B층 평가 실행, 팀 결정 항목 6개.
+- **설명 보완 (2026-11-08)**: 점수를 수령인 그룹 적합과 말씀하신 선호로 나누고, 문장에서 내부 키를 빼서 `basis`·`case` 필드로 옮겼다. 조사는 받침에 따라 고르고, 비교 설명은 가정 예산임을 밝힌다. 데모에 분류 LLM이 필요한 7·8턴을 추가했다.
+- 남은 일: 8턴 데모 실제 실행, `maxTurns` 기본값과 계산 방식은 팀 결정.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.
