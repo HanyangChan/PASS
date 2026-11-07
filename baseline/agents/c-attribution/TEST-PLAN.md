@@ -4,7 +4,7 @@
 
 - 기준 커밋: `d95dca4` (`main`), 브랜치 `codex/architecture-c-attribution`
 - 작성일: 2026-11-05
-- 상태 값: `계획` / `구현` / `미구현(이유)`. P1 A층 T1-01~T1-48, T1-50~T1-55와 T1-B1·B2는 `구현`(T1-44~55는 2026-11-07 추가·수정), T1-49는 `미구현(보류)`, 나머지는 `계획`이다.
+- 상태 값: `계획` / `구현` / `미구현(이유)`. 2026-11-07 기준 P1~P5 A·C층 항목은 `구현`이다. 미구현은 T1-49, T2-02, T2-18, T2-19(이유는 각 행)이고, 실제 LLM 항목 T1-B3·T6-09는 담당자 실행 대기다.
 - P1 테스트 위치: `tests/attribution.test.mjs`(T1-01~T1-43, 테스트 이름 앞에 ID), `tests/eval-data.test.mjs`(T1-B1·B2).
 - 원래 요구에서 고친 항목은 `수정:`으로 이유를 적었다. 근거는 P0에서 실제 코드를 실행해 확인한 결과다.
 
@@ -351,27 +351,30 @@
 | T5-05 | 오류 없음 | 300세트 모두 `invalid_engine_result` 없이 끝남 | A | 구현 |
 | T5-06 | 설명 금액 | 300세트의 설명 금액이 모두 엔진 값(T3-11 기준)과 일치 | A | 구현 (추가 2026-11-07) |
 
-## 다턴 시나리오 — C층 (`tests/scenario.test.mjs`)
+## 다턴 시나리오와 조립 — C층 (`tests/scenario.test.mjs`, P5)
 
-D7: 원래 요구의 "P5의 6턴 대화"가 아직 없어서 아래 초안을 사용한다. 기대값은 공통 코어와 모의 해석기로 실제 실행해 확인했다(2026-11-05). 상품은 `examples/catalog.mjs`, 세션 시작 버전은 0이다.
+D7 해결(2026-11-07): 지시된 6턴을 쓴다. 실행 경로는 `createConfiguredAgent(env, {fetcher, memory})`(P1 해석기 + P2 플래너 + P3 설명 + P4 기억)이고, 테스트에서는 모의 fetcher를 쓴다. `recipientId`는 `demo-recipient-1`, 상품은 `examples/catalog.mjs`다. 6턴 모두 규칙·주어 가드로 처리되므로 기대 LLM 호출은 0회다.
 
-| 턴 | 요청 | 경로 | kind | 버전 | 질문 | cards(id:적용 비용) | 상태 변화 |
+| 턴 | 요청 | kind | 버전 | 적용 조건 변화 | 질문(`plan.question`) | cards | 설명·기억 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | message "엄마 선물 추천해줘" | 규칙, LLM 0 | question | 1 | "예산 상한을 알려주세요." | – | recipients `['어머니']` |
-| 2 | message "세트당 예산 5만원 이하 배송비 포함 한 세트" | 규칙, LLM 0 | recommendation | 2 | – | tea:33000, snack:23000 | 예산·수량 확정 |
-| 3 | message "엄마는 견과류 알레르기가 있으셔" | C안 규칙, 모의 LLM 0 | recommendation | 3 | – | tea:33000 | `excluded_ingredients ['견과류']` |
-| 4 | message "나는 단 거 좋아해" | C안 규칙(giver), 모의 LLM 0 | recommendation | 3 | – | tea:33000 | 없음 |
-| 5 | message "단 건 별로래" | 모의 LLM 1회, owner unknown | question | 3 | 확인 질문 1개(예: "단 것을 피하시는 분이 어머니인가요?") | – | 없음 |
-| 6 | what_if_budget 70000 | 공통 비교 | comparison | 3 | – | premium:60000, tea:33000 | 없음(가정 예산은 `evaluatedState`에만) |
+| 1 | "어머니 한 세트 세트당 예산 5만원 이하 배송비 포함 추천" | recommendation | 1 | 수령인·수량·예산 확정 | 없음 | tea, snack | 대조 `score`, 반사실 (a) premium 60,000원 |
+| 2 | "나는 단 것을 좋아해" | recommendation | 1 | 없음(giver) | 없음 | tea, snack | 제안 없음 |
+| 3 | "엄마는 설탕을 피해" | recommendation | 2 | `preferences:['less_sweet']` | 없음 | tea, snack | reason에 "덜 단 상품을 우선", 제안 `less_sweet` |
+| 4 | "견과류는 별로야" | question | 2 | 없음(주어 가드) | "견과류는 받는 분이 피하시는 건가요?" | – | – |
+| 5 | "응 엄마가 견과류 알레르기 있어" | recommendation | 3 | `excluded_ingredients:['견과류']` | 없음 | tea | 제안 `견과류`(sensitive) |
+| 6 | what_if_budget 70000 | comparison | 3 | 없음(가정 예산은 `evaluatedState`에만) | 없음 | premium, tea | 대조 `popularity`, 반사실 (c) |
 
 | ID | 검증 내용 | 층 | 상태 |
 | --- | --- | --- | --- |
-| T6-01 | 턴마다 kind, 버전, state, 질문 수, cards id·순서가 표와 같음 | C(모의) | 계획 |
-| T6-02 | 전체 대화에서 제약 위반 0(T5의 독립 검사 함수 재사용) | C(모의) | 계획 |
-| T6-03 | 질문 반복 0: 턴 1과 5의 질문 문구·필드가 다름 | C(모의) | 계획 |
-| T6-04 | 모의 LLM 호출 합계 정확히 1회(턴 5) | C(모의) | 계획 |
-| T6-05 | 턴 5 문구 "별로래"는 전달 표현이다. 실제 LLM이 recipient로 볼 가능성이 있으므로 실제 실행에서는 recipient 또는 unknown을 모두 허용하고 결과만 기록 | C(실제, 선택) | 계획 |
-| T6-06 | 실제 LLM 실행: `node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-scenario-live.mjs`(담당자가 직접) | C(실제, 선택) | 계획 |
+| T6-01 | 턴마다 kind, 버전, state, 질문 수, cards id·순서가 표와 같음 | C(모의) | 구현 |
+| T6-02 | 전체 대화에서 제약 위반 0(독립 검사 함수) | C(모의) | 구현 |
+| T6-03 | 질문 반복 0(`plan.question` 문구와 누락 필드 모두) | C(모의) | 구현 |
+| T6-04 | LLM 전송 호출 0회(모의 fetcher 호출 수) | C(모의) | 구현 |
+| T6-05 | 기억 제안은 3·5턴에만, 확인 전 저장 없음 | C(모의) | 구현 |
+| T6-06 | 설명: 추천·비교 턴에만, 6턴 반사실 (c), 3턴 "덜 단 상품을 우선" | C(모의) | 구현 |
+| T6-07 | 조립 경로 오류: `auth_failed`(401), `quota_exceeded`(429), `request_rejected`(400), `network_error`, `invalid_response`, `timeout`(해석기 제한), `configuration`(키 없음) → `kind:'error'`, 코드별 안내, 세션 불변 | A | 구현 |
+| T6-08 | `createConfiguredAgent`는 키를 `env` 인자로만 받고, 규칙으로 끝나는 턴은 키가 없어도 동작(네트워크 0) | A | 구현 |
+| T6-09 | 실제 LLM 데모 `examples/live-demo.mjs`(담당자 실행) | C(실제) | 계획(담당자 실행 대기) |
 
 ## 완료 체크
 

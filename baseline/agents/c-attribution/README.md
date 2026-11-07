@@ -1,114 +1,81 @@
 # 귀속·플래너 작업 공간 (C안)
 
-담당 범위: 주는 사람(giver)과 받는 사람(recipient)의 조건 귀속, 그리고 대화 계획.
+담당 범위: 주는 사람(giver)과 받는 사람(recipient)의 조건 귀속, 대화 계획, 설명, 수령인 기억.
 
 | 단계 | 상태 |
 | --- | --- |
-| P1 귀속 분류 해석기 | 구현됨(마무리 2026-11-07). 규칙 + 주어 가드 + 선택적 LLM 2단계(reasoning off). 테스트는 모의 LLM만 사용 |
-| P1 실제 LLM 평가(B층) | 평가셋 30문항·실행기 있음. `run-eval.mjs` 전체 평가는 아직 실행하지 않음. `try-attribution`으로 담당자가 부분 측정함 |
-| P2 플래너, P3 설명, P4 기억 | 미구현. [TEST-PLAN.md](TEST-PLAN.md) 참조 |
+| P1 귀속 분류 해석기 | 구현됨. 규칙 + 주어 가드 + 선택적 LLM 2단계(reasoning off) |
+| P2 플래너(오케스트레이터) | 구현됨. 단, 대기 보관(D8)과 짧은 답 연결(T2-19)은 미구현 |
+| P3 설명 | 구현됨. 템플릿만 사용, LLM 0회 |
+| P4 수령인 기억 | 구현됨. 프로세스 메모리 저장소만 있고, 영속 저장(DB)은 호스트 몫 |
+| P5 조립·데모 | 구현됨. `createConfiguredAgent`, `examples/live-demo.mjs`. 실제 LLM 데모는 담당자가 실행 |
+| B층 실제 LLM 평가 | 평가셋 30문항·실행기 있음. `run-eval.mjs` 전체 평가는 아직 실행하지 않음 |
+| 앱(`/api/chat`)·화면 연결 | 미구현(후속 작업) |
 
-완료 기준과 항목별 상태는 [TEST-PLAN.md](TEST-PLAN.md)를 따른다.
+모든 자동 테스트는 모의 LLM만 쓴다. 완료 기준과 항목별 상태는 [TEST-PLAN.md](TEST-PLAN.md)를 따른다.
 
 ## 구조
 
 ```
-발화 ─► rules.mjs        절 나누기 → claim 추출 → 주어로 owner 판정(인용문이면 판정 보류)
-     ─► LLM 1단계 추출    규칙이 못 읽은 절이 있을 때만 (prompts.mjs)
-     ─► LLM 2단계 분류    owner가 정해지지 않은 claim이 있을 때만
-     ─► attribution.mjs  giver → 버림 / recipient → 강도 판단 후 patch 또는 확인 질문 / unknown → 확인 질문
-     ─► checkedPatch     공통 조건 검증 → {patch, questions, unresolved}
+요청 ─► createConfiguredAgent / createPlannedAgent  (planner.mjs, P2)
+          │
+          ├─► 공통 runTurn (baseline/src, 수정하지 않음)
+          │     └─ 규칙 parseRules가 못 읽으면 ─► 해석기 interpret (P1)
+          │            rules.mjs      절 나누기 → claim 추출 → 조건 kind 우선 → 주어로 owner 판정
+          │            주어 가드      주어 표시가 없으면 unknown(분류 LLM 생략)
+          │            LLM 1단계 추출  규칙이 못 읽은 절이 있을 때만 (prompts.mjs, reasoning off)
+          │            LLM 2단계 분류  owner가 정해지지 않고 주어 표시가 있는 claim만
+          │            attribution.mjs giver 버림 / recipient → patch 또는 확인 질문 / unknown → 질문
+          │            checkedPatch   → {patch, questions, unresolved}
+          │
+          ├─► 기억 (memory.mjs, P4, 선택)  대화당 1회 공통 patch 요청으로 적용, 적용된 claim은 저장 제안
+          ├─► planNext (P2)               ask / confirm / request_edit / recommend / compare / error
+          │                               (턴 제한 + 필수 조건 있음 → 공통 view 재실행)
+          └─► explain (explain.mjs, P3)   이유 · 대조 · 반사실 · 근거(facts)
+응답 = 공통 결과 그대로 + plan (+ explanation)
 ```
 
 | 파일 | 역할 |
 | --- | --- |
 | `vocabulary.mjs` | 고정 사전(성분 `ALLERGEN_NAMES`, 카테고리, 단맛 값, 허용 필드, 질문 템플릿) |
-| `rules.mjs` | 규칙 1차 처리 |
+| `rules.mjs` | 규칙 1차 처리, 주어 표시 판정 |
 | `prompts.mjs` | 추출·분류 프롬프트, `PROMPT_VERSION` |
 | `attribution.mjs` | LLM 출력 검증(`validate` 콜백), claim → patch/질문 라우팅 |
-| `interpreter.mjs` | `createInterpreter`: 전체 흐름, 시간 제한, 통계 |
-| `index.mjs` | `interpretMessage`(네트워크 없음), `createAgent` |
-| `configured-agent.mjs` | `createConfiguredAgent(env)`: 실제 LLM 연결(서버 전용) |
-| `eval/` | B층 평가셋·지표·실제 LLM 실행기(`npm test`에 포함되지 않음) |
+| `interpreter.mjs` | `createInterpreter`: P1 전체 흐름, 시간 제한, 진단 |
+| `planner.mjs` | `createPlannedAgent`, `planNext`, `missingField`, `createPlannerState`, `ERROR_NOTICES` |
+| `explain.mjs` | `explain`: 엔진 사실만으로 설명 |
+| `memory.mjs` | `createMemoryStore`, `memoryPatch` |
+| `configured-agent.mjs` | `createConfiguredAgent(env, options)`: 실제 LLM + P2~P4 조립(서버 전용) |
+| `index.mjs` | `interpretMessage`(네트워크 없음), 기본 `createAgent`(공통 테스트용, 바꾸지 않음) |
+| `examples/` | `live-demo.mjs`(6턴), `try-attribution.mjs`(문장 시험) — 실제 LLM, `npm test` 제외 |
+| `eval/` | B층 평가셋·지표·실제 LLM 실행기 — `npm test` 제외 |
 
-LLM은 patch나 질문을 만들지 않는다. LLM이 하는 일은 claim(`span`, `kind`, `value`, `polarity`, `strength`)과 owner를 고르는 것뿐이다. 값은 `ALLERGEN_NAMES`, `CATEGORIES`, `less_sweet`/`unsweetened` 안에서만 허용된다. patch는 코드가 만들고, 질문은 코드 템플릿만 쓴다.
-
-**kind를 owner보다 먼저 판단한다.**
-- 선물 조건 kind(`budget`, `quantity`, `delivery`, `recipient`)와 `other`는 누가 말했든 patch를 만들지 않는다. 분류 LLM도 부르지 않고, 안내 질문 1개로 끝난다.
-- 규칙이 이미 조건 표현(예: "예산 100만원", "두 개")을 찾았고 정책이 `ask_first`이면, 결과가 정해져 있으므로 LLM을 아예 호출하지 않는다.
-
-**주어 가드**
-- 주어 표시가 없는 claim은 LLM 결과와 상관없이 owner가 `unknown`이다. 주어 표시란 "나/저/내가/제가", 받는 사람 호칭이나 다른 사람 + 조사, 인용문이면 인용한 화자를 말한다.
-- 그래서 이런 claim은 분류 LLM을 부르지 않는다. 예: "견과류는 별로야"는 LLM 0회로 "견과류는 받는 분이 피하시는 건가요?"를 묻는다.
-- 예외는 "견과류는 빼줘" 같은 선물에 대한 직접 지시로, 규칙이 recipient로 처리한다.
-
-## 사용
+## 진입점
 
 ```js
-import { createAgent, createInterpreter } from './index.mjs';
+import { createAgent } from './index.mjs';
+createAgent();                // 기본: 규칙만, 네트워크 없음. 공통 runTurn과 결과가 같다(공통 테스트가 검사)
 
-createAgent();                                   // 규칙만 사용, 네트워크 호출 없음(공통 테스트·데모 기본값)
-createAgent({ llm, mixedPolicy: 'ask_first' });  // llm은 baseline/llm의 클라이언트(completeJson)
-createAgent({ interpret });                      // 주입한 해석기를 그대로 사용
-const interpret = createInterpreter({ llm, mixedPolicy, timeoutMs, maxTokens, reasoning, onStats });
-```
+import { createPlannedAgent } from './planner.mjs';
+const agent = createPlannedAgent({ llm, maxTurns: 8, memory });     // llm 없으면 규칙만
+const out = await agent.runTurn({ session, plannerState, request, products, recipientId });
+// out = 공통 결과(kind, session, result, question, trace, evaluatedState) + plan (+ explanation)
+// 다음 턴에는 out.session과 out.plan.plannerState를 넘긴다. plannerState는 session에 넣지 않는다.
 
-```js
-// 서버에서 실제 LLM 사용
 import { createConfiguredAgent } from './configured-agent.mjs';
-const agent = createConfiguredAgent(process.env);
+const live = createConfiguredAgent(process.env);   // 서버에서만. 키는 env 인자로만 받는다
 ```
 
-### 옵션
+- `plan`: `{action, field, question, notice, unapplied, turn, maxTurns, turnLimitReached, error, attribution, llm, memory?, plannerState}`. 화면에는 `plan.question`(최대 1개)이나 `plan.notice`를 보여준다.
+- `kind:'error'`는 LLM 오류다. `plan.error.code`와 안내(`ERROR_NOTICES.retry`는 잠시 후 재시도, `ERROR_NOTICES.operator`는 운영자 확인)가 있고, `session`은 입력 그대로다. 자동 재시도는 없다. `version_conflict` 같은 공통 오류는 그대로 던진다.
+- `explanation`: `{reason, contrastive, counterfactual, facts}`. 추천·비교 응답에만 붙는다(비교는 가정 예산 기준).
+- 기억: `createMemoryStore()` 저장소를 넘기고, `runTurn`에 호스트의 안정적인 `recipientId`(표시 이름이 아님)를 주면 사용한다. 저장 제안은 `plan.memory.proposals`로 나오고, 호스트가 사용자 확인 후 `memory.confirm(id)`을 호출해야 저장된다.
 
-| 옵션 | 기본값 | 설명 |
-| --- | --- | --- |
-| `llm` | 없음 | 없으면 규칙만 쓴다. 규칙으로 판단할 수 없는 발화는 `unresolved:true` + 질문 1개 |
-| `mixedPolicy` | `'ask_first'` | 받는 사람 조건과 불명확한 조건이 섞였을 때의 처리. `'ask_first'`는 아무것도 적용하지 않고 질문한다. `'apply_confirmed'`는 확정된 부분을 적용하고 질문한다(공통 수용 기준 3 해석은 팀 확인 필요) |
-| `timeoutMs` | `8000` | 해석기 전체(LLM 1·2단계 합계) 제한. 넘으면 공통 클라이언트처럼 `LlmError('timeout')`을 던진다. 상태는 바뀌지 않고, 진단에 어느 제한에 걸렸는지(`timeoutSource`, `calls[].limit`) 남긴다 |
-| `maxTokens` | `{extract: 1200, classify: 400}` | 단계별 출력 토큰 한도. 숫자 하나나 `{extract, classify}`로 덮어쓴다 |
-| `reasoning` | `{enabled: false}` (off) | `null`이면 아무것도 보내지 않는다(공급자 기본). `{enabled}` → payload `reasoning: {enabled}`, `{effort: 'low'}` → payload `reasoning_effort: 'low'`(공통 클라이언트 `llm/index.mjs` 31·32행). 플랫폼이 거부하면 `request_rejected`(400·422)로 진단에 남는다 |
-| `onStats` | 없음 | 호출마다 `{promptVersion, llmCalls, latencyMs, usage, timedOut, timeoutSource, path, claims, calls, skipped}`를 받는다. 키나 원문 응답은 넣지 않는다 |
+## 환경 변수 (서버, 값은 `baseline/llm/.env`에만)
 
-### 결정 기록 (2026-11-07, `deepseek-v4-flash`, `c-attribution-p1-v2`)
+`LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_CHAT_PATH`, `LLM_MODEL`, `LLM_API_KEY`. 키는 앱 번들·`EXPO_PUBLIC_*`·코드·로그에 넣지 않는다.
 
-- **reasoning 기본값 off**: 담당자 측정에서 off는 실패 0회, 출력 최대 40토큰, 문장당 최대 3.3초였고, 4·6번 정확도는 다른 설정과 차이가 없었다. 옵션 없음(공급자 기본)일 때는 분류 1회에 출력 1,369토큰, 10.8초가 걸렸다.
-- **분류 한도 400**: 검증기가 허용하는 최대 출력은 owner 10개(`{"id":"c9","owner":"recipient"}` × 10)로 약 340자, 약 120토큰이다. 여기에 약 3배 여유를 두었다(관측 최대 40토큰).
-- **추출 한도 1200**: claim 하나는 고정 키 약 30토큰과 span(현실적으로 40자 이하, 한국어 1자 ≈ 1토큰 이하로 가정, 확인 필요)을 합쳐 약 70토큰이다. 10개면 약 700토큰이고, 여기에 약 1.7배 여유를 두었다. span이 아주 긴 극단적 출력은 잘려서 `invalid_response`(클라이언트 단계 실패)로 안전하게 실패한다.
-- **해석기 시간 제한 8초**: 관측 최대 3.3초의 약 2.4배다. 공통 클라이언트의 요청당 18초보다 짧아서 보통은 이 제한이 먼저 걸린다.
-- **시간 초과는 오류로 전달**: 해석기 제한에 걸려도 질문으로 바꾸지 않고 `timeout` 오류를 던진다. 다른 LLM 오류를 전달하는 방식(T1-49, LLM-USAGE.md 6절)과 맞추기 위해서다.
-- **주어 가드**: P1-live 3번처럼 주어가 없는 문장에서 LLM 분류가 결과를 바꾸지 않게 했다. 분류 호출도 하지 않으므로 보류했던 T1-50(LLM 생략)이 함께 해결됐다.
-- **추출과 분류를 한 번의 호출로 합치기**: 하지 않는다. off 기준 2단계 문장도 3.3초 이내였고, 단계를 나눠야 진단과 검증이 단계별로 남는다.
-
-**진단 정보 `calls[]`** (LLM 요청 1건마다 1개)
-
-| 필드 | 뜻 |
-| --- | --- |
-| `stage` | `extract` 또는 `classify` |
-| `maxTokens` | 이 요청에 쓴 한도 |
-| `reasoning` | 이 요청에 보낸 reasoning 설정(`null`이면 보내지 않음) |
-| `errorCode` | 실패 시 오류 코드(`invalid_response`, `timeout`, `request_rejected` 등), 성공 시 `null` |
-| `limit` | `timeout`일 때 걸린 제한: `interpreter`(해석기 전체) 또는 `transport`(공통 클라이언트 요청당 18초) |
-| `completionTokens` | 이 요청의 출력 토큰 수 |
-| `validateCalled` | 내 검증 함수까지 도달했는지 |
-| `rejectReason` | 검증 탈락 규칙(`sweetness_value`, `span`, `claim_keys`, `strength`, `value_vocabulary`, `owner_entry`, `owner_free_fields` 등) |
-| `clientStageFailure` / `note` | 검증 전에 `invalid_response`가 난 경우. 공통 클라이언트가 `finish_reason`을 보여주지 않으므로 "끊김·빈 응답·JSON 파싱 가능성"으로만 표시하고 원인을 단정하지 않는다 |
-| `latencyMs` | 이 요청의 지연 |
-
-**최악의 대기 시간** (해석기 전체 8초, 공통 클라이언트 요청당 18초. 18초에는 5xx 재시도도 포함)
-
-| 경우 | 끝나는 시점 | 결과 |
-| --- | --- | --- |
-| LLM 1회 또는 2회 문장이 끝나지 않음 | 8초(해석기 제한이 항상 먼저) | 요청 취소, `timeout` 오류(`limit: 'interpreter'`), 상태 불변 |
-| `timeoutMs`를 18초보다 크게 설정한 경우 | 요청 1건이 18초 | `timeout` 오류(`limit: 'transport'`), 상태 불변 |
-
-따라서 기본 설정에서 사용자가 기다리는 최대 시간은 약 8초(+수 ms)다.
-
-**오류 처리**
-- LLM 오류(`configuration`, `auth_failed`, `quota_exceeded`, `timeout`, `network_error`, `invalid_response`, `request_rejected`)는 해석기 시간 초과를 포함해 모두 코드 그대로 전달된다. 공통 `runTurn`이 이를 거부하고, 호출자 세션은 바뀌지 않는다.
-- 다시 시도할지는 호스트가 정한다([LLM-USAGE.md](../LLM-USAGE.md) 6절). 오류 코드와 걸린 제한은 `onStats` 진단에도 남는다.
-
-## 테스트와 실행
+## 실행
 
 ```sh
 # 저장소 루트 기준. 모의 LLM만 사용(실제 호출 없음)
@@ -119,30 +86,94 @@ npm --prefix baseline run demo:agent -- c-attribution
 아래 명령은 **실제 LLM을 호출한다.** 담당자가 직접 실행하고 비용·토큰을 확인한다.
 
 ```sh
-# 9문장 시험(진단·요약 포함). --only 문장 선택, --repeat=N 반복, --reasoning=off|low|none(기본 off), --max-tokens 이번 실행만 한도 변경
+# P5 6턴 데모: 턴마다 kind, 적용 조건, 질문, 상위 카드, 설명, plan, LLM 호출·토큰·지연
+node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/live-demo.mjs
+
+# 문장 시험(진단·요약). --only, --repeat=N, --reasoning=off|low|none(기본 off), --max-tokens
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/examples/try-attribution.mjs --only=3,6 --repeat=3
 
-
-# 발화 하나(P1-live): kind, patch, 질문, 호출 수, 지연, 토큰 출력
+# 발화 하나(조립된 에이전트 경유)
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-live.mjs "엄마는 견과류는 좀 그렇대"
 
 # 평가셋 전체(B층): 결과는 eval/results/에 모델·PROMPT_VERSION·날짜·평가셋 해시와 함께 저장
 node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mjs --repeat 5
 ```
 
+## 확정 결정
+
+**P1 귀속**
+- LLM은 claim과 owner만 고른다. patch는 코드가 사전으로 만들고 `checkedPatch`로 검증하며, 질문은 코드 템플릿만 쓴다. 한 턴 질문은 최대 1개다.
+- kind를 owner보다 먼저 판단한다. 예산·수량·배송일·수령인·`other`는 patch를 만들지 않고 안내 질문 1개로 끝낸다.
+- 주어 표시(나/저/제가/내가, 받는 사람 호칭이나 다른 사람 + 조사, 인용 화자)가 없는 claim은 LLM과 상관없이 unknown이다. 직접 지시("빼줘")는 예외다.
+- 강도는 귀속 다음에 판단한다(D3). 알레르기·못 먹어·빼줘는 바로 제외하고, 별로·싫어는 확인 질문을 한다. 단맛(D4)은 "설탕·단 것 피함 → `less_sweet`", "무가당·단맛 없는 → `unsweetened`"이고, 설명에서는 "덜 단 상품을 우선"이라고 쓴다.
+- 혼합 발화는 `mixedPolicy`로 처리하고 기본은 `ask_first`다. 배열 필드는 기존 값과 합치고, patch에 `recipients`는 넣지 않는다.
+
+**P1 측정 기반 기본값** (2026-11-07, `deepseek-v4-flash`, `c-attribution-p1-v2`)
+- **reasoning 기본값 off**: 담당자 측정에서 off는 실패 0회, 출력 최대 40토큰, 문장당 최대 3.3초였고, 4·6번 정확도는 다른 설정과 차이가 없었다. 공급자 기본일 때는 분류 1회에 1,369토큰, 10.8초가 걸렸다.
+- **분류 한도 400**: 검증기가 허용하는 최대 출력은 owner 10개로 약 120토큰이다. 여기에 약 3배 여유를 두었다.
+- **추출 한도 1200**: claim 10개를 약 700토큰으로 잡고 약 1.7배 여유를 두었다. span 토큰 수는 한국어 1자 ≈ 1토큰 이하로 가정했다(확인 필요). 이보다 긴 출력은 잘려서 `invalid_response`로 안전하게 실패한다.
+- **해석기 시간 제한 8초**: 관측 3.3초의 약 2.4배이고, 공통 클라이언트의 요청당 18초보다 먼저 걸린다. 걸리면 `timeout` 오류를 던진다.
+- **추출과 분류는 합치지 않는다**: 2단계 문장도 3.3초 이내였고, 단계를 나눠야 진단과 검증이 단계별로 남는다.
+
+**P2~P5**
+- 기본 `createAgent()`는 바꾸지 않는다. P2~P5는 `createPlannedAgent`와 `createConfiguredAgent`로만 쓴다.
+- 플래너는 공통 결과를 바꾸지 않고 `plan`만 덧붙인다.
+  - 같은 질문 문구나 같은 누락 필드는 다시 묻지 않는다. 대체 문구를 쓰고, 그것도 물었으면 조건 편집 안내로 바꾼다.
+  - 턴 제한에 도달하면 필수 조건이 있을 때만 확인된 조건으로 추천한다.
+- 오류는 해석기가 던지고 오케스트레이터(호스트 역할)가 안내로 바꾼다. 재시도하지 않는다.
+- 설명은 엔진 숫자만 쓴다. 대조는 엔진 재계산 순서가 카드와 같을 때만 기준을 말하고, (b) 경우에는 "바뀐다"고 쓰지 않는다.
+- 기억은 recipient 사실만, 확인 후에만 저장한다. 선물 지시("빼줘")는 사실이 아니라 저장하지 않는다. 적용은 대화당 1회 공통 patch 요청으로 하고, 현재 요청이 우선이다. 해석기가 질문 중인 턴에는 적용을 미룬다.
+
+## 설계와 공통 수용 기준이 부딪히는 지점의 결정
+
+| 지점 | 결정 |
+| --- | --- |
+| 턴 제한의 "최선 추천" vs 기준 2(필수 조건 임의 확정 금지) | 필수 조건이 모두 있을 때만 공통 `view`로 추천한다. 없으면 누락 안내만 하고 아무것도 지어내지 않는다 |
+| 혼합 발화 부분 적용 vs 기준 3 | 기본 `ask_first`(적용 안 함). `apply_confirmed`는 옵션으로만 둔다(팀 확인 필요) |
+| 제약 검사기의 "위반 상품 제거" vs 기준 1·6 | 상품을 빼지 않는다. 공통 `resultFor`의 오류 방식을 그대로 쓰고, 무작위 300세트로 회귀 검사한다 |
+| LLM 오류를 질문으로 바꾸기 vs LLM-USAGE.md 139행 | 해석기는 오류를 던진다(T1-49 보류). 사용자 안내는 오케스트레이터가 오류 코드를 보고 만든다 |
+| 기억 자동 적용 vs 기준 4(수령인 변경 시 초기화) | 기억은 수령인이 정해진 뒤 별도 patch 요청으로만 적용하고, 항목마다 출처를 표시한다 |
+| 공통 결과 보존 vs 턴 제한 추천 | 턴 제한 추천은 공통 `view` 결과를 그대로 반환한다(상태 불변). `plan.turnLimitReached`로 표시한다 |
+
+## 해석기 옵션 (`createInterpreter`, `createPlannedAgent`·`createConfiguredAgent`도 같은 이름으로 전달)
+
+| 옵션 | 기본값 | 설명 |
+| --- | --- | --- |
+| `llm` | 없음 | 없으면 규칙만 쓴다. 규칙으로 판단할 수 없는 발화는 `unresolved:true` + 질문 1개 |
+| `mixedPolicy` | `'ask_first'` | `'apply_confirmed'`는 확정된 부분을 적용하고 질문한다 |
+| `timeoutMs` | `8000` | 해석기 전체 제한. 넘으면 `LlmError('timeout')`을 던지고, 진단에 `timeoutSource`·`calls[].limit`을 남긴다 |
+| `maxTokens` | `{extract: 1200, classify: 400}` | 숫자 하나나 `{extract, classify}`로 덮어쓴다 |
+| `reasoning` | `{enabled: false}` | `null`이면 보내지 않는다. `{enabled}` → payload `reasoning`, `{effort}` → `reasoning_effort`(공통 클라이언트 31·32행) |
+| `onStats` | 없음 | 호출마다 `{promptVersion, llmCalls, latencyMs, usage, timedOut, timeoutSource, path, claims, calls, skipped}`. 키·원문 응답 없음 |
+
+**진단 `calls[]`**: 필드는 `stage`, `maxTokens`, `reasoning`, `errorCode`, `limit`(`interpreter`/`transport`), `completionTokens`, `validateCalled`, `rejectReason`, `clientStageFailure`·`note`, `latencyMs`다. 검증 전에 `invalid_response`가 나면 "끊김·빈 응답·JSON 파싱 가능성"으로만 표시하고 원인을 단정하지 않는다.
+
+**최악의 대기 시간**: 기본 설정에서 약 8초다(해석기 제한이 공통 클라이언트의 18초보다 먼저 걸림). 오케스트레이터가 기억 적용이나 턴 제한으로 공통 `runTurn`을 한 번 더 부를 수 있지만, 그 호출은 LLM을 쓰지 않는다.
+
 ## 알려진 한계
 
-- **확인 질문에 대한 짧은 답**: "응", "맞아"를 이전 질문과 연결하지 못하고 일반 질문을 반환한다. P2 플래너(T2-19)에서 다룬다.
-- **단맛**: 엔진에는 점수만 있고 단맛을 강제로 제외하는 필터가 없다. `less_sweet`는 덜 단 상품을 앞에 둘 뿐이다.
-- **성분 범위**: 성분 제외는 `ALLERGEN_NAMES` 20개만 가능하다. 땅콩·호두·잣·견과류는 서로 다른 값이며, 하나를 제외해도 다른 것까지 제외하지 않는다.
-- **규칙의 한계**: 규칙은 한 절 안에서 인식한 표현만 claim으로 만든다. 같은 절의 나머지 말은 무시될 수 있다. 정확도는 B층 평가로 확인해야 한다.
+- **짧은 답**: "응", "맞아"만으로는 직전 질문과 연결하지 못한다(T2-19). "응 엄마가 견과류 알레르기 있어"처럼 주어가 있으면 처리된다.
+- **단맛**: 엔진에는 점수만 있고, 단맛을 강제로 제외하는 필터가 없다.
+- **성분 범위**: `ALLERGEN_NAMES` 20개만 제외할 수 있다. 땅콩·호두·잣·견과류는 서로 다른 값이고, 상품명 기반 추정이라 성분표 확인 안내가 필요하다.
+- **규칙 범위**: 한 절 안에서 인식한 표현만 claim이 된다. 정확도는 B층 평가(미실행)로 확인해야 한다.
+- **기억 저장소**: 프로세스 메모리뿐이라 재시작하면 사라진다. 호스트가 `snapshot()`과 `facts` 옵션으로 저장·복원해야 한다. `recipientId` 발급은 호스트 몫이다.
+- **동시성**: 버전 검사는 공통 코어 방식 그대로라, 원자적 저장(CAS)은 호스트 몫이다. 기억 적용·턴 제한 재실행은 같은 세션 버전 위에서 연달아 실행된다.
+- **실제 LLM 검증 범위**: P1 문장 시험만 담당자가 실행했다. 6턴 실제 데모와 B층 평가는 아직 실행하지 않았다.
 
-## P2 설계 메모: 확정 조건 "대기" 보관(D8, 구현하지 않음)
+## 팀 결정이 필요한 항목
+
+1. `mixedPolicy` 기본값과 수용 기준 3의 해석(부분 적용 허용 여부)
+2. D8: 확정 조건 대기 보관과 짧은 답 연결(아래 메모)
+3. 기억의 영속 저장소·`recipientId` 발급·보존 기간(`staleDays` 기본 180일은 임시값)과 사용자 동의 화면
+4. 오류 안내 문구와 코드 분류(`invalid_response`·`provider_unavailable`을 "재시도"로 분류함)
+5. 턴 제한 `maxTurns` 기본값 8(근거 없는 임시값)
+6. 앱 `/api/chat` 연결 방식과 `plan`·`explanation`을 화면에 보여주는 방식
+
+## 설계 메모: 확정 조건 "대기" 보관(D8, 구현하지 않음)
 
 `ask_first`에서 "엄마는 견과류 알레르기가 있고 단 건 별로야"처럼 확정된 조건(견과류)과 불명확한 조건이 섞이면, 지금은 아무것도 적용하지 않고 질문만 한다. 대안은 확정된 patch를 `plannerState.pending`에 보관했다가, 다음 턴 답이 오면 공통 `runTurn`의 `kind:'patch'` 요청으로 함께 적용하는 방식이다.
 - 장점: 사용자가 견과류를 다시 말하지 않아도 된다. "응"·"맞아" 같은 짧은 답을 직전 질문과 연결할 수 있다(T2-19).
-- 단점: 세션 밖(`plannerState`)에 조건이 남는다. 그 사이 다른 요청으로 수령인이 바뀌거나 버전이 올라가면 대기 patch가 낡는다. 답이 오지 않으면 언제 버릴지 정해야 하고, 확정 조건을 늦게 적용하는 것이 수용 기준 3과 맞는지 팀 확인이 필요하다.
-- 현재 결론: 구현하지 않는다(팀 결정 필요).
+- 단점: 세션 밖(`plannerState`)에 조건이 남는다. 그 사이 수령인이 바뀌거나 버전이 올라가면 대기 patch가 낡는다. 답이 오지 않을 때 언제 버릴지 정해야 하고, 늦은 적용이 수용 기준 3과 맞는지 팀 확인이 필요하다.
 
 ## 진행 기록
 
@@ -152,5 +183,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 - 시드 고정 무작위 검사(300세트)로 제약과 설명 금액을 검증한다. 남은 일은 P4 기억이다.
 - **P4 (2026-11-07)**: `memory.mjs`는 `recipientId`를 키로 쓰고, 저장은 제안 → 확인 두 단계다. 선물 지시("빼줘")는 사실이 아니라 저장하지 않는다. 적용은 대화당 1회 공통 patch 요청으로 하고, 현재 요청이 우선이며, 해석기가 질문 중이면 미룬다.
 - 저장소는 프로세스 메모리뿐이라 영속 저장(DB)은 호스트 몫이다(`snapshot`·`facts`로 주고받음). 다음은 P5 조립과 데모다.
+- **P5 (2026-11-07)**: `createConfiguredAgent`가 실제 LLM 해석기·플래너·설명·기억을 묶는다. 6턴 시나리오는 모의 전송기로 고정 검사하고(LLM 0회), 조립 경로의 오류 코드별 상태 보존도 검사한다.
+- 남은 일: 담당자의 `live-demo.mjs` 실제 실행, B층 평가 실행, 팀 결정 항목 6개.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.
