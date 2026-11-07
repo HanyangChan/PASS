@@ -2,7 +2,7 @@
 import {
   ALLERGEN_NAMES, CATEGORIES, CLAIM_KINDS, CONDITION_KINDS, OWNER_FREE_KINDS, OWNERS, POLARITIES, STRENGTHS,
   SWEETNESS_VALUES, PATCH_FIELDS, QUESTIONS,
-  unknownQuestion, confirmExclusionQuestion, confirmReleaseQuestion, unsupportedQuestion,
+  unknownQuestion, confirmExclusionQuestion, confirmReleaseQuestion, unsupportedQuestion, conflictQuestion,
 } from './vocabulary.mjs';
 
 const MAX_CLAIMS = 10;
@@ -97,6 +97,8 @@ export function routeClaims(state, claims, mixedPolicy) {
   const additions = { preferences: [], excluded_ingredients: [], excluded_categories: [] };
   const guidance = [], questions = [];
   for (const c of claims) {
+    // R1: rules and the LLM disagreed on this target, so nothing is confirmed for it.
+    if (c.conflict) { guidance.push(conflictQuestion(c)); continue; }
     if (CONDITION_KINDS.includes(c.kind)) { if (!guidance.includes(QUESTIONS.condition)) guidance.push(QUESTIONS.condition); continue; }
     if (c.kind === 'other') { guidance.push(unsupportedQuestion(c)); continue; }
     if (c.owner === 'giver') continue;

@@ -101,4 +101,6 @@ export function confirmReleaseQuestion(claim) {
   if (claim.kind === 'category') return `${categoryName(claim.value)} 제외를 해제할까요?`;
   return '단맛을 줄이는 조건을 해제할까요?';
 }
+/** Rules and the LLM read the same target differently: confirm before applying anything. */
+export const conflictQuestion = claim => `'${clip(claim.span)}'는 지금도 받는 분께 해당하는 조건인가요?`;
 export const unsupportedQuestion = claim => `'${clip(claim.span)}'는 아직 추천 조건으로 반영할 수 없어요. 조건 편집으로 입력해 주세요.`;

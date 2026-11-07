@@ -92,20 +92,34 @@ export function ruleOwner(clause, state, quoted) {
 }
 
 /** Whole-message rule pass. complete=false means at least one clause needs the LLM extractor. */
+/**
+ * R1: tense/negation markers are checked on the whole message (after removing unsweetened phrases such as
+ * "단맛 없는"), because splitting at "는데"/"고" can cut a marker like "였는데" off its clause.
+ */
+export function hasMessageMarker(text) {
+  const marked = NEEDS_LLM.test(text.replace(UNSWEETENED, ' '));
+  UNSWEETENED.lastIndex = 0;
+  return marked;
+}
+
 export function analyze(text, state) {
   const quoted = isQuoted(text);
   const clauses = splitClauses(text);
+  const marked = hasMessageMarker(text);
   const claims = [];
   const parsed = [];
   let complete = clauses.length > 0;
   for (const clause of clauses) {
     const found = extractClause(clause);
-    parsed.push(found !== null);
-    if (found === null) { complete = false; continue; }
+    // With a message-level marker, no clause may confirm a taste claim by rules; condition claims stay
+    // (they never patch and only lead to the guidance question).
+    const blocked = found !== null && marked && found.some(c => !CONDITION_WORDS.some(([kind]) => kind === c.kind));
+    parsed.push(found !== null && !blocked);
+    if (found === null || blocked) { complete = false; continue; }
     const owner = ruleOwner(clause, state, quoted);
     for (const c of found) claims.push({ ...c, ...owner });
   }
-  return { text, quoted, clauses, parsed, claims, complete };
+  return { text, quoted, clauses, parsed, claims, complete, marked };
 }
 
 const squash = s => s.replace(/\s+/g, '');

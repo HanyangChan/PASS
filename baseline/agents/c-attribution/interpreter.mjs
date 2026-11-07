@@ -151,12 +151,32 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     if (!llm) return copy(GENERIC);
     const data = await ask('extract', { messages: extractionMessages({ text, state }), validate: d => validateExtraction(d, text) });
     let extracted = data.claims.map(c => ({ ...c, ...ownerForSpan(c.span, analysis, state), clause: bestClause(c.span, analysis) }));
+    // R1 (general principle): when rules and the LLM judge the same target differently, confirm neither.
+    const ruleClaims = analysis.claims.map(c => ({ ...c, clause: bestClause(c.span, analysis) }));
+    // Same clause: any difference in kind, polarity (value for sweetness) or owner is a conflict, including an LLM
+    // that sees the clause only as `other`. Another clause: a conflict only on the same target when that claim's
+    // owner is unclear or the same person (a clearly different person, e.g. the giver, may say something else).
+    const sameTarget = (r, l) => l.kind === r.kind && (r.kind === 'sweetness' || l.value === r.value);
+    const samePolarity = (r, l) => l.polarity === r.polarity && (r.kind !== 'sweetness' || l.value === r.value);
+    const sameOwner = (r, l) => !r.owner || !l.owner || r.owner === l.owner;
+    const conflicted = new Set();
+    for (const r of ruleClaims) {
+      if (isOwnerFree(r)) continue;
+      const inClause = extracted.filter(l => l.clause === r.clause);
+      const agreeing = inClause.some(l => sameTarget(r, l) && samePolarity(r, l) && sameOwner(r, l));
+      const clauseConflict = inClause.length > 0 && !agreeing;
+      const crossConflict = extracted.some(l => l.clause !== r.clause && !isOwnerFree(l) && sameTarget(r, l) && !samePolarity(r, l)
+        && (!l.owner || l.owner === 'unknown' || l.owner === r.owner));
+      if (clauseConflict || crossConflict) conflicted.add(r);
+    }
+    for (const r of conflicted) Object.assign(r, { conflict: true, owner: r.owner ?? 'unknown', reason: 'rule_llm_conflict' });
+    extracted = extracted.filter(l => ![...conflicted].some(r => l.clause === r.clause || (!isOwnerFree(l) && sameTarget(r, l) && (!l.owner || l.owner === 'unknown' || l.owner === r.owner))));
     // C2 hybrid: clauses the rules could read keep their rule claims; LLM claims over those clauses are dropped.
     extracted = extracted.filter(c => c.clause < 0 || !analysis.parsed[c.clause]);
     // C3: an `other` with the same span as a taste claim is a duplicate of that claim.
     const tasteSpans = new Set([...analysis.claims, ...extracted].filter(c => !isOwnerFree(c)).map(c => squash(c.span)));
     extracted = extracted.filter(c => !(c.kind === 'other' && tasteSpans.has(squash(c.span))));
-    claims = [...analysis.claims, ...extracted];
+    claims = [...ruleClaims, ...extracted];
   }
   if (!claims.length) return copy(GENERIC);
 
@@ -179,7 +199,9 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     for (const c of pending) if (c.owner === 'recipient' && otherSubjectOnly(c.span, analysis, state)) { c.owner = 'unknown'; c.reason = 'other_subject_guard'; }
   }
   // Kinds decided before owner carry no owner in diagnostics (it was never judged for them).
-  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person }) => isOwnerFree({ kind })
+  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person, conflict }) => conflict
+    ? { span, kind, value, polarity, strength, owner: null, reason, person: null }
+    : isOwnerFree({ kind })
     ? { span, kind, value, polarity, strength, owner: null, reason: 'kind_first', person: null }
     : { span, kind, value, polarity, strength, owner: owner ?? null, reason, person: person ?? null });
 
