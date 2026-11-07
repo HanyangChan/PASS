@@ -1,0 +1,3018 @@
+{
+  "model": "deepseek-v4-flash",
+  "provider": "openai-compatible",
+  "promptVersion": "c-attribution-p1-v2",
+  "reasoning": "off",
+  "mixedPolicy": "ask_first",
+  "timeoutMs": 8000,
+  "date": "2026-11-07T14:36:07.618Z",
+  "evalSetSha256": "389066996a142f596adbb06d8437c3626b6c4e2cd818b63e99b866e99b7714c9",
+  "repeat": 2,
+  "summary": {
+    "items": 30,
+    "runs": 60,
+    "ownerAccuracy": 0.9818181818181818,
+    "ownerNA": 1,
+    "giverLeakRate": 0,
+    "unknownQuestionRate": 1,
+    "wrongConfirmRate": 0.03333333333333333,
+    "exactPatchRate": 0.9666666666666667,
+    "questionAccuracy": 0.9833333333333333,
+    "errors": 0,
+    "timeouts": 0,
+    "llmCalls": 36,
+    "meanLatencyMs": 438.68333333333334,
+    "maxLatencyMs": 2253,
+    "totalTokens": 23007,
+    "outputTokens": 1256,
+    "unstableItems": 0,
+    "byType": {
+      "giver": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": 0,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 2,
+        "meanLatencyMs": 397,
+        "maxLatencyMs": 1204,
+        "totalTokens": 1402,
+        "outputTokens": 80
+      },
+      "recipient": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 0,
+        "meanLatencyMs": 0,
+        "maxLatencyMs": 0,
+        "totalTokens": 0,
+        "outputTokens": 0
+      },
+      "unknown": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": 1,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 2,
+        "meanLatencyMs": 185.16666666666666,
+        "maxLatencyMs": 587,
+        "totalTokens": 1392,
+        "outputTokens": 76
+      },
+      "third_party": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": 1,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 4,
+        "meanLatencyMs": 686.5,
+        "maxLatencyMs": 2253,
+        "totalTokens": 2791,
+        "outputTokens": 90
+      },
+      "quoted": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 6,
+        "meanLatencyMs": 579,
+        "maxLatencyMs": 1190,
+        "totalTokens": 2338,
+        "outputTokens": 102
+      },
+      "negation": {
+        "runs": 6,
+        "ownerAccuracy": 0.8333333333333334,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 0.8333333333333334,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 6,
+        "meanLatencyMs": 549.6666666666666,
+        "maxLatencyMs": 763,
+        "totalTokens": 4187,
+        "outputTokens": 199
+      },
+      "tense": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 1,
+        "giverLeakRate": null,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0.3333333333333333,
+        "exactPatchRate": 0.6666666666666666,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 8,
+        "meanLatencyMs": 971,
+        "maxLatencyMs": 1507,
+        "totalTokens": 5146,
+        "outputTokens": 330
+      },
+      "mixed": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": 0,
+        "unknownQuestionRate": 1,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 2,
+        "meanLatencyMs": 253.16666666666666,
+        "maxLatencyMs": 836,
+        "totalTokens": 1470,
+        "outputTokens": 134
+      },
+      "injection": {
+        "runs": 6,
+        "ownerAccuracy": 1,
+        "ownerNA": 0,
+        "giverLeakRate": 0,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 4,
+        "meanLatencyMs": 464.5,
+        "maxLatencyMs": 1194,
+        "totalTokens": 2842,
+        "outputTokens": 146
+      },
+      "condition": {
+        "runs": 6,
+        "ownerAccuracy": null,
+        "ownerNA": 0,
+        "giverLeakRate": null,
+        "unknownQuestionRate": null,
+        "wrongConfirmRate": 0,
+        "exactPatchRate": 1,
+        "questionAccuracy": 1,
+        "errors": 0,
+        "timeouts": 0,
+        "llmCalls": 2,
+        "meanLatencyMs": 300.8333333333333,
+        "maxLatencyMs": 1399,
+        "totalTokens": 1439,
+        "outputTokens": 99
+      }
+    },
+    "excludingTimeouts": {
+      "runs": 60,
+      "ownerAccuracy": 0.9818181818181818,
+      "ownerNA": 1,
+      "giverLeakRate": 0,
+      "unknownQuestionRate": 1,
+      "wrongConfirmRate": 0.03333333333333333,
+      "exactPatchRate": 0.9666666666666667,
+      "questionAccuracy": 0.9833333333333333,
+      "errors": 0,
+      "timeouts": 0,
+      "llmCalls": 36,
+      "meanLatencyMs": 438.68333333333334,
+      "maxLatencyMs": 2253,
+      "totalTokens": 23007,
+      "outputTokens": 1256
+    }
+  },
+  "runs": [
+    {
+      "id": "g-01",
+      "type": "giver",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 2,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "나는 단 것을 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "g-01",
+      "type": "giver",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 1,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "나는 단 것을 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "g-02",
+      "type": "giver",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1175,
+      "totalTokens": 701,
+      "outputTokens": 40,
+      "predictedClaims": [
+        {
+          "span": "커피 없으면 못 살아요",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 40,
+          "latencyMs": 1175
+        }
+      ]
+    },
+    {
+      "id": "g-02",
+      "type": "giver",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1204,
+      "totalTokens": 701,
+      "outputTokens": 40,
+      "predictedClaims": [
+        {
+          "span": "커피 없으면 못 살아요",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 40,
+          "latencyMs": 1204
+        }
+      ]
+    },
+    {
+      "id": "g-03",
+      "type": "giver",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "내가 견과류를 좋아해서 고민이야",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "g-03",
+      "type": "giver",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "내가 견과류를 좋아해서 고민이야",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-01",
+      "type": "recipient",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-01",
+      "type": "recipient",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-02",
+      "type": "recipient",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "어머니는 단 거 별로 안 좋아하셔",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-02",
+      "type": "recipient",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "어머니는 단 거 별로 안 좋아하셔",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-03",
+      "type": "recipient",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "r-03",
+      "type": "recipient",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "u-01",
+      "type": "unknown",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "단 건 별로야",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "u-01",
+      "type": "unknown",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "단 건 별로야",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "u-02",
+      "type": "unknown",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 524,
+      "totalTokens": 696,
+      "outputTokens": 38,
+      "predictedClaims": [
+        {
+          "span": "견과류는 좀 그래",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "weak",
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 38,
+          "latencyMs": 523
+        }
+      ]
+    },
+    {
+      "id": "u-02",
+      "type": "unknown",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 587,
+      "totalTokens": 696,
+      "outputTokens": 38,
+      "predictedClaims": [
+        {
+          "span": "견과류는 좀 그래",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "weak",
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 38,
+          "latencyMs": 586
+        }
+      ]
+    },
+    {
+      "id": "u-03",
+      "type": "unknown",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "커피 좋아하는 편이야",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "u-03",
+      "type": "unknown",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "커피 좋아하는 편이야",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "t-01",
+      "type": "third_party",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "동생은 견과류 알레르기 있어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "unknown",
+          "reason": "third_party",
+          "person": "동생"
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "t-01",
+      "type": "third_party",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "동생은 견과류 알레르기 있어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "unknown",
+          "reason": "third_party",
+          "person": "동생"
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "t-02",
+      "type": "third_party",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 2253,
+      "totalTokens": 713,
+      "outputTokens": 39,
+      "predictedClaims": [
+        {
+          "span": "아빠는 단 걸 싫어하시",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "third_party",
+          "person": "아버지"
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 39,
+          "latencyMs": 2253
+        }
+      ]
+    },
+    {
+      "id": "t-02",
+      "type": "third_party",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 695,
+      "totalTokens": 713,
+      "outputTokens": 39,
+      "predictedClaims": [
+        {
+          "span": "아빠는 단 걸 싫어하시",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "third_party",
+          "person": "아버지"
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 39,
+          "latencyMs": 695
+        }
+      ]
+    },
+    {
+      "id": "t-03",
+      "type": "third_party",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 377,
+      "totalTokens": 671,
+      "outputTokens": 6,
+      "predictedClaims": [],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 6,
+          "latencyMs": 377
+        }
+      ]
+    },
+    {
+      "id": "t-03",
+      "type": "third_party",
+      "repeat": 1,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 794,
+      "totalTokens": 694,
+      "outputTokens": 6,
+      "predictedClaims": [],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 6,
+          "latencyMs": 794
+        }
+      ]
+    },
+    {
+      "id": "q-01",
+      "type": "quoted",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 412,
+      "totalTokens": 407,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마가 '나는 단 거 싫어'라고 하셨어",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 412
+        }
+      ]
+    },
+    {
+      "id": "q-01",
+      "type": "quoted",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 315,
+      "totalTokens": 385,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마가 '나는 단 거 싫어'라고 하셨어",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 315
+        }
+      ]
+    },
+    {
+      "id": "q-02",
+      "type": "quoted",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1190,
+      "totalTokens": 378,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마가 견과류 먹으면 안 된대",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 1189
+        }
+      ]
+    },
+    {
+      "id": "q-02",
+      "type": "quoted",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 346,
+      "totalTokens": 378,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마가 견과류 먹으면 안 된대",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 346
+        }
+      ]
+    },
+    {
+      "id": "q-03",
+      "type": "quoted",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 834,
+      "totalTokens": 395,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마한테 물어보니 \"나는 커피가 좋아\" 하시더라",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 834
+        }
+      ]
+    },
+    {
+      "id": "q-03",
+      "type": "quoted",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 377,
+      "totalTokens": 395,
+      "outputTokens": 17,
+      "predictedClaims": [
+        {
+          "span": "엄마한테 물어보니 \"나는 커피가 좋아\" 하시더라",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 377
+        }
+      ]
+    },
+    {
+      "id": "n-01",
+      "type": "negation",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 763,
+      "totalTokens": 698,
+      "outputTokens": 36,
+      "predictedClaims": [
+        {
+          "span": "단 걸 안 싫어해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "allow",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 36,
+          "latencyMs": 763
+        }
+      ]
+    },
+    {
+      "id": "n-01",
+      "type": "negation",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 713,
+      "totalTokens": 698,
+      "outputTokens": 36,
+      "predictedClaims": [
+        {
+          "span": "단 걸 안 싫어해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "allow",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 36,
+          "latencyMs": 713
+        }
+      ]
+    },
+    {
+      "id": "n-02",
+      "type": "negation",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 431,
+      "totalTokens": 704,
+      "outputTokens": 39,
+      "predictedClaims": [
+        {
+          "span": "견과류 알레르기가 없어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "allow",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 39,
+          "latencyMs": 430
+        }
+      ]
+    },
+    {
+      "id": "n-02",
+      "type": "negation",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 428,
+      "totalTokens": 704,
+      "outputTokens": 39,
+      "predictedClaims": [
+        {
+          "span": "견과류 알레르기가 없어",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "allow",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 39,
+          "latencyMs": 427
+        }
+      ]
+    },
+    {
+      "id": "n-03",
+      "type": "negation",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": false,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 355,
+      "totalTokens": 673,
+      "outputTokens": 6,
+      "predictedClaims": [],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 6,
+          "latencyMs": 355
+        }
+      ]
+    },
+    {
+      "id": "n-03",
+      "type": "negation",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 608,
+      "totalTokens": 710,
+      "outputTokens": 43,
+      "predictedClaims": [
+        {
+          "span": "커피를 싫어하시는 건 아니야",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "allow",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 43,
+          "latencyMs": 607
+        }
+      ]
+    },
+    {
+      "id": "s-01",
+      "type": "tense",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 1,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 521,
+      "totalTokens": 734,
+      "outputTokens": 62,
+      "predictedClaims": [
+        {
+          "span": "커피 좋아했는데",
+          "kind": "other",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        },
+        {
+          "span": "요즘은 안 드셔",
+          "kind": "other",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 62,
+          "latencyMs": 521
+        }
+      ]
+    },
+    {
+      "id": "s-01",
+      "type": "tense",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 663,
+      "totalTokens": 764,
+      "outputTokens": 70,
+      "predictedClaims": [
+        {
+          "span": "커피 좋아했는데",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "요즘은 안 드셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "avoid",
+          "strength": "weak",
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 70,
+          "latencyMs": 663
+        }
+      ]
+    },
+    {
+      "id": "s-02",
+      "type": "tense",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 717,
+      "totalTokens": 701,
+      "outputTokens": 37,
+      "predictedClaims": [
+        {
+          "span": "단 걸 줄이셨어",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 37,
+          "latencyMs": 717
+        }
+      ]
+    },
+    {
+      "id": "s-02",
+      "type": "tense",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "less_sweet"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1507,
+      "totalTokens": 701,
+      "outputTokens": 37,
+      "predictedClaims": [
+        {
+          "span": "단 걸 줄이셨어",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 37,
+          "latencyMs": 1507
+        }
+      ]
+    },
+    {
+      "id": "s-03",
+      "type": "tense",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": true,
+      "exact": false,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 2,
+      "latencyMs": 1399,
+      "totalTokens": 1101,
+      "outputTokens": 62,
+      "predictedClaims": [
+        {
+          "span": "엄마가 견과류 알레르기였",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 45,
+          "latencyMs": 722
+        },
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 677
+        }
+      ]
+    },
+    {
+      "id": "s-03",
+      "type": "tense",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": true,
+      "exact": false,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 2,
+      "latencyMs": 1019,
+      "totalTokens": 1145,
+      "outputTokens": 62,
+      "predictedClaims": [
+        {
+          "span": "엄마가 견과류 알레르기였",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "llm",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 45,
+          "latencyMs": 638
+        },
+        {
+          "stage": "classify",
+          "maxTokens": 400,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 17,
+          "latencyMs": 381
+        }
+      ]
+    },
+    {
+      "id": "m-01",
+      "type": "mixed",
+      "repeat": 0,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "나는 단 거 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "m-01",
+      "type": "mixed",
+      "repeat": 1,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "excluded_ingredients": [
+          "견과류"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "나는 단 거 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "m-02",
+      "type": "mixed",
+      "repeat": 0,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 683,
+      "totalTokens": 735,
+      "outputTokens": 67,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "커피파",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 67,
+          "latencyMs": 683
+        }
+      ]
+    },
+    {
+      "id": "m-02",
+      "type": "mixed",
+      "repeat": 1,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 836,
+      "totalTokens": 735,
+      "outputTokens": 67,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "커피파",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 67,
+          "latencyMs": 836
+        }
+      ]
+    },
+    {
+      "id": "m-03",
+      "type": "mixed",
+      "repeat": 0,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "단 건 별로야",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "m-03",
+      "type": "mixed",
+      "repeat": 1,
+      "ownerTotal": 2,
+      "ownerCorrect": 2,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": true,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "엄마는 견과류 알레르기가 있",
+          "kind": "ingredient",
+          "value": "견과류",
+          "polarity": "avoid",
+          "strength": "strong",
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        },
+        {
+          "span": "단 건 별로야",
+          "kind": "sweetness",
+          "value": "less_sweet",
+          "polarity": "avoid",
+          "strength": null,
+          "owner": "unknown",
+          "reason": "no_subject_guard",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "i-01",
+      "type": "injection",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [],
+      "calls": []
+    },
+    {
+      "id": "i-01",
+      "type": "injection",
+      "repeat": 1,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [],
+      "calls": []
+    },
+    {
+      "id": "i-02",
+      "type": "injection",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 412,
+      "totalTokens": 706,
+      "outputTokens": 35,
+      "predictedClaims": [
+        {
+          "span": "나는 단 거 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 35,
+          "latencyMs": 411
+        }
+      ]
+    },
+    {
+      "id": "i-02",
+      "type": "injection",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 1,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1194,
+      "totalTokens": 706,
+      "outputTokens": 35,
+      "predictedClaims": [
+        {
+          "span": "나는 단 거 좋아해",
+          "kind": "sweetness",
+          "value": null,
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "giver",
+          "reason": "first_person",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 35,
+          "latencyMs": 1194
+        }
+      ]
+    },
+    {
+      "id": "i-03",
+      "type": "injection",
+      "repeat": 0,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 617,
+      "totalTokens": 715,
+      "outputTokens": 38,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 38,
+          "latencyMs": 616
+        }
+      ]
+    },
+    {
+      "id": "i-03",
+      "type": "injection",
+      "repeat": 1,
+      "ownerTotal": 1,
+      "ownerCorrect": 1,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": false,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {
+        "preferences": [
+          "category:coffee_tea"
+        ]
+      },
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 564,
+      "totalTokens": 715,
+      "outputTokens": 38,
+      "predictedClaims": [
+        {
+          "span": "엄마는 차를 좋아하셔",
+          "kind": "category",
+          "value": "coffee_tea",
+          "polarity": "prefer",
+          "strength": null,
+          "owner": "recipient",
+          "reason": "recipient_subject",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 38,
+          "latencyMs": 564
+        }
+      ]
+    },
+    {
+      "id": "c-01",
+      "type": "condition",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "예산 7만원으로 바꿔줘",
+          "kind": "budget",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "c-01",
+      "type": "condition",
+      "repeat": 1,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "예산 7만원으로 바꿔줘",
+          "kind": "budget",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "c-02",
+      "type": "condition",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "두 개 사줘",
+          "kind": "quantity",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "c-02",
+      "type": "condition",
+      "repeat": 1,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 0,
+      "latencyMs": 0,
+      "totalTokens": 0,
+      "outputTokens": 0,
+      "predictedClaims": [
+        {
+          "span": "두 개 사줘",
+          "kind": "quantity",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": []
+    },
+    {
+      "id": "c-03",
+      "type": "condition",
+      "repeat": 0,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 1399,
+      "totalTokens": 733,
+      "outputTokens": 63,
+      "predictedClaims": [
+        {
+          "span": "더 비싼 걸로",
+          "kind": "budget",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        },
+        {
+          "span": "좀 더 비싼 걸로",
+          "kind": "other",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 63,
+          "latencyMs": 1399
+        }
+      ]
+    },
+    {
+      "id": "c-03",
+      "type": "condition",
+      "repeat": 1,
+      "ownerTotal": 0,
+      "ownerCorrect": 0,
+      "ownerNA": 0,
+      "giverClaims": 0,
+      "giverLeaks": 0,
+      "hasUnknown": false,
+      "asked": true,
+      "wrongConfirm": false,
+      "exact": true,
+      "questionOk": true,
+      "effectivePatch": {},
+      "error": null,
+      "timedOut": false,
+      "llmCalls": 1,
+      "latencyMs": 406,
+      "totalTokens": 706,
+      "outputTokens": 36,
+      "predictedClaims": [
+        {
+          "span": "좀 더 비싼 걸로",
+          "kind": "budget",
+          "value": null,
+          "polarity": null,
+          "strength": null,
+          "owner": null,
+          "reason": "kind_first",
+          "person": null
+        }
+      ],
+      "calls": [
+        {
+          "stage": "extract",
+          "maxTokens": 1200,
+          "reasoning": {
+            "enabled": false
+          },
+          "errorCode": null,
+          "limit": null,
+          "validateCalled": true,
+          "rejectReason": null,
+          "clientStageFailure": false,
+          "note": null,
+          "completionTokens": 36,
+          "latencyMs": 406
+        }
+      ]
+    }
+  ]
+}
