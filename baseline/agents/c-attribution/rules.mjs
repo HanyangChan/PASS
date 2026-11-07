@@ -86,7 +86,7 @@ export function ruleOwner(clause, state, quoted) {
   if (kinds > 1) return { owner: null, reason: 'ambiguous_subject' };
   if (giver) return { owner: 'giver', reason: 'first_person' };
   if (current.length) return { owner: 'recipient', reason: 'recipient_subject' };
-  if (others.length) return { owner: 'unknown', reason: 'third_party' };
+  if (others.length) return { owner: 'unknown', reason: 'third_party', person: others[0] };
   if (INSTRUCTION.test(clause)) return { owner: 'recipient', reason: 'gift_instruction' };
   return { owner: null, reason: 'no_subject' };
 }

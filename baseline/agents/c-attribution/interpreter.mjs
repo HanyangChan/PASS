@@ -168,7 +168,7 @@ async function interpretOnce({ text, state, llm, ask, mixedPolicy, stats }) {
     const owners = new Map(data.owners.map(o => [o.id, o.owner]));
     pending.forEach((c, i) => { c.owner = owners.get(ids[i]); c.reason = 'llm'; });
   }
-  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason }) => ({ span, kind, value, polarity, strength, owner: owner ?? null, reason: isOwnerFree({ kind }) ? 'kind_first' : reason }));
+  stats.claims = claims.map(({ span, kind, value, polarity, strength, owner, reason, person }) => ({ span, kind, value, polarity, strength, owner: owner ?? null, reason: isOwnerFree({ kind }) ? 'kind_first' : reason, person: person ?? null }));
 
   const result = routeClaims(state, claims, mixedPolicy);
   checkedPatch(state, result.patch); // common schema check; throws invalid_input

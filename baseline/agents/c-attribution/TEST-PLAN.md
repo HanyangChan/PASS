@@ -244,42 +244,50 @@
 
 ## P2 플래너 — A층 (`tests/planner.test.mjs`)
 
-플래너는 순수 함수 `planNext({state, attribution, plannerState, maxTurns})` → `{action, field?, question?}`이다. `action`은 `ask`, `confirm`, `recommend`, `explain`, `compare`, `request_edit` 중 하나다. 질문 문장은 규칙 템플릿을 쓰고, LLM 문장 다듬기는 P2 범위 밖이다(미구현으로 남기고 나중에 추가).
+진입점: `createPlannedAgent({interpret?, llm?, mixedPolicy?, maxTurns?, ...})` → `runTurn({session, plannerState?, request, products})`. (수정 2026-11-07: 순수 함수 `planNext` 단독이 아니라, 공통 `runTurn`을 감싸는 오케스트레이터와 `planNext`로 나눔)
+- 공통 결과(`kind`, `result`, `session`, `question`, `trace`)는 그대로 두고 `plan` 필드만 덧붙인다. 다음 턴용 `plannerState`는 `plan.plannerState`로 돌려준다. session에 넣지 않고 입력 객체를 수정하지 않는다.
+- `plan` = `{action, field, question, notice, unapplied, turn, maxTurns, turnLimitReached, error, attribution, llm, plannerState}`. `action`은 `ask`, `confirm`, `request_edit`, `recommend`, `compare`, `error` 중 하나다. 표시용 질문은 `plan.question`(최대 1개)이고, 질문이 아닌 안내는 `plan.notice`다.
+- 기본 `createAgent()`는 바꾸지 않는다.
 
 **규칙 표**(위에서부터 먼저 맞는 행을 적용)
 
 | 행 | 조건 | action |
 | --- | --- | --- |
+| R0 | 해석기가 LLM 오류를 던짐 | `error`: 세션·입력 유지, 코드별 안내, 자동 재시도 없음. 공통 오류(`version_conflict` 등)는 그대로 전달 |
 | R1 | 요청이 `what_if_budget` | `compare` |
-| R2 | 요청이 설명 요청(오케스트레이터 입력 `intent:'explain'`) | `explain` |
-| R3 | 필수 조건 누락, 이 필드를 처음 묻는 경우 | `ask`(공통 `missing()`과 같은 순서·필드) |
-| R4 | 필수 조건 누락, 같은 필드를 이미 물은 경우 | `request_edit`(D5) |
-| R5 | 미확정 unknown·제3자 claim 있음, 턴 제한 전 | `confirm` |
-| R6 | 턴 제한 도달, 필수 조건 모두 있음, 미확정 claim 있음 | `recommend`(확정 조건만 사용, 미적용 claim 목록 표시) |
-| R7 | 턴 제한 도달, 필수 조건 누락 | `ask` 또는 `request_edit`(조건을 지어내지 않음) |
-| R8 | 그 외 | `recommend` |
+| R2 | 공통 결과가 추천 | `recommend` |
+| R3 | 턴 제한 도달, 필수 조건 모두 있음, 공통 결과가 질문 | `recommend`(공통 `runTurn`을 `view`로 다시 실행, 확정 조건만, 미적용 claim 목록 표시, 상태 불변) |
+| R4 | 해석기 질문(확인·안내) | `confirm`(claim 근거별 템플릿. 같은 문구를 이미 물었으면 대체 문구, 그것도 물었으면 `request_edit`) |
+| R5 | 필수 조건 누락, 이 필드를 처음 물음 | `ask`(공통 `missing()`과 같은 순서·문구) |
+| R6 | 필수 조건 누락, 같은 필드를 이미 물음 | `request_edit`(질문 없음, 조건 편집 안내) |
+| R7 | 턴 제한 도달, 필수 조건 누락 | R4~R6 결과에 "비어 있어 추천할 수 없음" 안내를 붙임. 조건을 지어내지 않음 |
 
 | ID | 입력 | 기대 결과 | 층 | 상태 |
 | --- | --- | --- | --- | --- |
-| T2-01 | R1: what_if 요청 | `compare` | A | 계획 |
-| T2-02 | R2: 설명 요청 | `explain` | A | 계획 |
-| T2-03 | R3: 빈 state | `ask`, field `recipients`. 문구는 공통 `missing()`과 같은 필드 | A | 계획 |
-| T2-04 | R3: 예산만 누락 | `ask`, field `budget.amount_krw` | A | 계획 |
-| T2-05 | R4: 같은 필드를 1회 물었음 | `request_edit`, 이전 질문과 다른 문구 | A | 계획 |
-| T2-06 | R5: unknown claim 1개 | `confirm`, 질문 1개 | A | 계획 |
-| T2-07 | R6: 턴 제한, 필수 완료, unknown 남음 | `recommend`, 미적용 claim 목록이 비어 있지 않음, state에 unknown 값 없음 | A | 계획 |
-| T2-08 | R7: 턴 제한, 예산 누락 | `ask` 또는 `request_edit`. `recommend` 아님, state에 예산이 생기지 않음 | A | 계획 |
-| T2-09 | R8: 필수 완료, 미확정 없음 | `recommend` | A | 계획 |
-| T2-10 | 모든 행 | 출력의 질문 수 0 또는 1 | A | 계획 |
-| T2-11 | 직전 질문과 문구가 같은 경우 | 같은 문구를 다시 내지 않음 | A | 계획 |
-| T2-12 | 같은 누락 필드를 다른 문구로 다시 묻는 경우 | 같은 필드를 `ask`로 두 번 내지 않음(R4로 전환) | A | 계획 |
-| T2-13 | maxTurns=4, turn=3 | 턴 제한 규칙(R6·R7) 미적용 | A | 계획 |
-| T2-14 | maxTurns=4, turn=4 | 턴 제한 규칙 적용 | A | 계획 |
-| T2-15 | maxTurns=4, turn=5 | 턴 제한 규칙 적용, 오류 없음 | A | 계획 |
-| T2-16 | 입력 불변·결정성 | `plannerState`, `state`, session을 바꾸지 않음. 같은 입력을 2회 넣으면 같은 출력 | A | 계획 |
-| T2-17 | 공통 질문과의 관계 | 플래너가 `ask`를 내도 공통 `runTurn`의 `kind:'question'`·버전·state는 바뀌지 않음(오케스트레이터는 표시 문구만 추가) | A | 계획 (추가: P0 사실 8) |
-| T2-18 | D8 검토: `ask_first`에서 확정된 recipient 조건을 `plannerState`에 대기로 두고, 확인 답이 오면 함께 적용 | P2 계획 단계에서 가능 여부와 수용 기준 3과의 관계를 검토한 뒤 항목을 확정 | A | 계획(P2 검토) |
-| T2-19 | 확인 질문에 대한 짧은 답("응", "맞아")의 처리 | P1 해석기는 이전 질문 맥락이 없어 일반 질문을 반환한다. P2에서 `plannerState`로 직전 질문을 연결 | A | 계획(P1 한계 기록) |
+| T2-01 | R1: what_if 70000 | `compare`, 공통 결과와 같음(1위 premium) | A | 구현 |
+| T2-02 | 설명 요청 action `explain` | – | A | 미구현: 공통 요청 종류(`message`/`patch`/`view`/`what_if_budget`)에 설명 요청이 없음. 설명은 P3에서 추천 응답마다 붙인다 |
+| T2-03 | R5: 빈 세션 `view` | `ask`, field `recipients`, 질문이 공통 질문과 같음. `missingField`의 문구가 6가지 누락 상태에서 공통 `runTurn` 질문과 모두 같음 | A | 구현 |
+| T2-04 | R5: 수령인만 있음 | `ask`, field `budget.amount_krw` | A | 구현 |
+| T2-05 | R6: 같은 누락 필드를 두 번째 | `request_edit`, `plan.question` null, 안내에 "조건 편집". 공통 결과는 그대로 질문 | A | 구현 |
+| T2-06 | R4: "견과류는 별로야" | `confirm`, 질문 1개 "견과류는 받는 분이 피하시는 건가요?" | A | 구현 |
+| T2-07 | R3: 턴 제한, 필수 완료, unknown 남음 | `recommend`, 미적용 claim 목록에 견과류, state·버전 불변 | A | 구현 |
+| T2-08 | R7: 턴 제한, 예산 누락 | `recommend` 아님, 예산이 생기지 않음, 안내에 "추천할 수 없" | A | 구현 |
+| T2-09 | R2: 필수 완료 `view` | `recommend`, cards id·순서가 공통 결과와 같음 | A | 구현 |
+| T2-10 | 모든 행 | `plan.question`은 문자열 하나 또는 null | A | 구현 |
+| T2-11 | 같은 확인 질문 상황 3회 | 1회째 기본 문구, 2회째 대체 문구(다름), 3회째 `request_edit`(질문 없음) | A | 구현 |
+| T2-12 | 같은 누락 필드를 다시 묻는 경우 | T2-05로 검사 | A | 구현 |
+| T2-13 | maxTurns=3, 이번이 2번째 턴(max-1) | 턴 제한 미적용(`confirm`) | A | 구현 |
+| T2-14 | maxTurns=3, 3번째 턴(max) | 턴 제한 적용(`recommend`) | A | 구현 |
+| T2-15 | maxTurns=3, 4번째 턴(max+1) | 턴 제한 적용, 오류 없음 | A | 구현 |
+| T2-16 | 입력 불변·결정성 | 깊게 얼린 session·plannerState·request로 실행해도 오류 없음. 같은 입력 2회 → 같은 출력 | A | 구현 |
+| T2-17 | 공통 결과 보존 | 질문·추천 턴에서 `plan`을 뺀 응답이 공통 `runTurn` 결과와 `deepEqual` | A | 구현 |
+| T2-18 | D8: `ask_first`에서 확정 조건을 `plannerState`에 대기 보관 | – | A | 미구현: 지시에 따라 설계·장단점만 README에 기록 |
+| T2-19 | 짧은 답("응")만으로 직전 질문 연결 | – | A | 미구현: 대기 보관(D8) 없이 연결할 claim이 없음. "응 엄마가 견과류 알레르기 있어"처럼 주어가 있으면 P1 규칙으로 처리됨(T6) |
+| T2-20 | R0: 해석기가 `timeout`, `network_error`, `auth_failed`, `configuration`, `quota_exceeded`, `request_rejected` 를 던짐 | `kind:'error'`, `plan.error.code`, timeout·network_error는 "잠시 후 다시 시도해 주세요", 나머지는 운영자 확인 안내. 세션 불변, plannerState 턴 수 불변, 해석기 1회만 호출(재시도 없음) | A | 구현 (추가 2026-11-07) |
+| T2-21 | 공통 오류 | `version_conflict`, 해석기 결과 검증 실패(`invalid_input`)는 그대로 거부 | A | 구현 (추가 2026-11-07) |
+| T2-22 | 제3자 템플릿: "동생은 견과류 알레르기 있어" | `plan.question` "동생분 이야기시죠? 받는 분도 견과류를 피하셔야 하나요?", 공통 결과의 질문은 P1 문구 그대로 | A | 구현 (추가 2026-11-07) |
+| T2-23 | 기본 `createAgent()` 불변 | 명확한 발화에서 공통 `runTurn`과 `deepEqual` | A | 구현 (추가 2026-11-07) |
+| T2-24 | 잘못된 입력 | 잘못된 `plannerState`(음수 턴, 배열 아님, 모르는 키), `maxTurns` 0 → `TypeError` | A | 구현 (추가 2026-11-07) |
 
 ## P3 설명 — A층 (`tests/explain.test.mjs`)
 
