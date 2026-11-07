@@ -291,24 +291,28 @@
 
 ## P3 설명 — A층 (`tests/explain.test.mjs`)
 
-설명은 템플릿만 사용한다. 근거는 공통 `runTurn` 결과, 엔진 `rankProducts`/`recommend` 재계산, `budgetAlternatives`다. 대조 설명은 카드에 `popularity`가 없어서 같은 상품·state로 엔진을 다시 계산한다. 이때 다시 계산한 상위 id가 카드 id 순서와 다르면 설명을 만들지 않는다.
+`explain({products, state, result})` → `{reason, contrastive, counterfactual, facts}`. 템플릿만 쓰고 LLM은 0회다. 근거는 공통 결과의 카드, 엔진 `rankProducts`·`morePopular` 재계산(읽기 전용), `budgetAlternatives`다. P2 오케스트레이터의 추천·비교 응답에 `explanation` 필드로 붙인다(비교는 `evaluatedState` 기준).
+- 반사실 구분: (a) `top_changed`·`first_match` → 1위 바뀜/생김, (b) `eligible_only`·`top_three_changed` → 1위 같고 후보 증가, (c) `no_alternative` → 변화 없음. (b)에는 "바뀌"를 쓰지 않는다. (수정 2026-11-07: 엔진 effect 4종을 지시의 3가지 경우로 묶음)
+- 대조 설명은 엔진 재계산 순서가 카드 순서와 같을 때만 갈린 기준을 말한다. 다르면 사실만 말한다(`criterion:null`).
 
 | ID | 입력 | 기대 결과 | 층 | 상태 |
 | --- | --- | --- | --- | --- |
-| T3-01 | 반사실 (a) 1위 바뀜: `S_MOM` + 예제 카탈로그 | `budgetAlternatives` effect `top_changed`, 대상 `premium`, 금액 60000(P0 실행으로 확인). 문장에 "첫 번째 추천이 바뀌어요" 포함 | A | 계획 |
-| T3-02 | 반사실 (b) 1위 같고 후보만 증가: 전용 상품 고정값 | effect `eligible_only`. 문장에 "바뀌" 없음 | A | 계획 |
-| T3-03 | 반사실 (b′) 1위 같고 상위 3개 구성만 바뀜 | effect `top_three_changed`. 엔진 문구 "추천 3개 구성이 바뀌어요"를 쓰므로 "1위가 바뀐다"는 문구가 없는지 따로 검사 | A | 계획 (수정: 엔진 effect가 4종이라 원래 (b)를 둘로 나눔) |
-| T3-04 | 반사실 (c) 변화 없음: 예산보다 비싼 후보가 없음 | status `no_alternative`, 대안 0개, "바뀌" 없음 | A | 계획 |
-| T3-05 | 반사실: 현재 추천 0개인데 예산을 올리면 생김 | effect `first_match` | A | 계획 (추가: 엔진 effect 4종 모두 검사) |
-| T3-06 | 대조: 1·2위의 선호 점수가 다름 | 이유 `score`, 두 점수 값이 엔진 값과 같음 | A | 계획 |
-| T3-07 | 대조: 점수 같고 인기도 다름 | 이유 `popularity` | A | 계획 |
-| T3-08 | 대조: 점수·인기도 같고 가격 다름 | 이유 `price`, 가격이 `price_krw`와 같음 | A | 계획 |
-| T3-09 | 대조: 점수·인기도·가격 모두 같음 | 이유 `id_order`(엔진의 마지막 동률 규칙) | A | 계획 (추가: 엔진 정렬의 4번째 기준) |
-| T3-10 | 대조: 후보 1개 / 결과 0개 | `null` | A | 계획 |
-| T3-11 | 금액 일치 | 설명 문장에서 정규식 `/([\d,]+)원/`으로 뽑은 모든 금액이 `budget_cost_krw`, `price_krw`, `total_krw`, 예산 상한, 대안 금액·차액 중 하나와 같음 | A | 계획 |
-| T3-12 | id 일치 | `facts`·`evidence`의 상품 id가 모두 실제 `cards`(반사실은 대안의 `target`)에 있음 | A | 계획 |
-| T3-13 | 불변 | 설명 생성 전후로 session, cards 순서·값이 같음 | A | 계획 |
-| T3-14 | 재계산 불일치 | 엔진 재계산 상위 id와 카드 id가 다르면 대조 설명 `null` | A | 계획 |
+| T3-01 | 반사실 (a): `S_MOM` + 예제 카탈로그 | 경우 `a`, 대상 `premium`, 금액 60000, "첫 번째 추천이" 포함 | A | 구현 |
+| T3-02 | 반사실 (b) `eligible_only`: 전용 상품 고정값 | 경우 `b`, 문장에 "바뀌" 없음, 1위 이름 포함 | A | 구현 |
+| T3-03 | 반사실 (b) `top_three_changed` | 경우 `b`, 문장에 "바뀌" 없음 | A | 구현 |
+| T3-04 | 반사실 (c): 예산보다 비싼 후보 없음 | 경우 `c`, "바뀌" 없음 | A | 구현 |
+| T3-05 | 반사실 `first_match`(현재 0개) | 경우 `a`, 대상 이름 포함 | A | 구현 |
+| T3-06 | 대조: 선호 점수 다름 | `criterion:'score'`, 점수가 엔진 값과 같음 | A | 구현 |
+| T3-07 | 대조: 점수 같고 인기도 다름 | `criterion:'popularity'` | A | 구현 |
+| T3-08 | 대조: 점수·인기도 같고 가격 다름 | `criterion:'price'`, 가격이 `price_krw`와 같음 | A | 구현 |
+| T3-09 | 대조: 모두 같음 | `criterion:'id_order'` | A | 구현 |
+| T3-10 | 후보 1개 / 결과 0개 | 대조 `null`. 결과 0개면 `reason`도 `null` | A | 구현 |
+| T3-11 | 금액 일치 | 설명 문장에서 `/([d,]+)원/`으로 뽑은 모든 금액이 카드의 `budget_cost_krw`·`price_krw`·`total_krw`, 예산 상한, 대안 금액·차액 중 하나 | A | 구현 |
+| T3-12 | id 일치 | `facts`의 상품 id가 카드(반사실은 대안의 대상·현재 1위)에 있음 | A | 구현 |
+| T3-13 | 불변 | 설명 생성 전후로 입력·카드 순서가 같음 | A | 구현 |
+| T3-14 | 재계산 불일치(카드 순서를 바꾼 결과) | 대조 `criterion:null`, 사실 문장만 | A | 구현 (수정 2026-11-07: null 대신 "사실만") |
+| T3-15 | P2 오케스트레이터 연결 | 추천·비교 응답에 `explanation`, 질문·오류에는 없음. `plan`·`explanation`을 뺀 응답은 공통 결과와 같음 | A | 구현 (추가 2026-11-07) |
+| T3-16 | 단맛 선호 적용 | reason에 "덜 단 상품을 우선했어요" 포함, "제외" 단어 없음(점수 조정 명시) | A | 구현 (추가 2026-11-07) |
 
 ## P4 메모리 — A층 (`tests/memory.test.mjs`)
 
@@ -330,17 +334,16 @@
 | T4-12 | 잘못된 저장값(예: 알 수 없는 성분 `설탕`, 잘못된 필드) | `checkedPatch` 실패 또는 사전 밖 값 → 적용 거부, state 불변 | A | 계획 |
 | T4-13 | 기억 적용 후 공통 결과 | 같은 state를 공통 `runTurn`으로 만든 결과와 cards가 같음 | A | 계획 (추가) |
 
-## 제약 검사 — A층 무작위 테스트 (`tests/constraints.test.mjs`)
+## 제약 검사 — A층 무작위 테스트 (`tests/constraints.test.mjs`, P3에서 구현)
 
 | ID | 입력 | 기대 결과 | 층 | 상태 |
 | --- | --- | --- | --- | --- |
-| T5-01 | 시드 고정 PRNG(직접 작성, 예: mulberry32)로 상품 5~15개 × 조건 300세트 생성. 상품은 `validateCatalog`를 통과(카테고리는 `CATEGORIES`, 알레르겐은 `ALLERGEN_NAMES`, 포장 `basic/formal`, 단맛 4종). 조건은 `validateState`를 통과하고 필수 조건을 모두 채움 | 실행 경로는 `loadAgent('c-attribution').runTurn`(`kind:'patch'`). 모든 카드가 아래를 지킴: 예산(`shipping_included`와 `scope:'total'`×수량 반영), 제외 성분, 제외 카테고리, 재고 ≥ 수량 | A | 계획 |
-| T5-02 | T5-01 같은 데이터 | 브랜드·포장·도착일 제약도 지킴 | A | 계획 (추가: 공통 `resultFor` 검사 항목과 맞춤) |
-| T5-03 | 검사기 독립성 | 테스트의 위반 검사 함수는 공통 `resultFor`를 재사용하지 않고 테스트 안에 따로 작성 | A | 계획 |
-| T5-04 | 재현성 | 같은 시드면 생성 데이터의 SHA-256이 같음. 실패 시 시드와 케이스 번호를 출력 | A | 계획 |
-| T5-05 | 오류 없음 | 300세트 모두 `invalid_engine_result` 없이 끝남 | A | 계획 |
-
-참고: 카드는 공통 코어가 만들기 때문에 이 테스트는 "C안 경로가 공통 제약을 우회하지 않는다"는 회귀 검사다.
+| T5-01 | 시드 고정 PRNG(mulberry32, 직접 작성)로 상품 5~15개 × 조건 300세트 생성. 상품은 `validateCatalog`, 조건은 `validateState`를 통과하고 필수 조건을 채움 | 실행 경로는 `createPlannedAgent().runTurn`(`kind:'patch'`). 모든 카드가 예산(`shipping_included`, `scope:'total'` × 수량), 제외 성분, 제외 카테고리, 재고를 지킴 | A | 구현 (수정 2026-11-07: 경로를 P2 오케스트레이터로) |
+| T5-02 | 같은 데이터 | 브랜드·포장·도착일도 지킴 | A | 구현 |
+| T5-03 | 검사기 독립성 | 위반 검사 함수는 테스트 안에 따로 작성 | A | 구현 |
+| T5-04 | 재현성 | 같은 시드면 생성 데이터의 SHA-256이 같음. 실패 메시지에 케이스 번호 | A | 구현 |
+| T5-05 | 오류 없음 | 300세트 모두 `invalid_engine_result` 없이 끝남 | A | 구현 |
+| T5-06 | 설명 금액 | 300세트의 설명 금액이 모두 엔진 값(T3-11 기준)과 일치 | A | 구현 (추가 2026-11-07) |
 
 ## 다턴 시나리오 — C층 (`tests/scenario.test.mjs`)
 

@@ -2,6 +2,7 @@
 // The default createAgent() in index.mjs is untouched; this is a separate entry point.
 import { runTurn as commonRunTurn } from '../../src/index.mjs';
 import { claimPatchValue, isOwnerFree } from './attribution.mjs';
+import { explain } from './explain.mjs';
 import { createInterpreter } from './interpreter.mjs';
 import { RECIPIENT_ALIASES, categoryName, josa, unknownQuestion } from './vocabulary.mjs';
 
@@ -108,8 +109,9 @@ const isLlmError = e => e?.name === 'LlmError' && typeof e.code === 'string';
  * options: interpret (use as is) or interpreter options {llm, mixedPolicy, timeoutMs, maxTokens, reasoning, onStats};
  * maxTurns (default DEFAULT_MAX_TURNS). Hooks for P3 (explain) and P4 (memory) are added by later steps.
  */
-export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, onStats, hooks = {}, ...interpreterOptions } = {}) {
+export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, onStats, explanation: withExplanation = true, hooks = {}, ...interpreterOptions } = {}) {
   if (interpret !== undefined && typeof interpret !== 'function') throw new TypeError('interpret must be a function');
+  if (typeof withExplanation !== 'boolean') throw new TypeError('explanation must be a boolean');
   if (!Number.isSafeInteger(maxTurns) || maxTurns < 1 || maxTurns > 50) throw new TypeError('maxTurns must be an integer 1..50');
   if (onStats !== undefined && typeof onStats !== 'function') throw new TypeError('onStats must be a function');
   const options = { llm: interpreterOptions.llm ?? null, ...interpreterOptions };
@@ -147,6 +149,9 @@ export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, on
       ...output,
       plan: { ...plan, maxTurns, error: null, attribution: stats ? claims : null, llm: llmSummary(stats), ...(context.planExtra ?? {}), plannerState: nextState },
     };
+    // P3: engine-fact explanation for recommendations and comparisons (comparison uses the hypothetical state).
+    if (withExplanation && (output.kind === 'recommendation' || output.kind === 'comparison'))
+      response.explanation = explain({ products, state: output.evaluatedState, result: output.result });
     return hooks.decorate ? hooks.decorate(response, context) : response;
   }
   return { id: 'c-attribution-planned', runTurn };

@@ -148,5 +148,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 
 - **P2 (2026-11-07)**: `planner.mjs`의 `createPlannedAgent`가 공통 `runTurn`을 감싸 `plan`을 덧붙인다. 반복 질문 방지, 턴 제한(필수 조건이 있을 때만 `view` 재실행 추천), LLM 오류를 호스트 안내로 바꿈(재시도 없음), 제3자 질문 템플릿을 넣었다.
 - 미구현: T2-02(설명 요청 종류 없음), T2-18·T2-19(D8 대기 보관). 다음은 P3 설명.
+- **P3 (2026-11-07)**: `explain.mjs`가 카드·엔진 재계산·`budgetAlternatives`만으로 이유·대조(점수→인기도→가격→id)·반사실((a)/(b)/(c))을 만든다. P2의 추천·비교 응답에 `explanation`으로 붙는다. 단맛 선호는 "덜 단 상품을 우선"으로 표현한다.
+- 시드 고정 무작위 검사(300세트)로 제약과 설명 금액을 검증한다. 남은 일은 P4 기억이다.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.
