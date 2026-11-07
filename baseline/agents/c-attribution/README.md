@@ -150,5 +150,7 @@ node --env-file=baseline/llm/.env baseline/agents/c-attribution/eval/run-eval.mj
 - 미구현: T2-02(설명 요청 종류 없음), T2-18·T2-19(D8 대기 보관). 다음은 P3 설명.
 - **P3 (2026-11-07)**: `explain.mjs`가 카드·엔진 재계산·`budgetAlternatives`만으로 이유·대조(점수→인기도→가격→id)·반사실((a)/(b)/(c))을 만든다. P2의 추천·비교 응답에 `explanation`으로 붙는다. 단맛 선호는 "덜 단 상품을 우선"으로 표현한다.
 - 시드 고정 무작위 검사(300세트)로 제약과 설명 금액을 검증한다. 남은 일은 P4 기억이다.
+- **P4 (2026-11-07)**: `memory.mjs`는 `recipientId`를 키로 쓰고, 저장은 제안 → 확인 두 단계다. 선물 지시("빼줘")는 사실이 아니라 저장하지 않는다. 적용은 대화당 1회 공통 patch 요청으로 하고, 현재 요청이 우선이며, 해석기가 질문 중이면 미룬다.
+- 저장소는 프로세스 메모리뿐이라 영속 저장(DB)은 호스트 몫이다(`snapshot`·`facts`로 주고받음). 다음은 P5 조립과 데모다.
 
 브랜치: `codex/architecture-c-attribution`. 공통 규칙은 [상위 안내](../README.md)를 따른다.

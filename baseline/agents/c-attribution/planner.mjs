@@ -4,6 +4,7 @@ import { runTurn as commonRunTurn } from '../../src/index.mjs';
 import { claimPatchValue, isOwnerFree } from './attribution.mjs';
 import { explain } from './explain.mjs';
 import { createInterpreter } from './interpreter.mjs';
+import { memoryPatch } from './memory.mjs';
 import { RECIPIENT_ALIASES, categoryName, josa, unknownQuestion } from './vocabulary.mjs';
 
 export const DEFAULT_MAX_TURNS = 8;
@@ -107,11 +108,13 @@ const isLlmError = e => e?.name === 'LlmError' && typeof e.code === 'string';
 /**
  * createPlannedAgent(options) → {id, runTurn({session, plannerState?, request, products, recipientId?})}
  * options: interpret (use as is) or interpreter options {llm, mixedPolicy, timeoutMs, maxTokens, reasoning, onStats};
- * maxTurns (default DEFAULT_MAX_TURNS). Hooks for P3 (explain) and P4 (memory) are added by later steps.
+ * maxTurns (default DEFAULT_MAX_TURNS); explanation (default true, P3); memory (a createMemoryStore() store, P4, optional).
+ * runTurn's recipientId is the host's stable id for the recipient; memory is used only when both are given.
  */
-export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, onStats, explanation: withExplanation = true, hooks = {}, ...interpreterOptions } = {}) {
+export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, onStats, explanation: withExplanation = true, memory = null, ...interpreterOptions } = {}) {
   if (interpret !== undefined && typeof interpret !== 'function') throw new TypeError('interpret must be a function');
   if (typeof withExplanation !== 'boolean') throw new TypeError('explanation must be a boolean');
+  if (memory !== null && (typeof memory?.list !== 'function' || typeof memory?.propose !== 'function')) throw new TypeError('memory must be a store from createMemoryStore()');
   if (!Number.isSafeInteger(maxTurns) || maxTurns < 1 || maxTurns > 50) throw new TypeError('maxTurns must be an integer 1..50');
   if (onStats !== undefined && typeof onStats !== 'function') throw new TypeError('onStats must be a function');
   const options = { llm: interpreterOptions.llm ?? null, ...interpreterOptions };
@@ -137,22 +140,44 @@ export function createPlannedAgent({ interpret, maxTurns = DEFAULT_MAX_TURNS, on
       };
     }
     const claims = stats?.claims ?? [];
-    const context = { session: output.session, request, products, recipientId, claims, plannerState: ps };
-    if (hooks.afterCommon) output = await hooks.afterCommon(output, context);
+
+    // P4: remembered facts (optional). Applied once per conversation, only through a common patch request.
+    let memoryPlan = null, memoryApplied = ps.memoryApplied;
+    if (memory && recipientId !== undefined) {
+      memoryPlan = { applied: [], skipped: [], proposals: [] };
+      const interpreterAsked = output.kind === 'question' && output.question !== missingField(output.session.state)?.question;
+      // Wait while the interpreter is asking: applying now would replace its question with a recommendation.
+      if (!memoryApplied && request.kind !== 'what_if_budget' && output.session.state.recipients.length && !interpreterAsked) {
+        const found = memoryPatch({ facts: memory.list(recipientId), state: output.session.state, currentClaims: claims });
+        memoryPlan.applied = found.applied; memoryPlan.skipped = found.skipped;
+        if (Object.keys(found.patch).length)
+          output = await commonRunTurn({ session: output.session, request: { kind: 'patch', expectedVersion: output.session.version, patch: found.patch }, products });
+        memoryApplied = true;
+      }
+      for (const c of claims) {
+        const target = c.owner === 'recipient' ? claimPatchValue(c) : null;
+        if (!target || !output.session.state[target.field].includes(target.value)) continue;
+        const proposed = memory.propose(recipientId, c);
+        if (proposed.ok) memoryPlan.proposals.push(proposed.proposal);
+      }
+    }
 
     const decided = planNext({ request, output, claims, plannerState: ps, maxTurns });
     if (decided.needsView) output = await commonRunTurn({ session: output.session, request: { kind: 'view', expectedVersion: output.session.version }, products });
     const { needsView, ...plan } = decided;
     const asked = plan.question ? [...ps.asked, { text: plan.question, field: plan.field }] : ps.asked;
-    const nextState = { ...ps, turn: decided.turn, asked, ...(context.plannerStatePatch ?? {}) };
+    const nextState = { ...ps, turn: decided.turn, asked, memoryApplied };
     const response = {
       ...output,
-      plan: { ...plan, maxTurns, error: null, attribution: stats ? claims : null, llm: llmSummary(stats), ...(context.planExtra ?? {}), plannerState: nextState },
+      plan: {
+        ...plan, maxTurns, error: null, attribution: stats ? claims : null, llm: llmSummary(stats),
+        ...(memoryPlan ? { memory: memoryPlan } : {}), plannerState: nextState,
+      },
     };
     // P3: engine-fact explanation for recommendations and comparisons (comparison uses the hypothetical state).
     if (withExplanation && (output.kind === 'recommendation' || output.kind === 'comparison'))
       response.explanation = explain({ products, state: output.evaluatedState, result: output.result });
-    return hooks.decorate ? hooks.decorate(response, context) : response;
+    return response;
   }
   return { id: 'c-attribution-planned', runTurn };
 }

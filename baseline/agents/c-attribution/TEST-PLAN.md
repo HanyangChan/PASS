@@ -316,23 +316,29 @@
 
 ## P4 메모리 — A층 (`tests/memory.test.mjs`)
 
-저장소는 메모리 내 구현(`createMemoryStore()`)이고 키는 호스트가 준 `recipientId`다. 공통 코어에는 `recipientId`가 없으므로 오케스트레이터 입력으로 받는다. 기억은 `kind:'patch'` 요청으로 적용한다. 이때 `recipients`는 넣지 않는다(P0 사실 5).
+`createMemoryStore({now, staleDays, facts})`는 메모리 내 `Map`이고 키는 호스트가 준 `recipientId`(표시 이름 아님)다. 저장은 `propose` → `confirm` 두 단계다. 적용은 `memoryPatch`가 만든 patch를 공통 `runTurn`의 `kind:'patch'` 요청으로 보내서 하고, `checkedPatch`를 거친다. P2 오케스트레이터는 `memory` 옵션과 `recipientId`가 있을 때만 사용하고, 없으면 기존과 같다.
+- 저장 대상: owner가 `recipient`로 확정됐고 patch 값이 있는 claim. giver, unknown(가드·제3자 포함), 선물 지시("빼줘", 받는 사람에 대한 사실이 아님), 출처가 대화가 아닌 것(예: 구매 기록)은 거부한다. 구매 기록으로 추론하는 함수는 없다.
+- 충돌: 이번 턴의 recipient claim이 같은 대상을 허용·선호하면 현재 요청이 우선이고, 기억은 적용하지 않는다(단맛·성분 각각). (수정 2026-11-07: 이전 D6 "확인 질문" 대신 지시대로 현재 요청 우선)
 
 | ID | 입력 | 기대 결과 | 층 | 상태 |
 | --- | --- | --- | --- | --- |
-| T4-01 | recipientId `r1`, `r2`에 서로 다른 사실 저장 | `r1` 조회 시 `r2` 사실 없음, 반대도 같음 | A | 계획 |
-| T4-02 | owner `giver` 사실 저장 시도 | 거부, 저장소 변화 없음 | A | 계획 |
-| T4-03 | owner `unknown` 사실 저장 시도 | 거부, 저장소 변화 없음 | A | 계획 |
-| T4-04 | 알레르기 사실 제안(`proposeFact`) | 확인 전에는 조회·적용 목록에 없음 | A | 계획 |
-| T4-05 | 제안 후 `confirmFact` | 저장되고 적용 목록에 있음 | A | 계획 |
-| T4-06 | 구매 기록 입력(`source:'purchase'`) | 저장하지 않음(취향·알레르기를 추론하지 않음) | A | 계획 |
-| T4-07 | 단맛 충돌: 기억 `less_sweet`, 현재 요청 "엄마는 요즘 단 거 좋아하셔" | 현재 요청 우선, 이번 state에 `less_sweet` 미적용 | A | 계획 |
-| T4-08 | 성분 충돌: 기억 `견과류` 제외, 현재 "견과류 괜찮아" | D6 기본값: 바로 풀지 않고 확인 질문 1개, state의 제외 유지 | A | 계획 (수정: 원래 "현재 요청 우선"을 알레르기 안전 때문에 D6로 분리) |
-| T4-09 | 명시적 `deleteFact` | 해당 사실만 삭제 | A | 계획 |
-| T4-10 | 오래된 기억(`savedAt`이 기준보다 오래됨) | `listStale()`은 목록을 반환할 뿐 삭제하지 않음 | A | 계획 |
-| T4-11 | 적용 출처 | 적용된 항목마다 `source`, `savedAt`, `원문(span)`이 있음 | A | 계획 |
-| T4-12 | 잘못된 저장값(예: 알 수 없는 성분 `설탕`, 잘못된 필드) | `checkedPatch` 실패 또는 사전 밖 값 → 적용 거부, state 불변 | A | 계획 |
-| T4-13 | 기억 적용 후 공통 결과 | 같은 state를 공통 `runTurn`으로 만든 결과와 cards가 같음 | A | 계획 (추가) |
+| T4-01 | recipientId `r1`, `r2`에 서로 다른 사실 저장 | 서로의 목록에 섞이지 않음 | A | 구현 |
+| T4-02 | owner `giver` claim 제안 | 거부(`not_recipient`), 저장소 변화 없음 | A | 구현 |
+| T4-03 | owner `unknown`(주어 가드, 제3자) claim 제안 | 거부, 저장소 변화 없음 | A | 구현 |
+| T4-04 | 알레르기 claim 제안 | `sensitive:true`, 확인 전에는 `list`·적용에 없음 | A | 구현 |
+| T4-05 | 제안 후 `confirm` | `list`에 있고 `savedAt`·`span` 기록 | A | 구현 |
+| T4-06 | 출처 `purchase` 제안 | 거부(`source_not_allowed`). 내보낸 함수 이름에 purchase 관련 추론 함수 없음 | A | 구현 |
+| T4-07 | 단맛 충돌: 기억 `less_sweet`, 이번 턴 recipient의 단맛 허용·선호 claim | 기억 미적용, `skipped` 사유 `current_request_priority` | A | 구현 |
+| T4-08 | 성분 충돌: 기억 `견과류` 제외, 이번 턴 "견과류 괜찮아"(recipient allow) | 기억 미적용, 사유 `current_request_priority`(오케스트레이터 경유 포함) | A | 구현 (수정 2026-11-07) |
+| T4-09 | `delete` | 지정한 사실만 삭제. 다른 함수는 아무것도 지우지 않음 | A | 구현 |
+| T4-10 | 오래된 기억(`staleDays` 초과) | `listStale`은 목록만 반환하고 삭제하지 않음 | A | 구현 |
+| T4-11 | 적용 출처 | 적용 항목마다 `source:'memory'`, `savedAt`, `span`, `factId` | A | 구현 |
+| T4-12 | 사전 밖 값(`설탕`, 잘못된 필드)과 `checkedPatch` 실패 | 해당 사실 미적용(사유 기록), state 불변 | A | 구현 |
+| T4-13 | 기억 적용 후 공통 결과 | 같은 state를 공통 `runTurn`으로 만든 결과와 cards가 같음 | A | 구현 |
+| T4-14 | 선물 지시("견과류는 빼줘") 제안 | 거부(`instruction_not_fact`) | A | 구현 (추가 2026-11-07) |
+| T4-15 | 오케스트레이터에 `memory` 없음 | 응답에 `plan.memory` 없음, 기존과 같음 | A | 구현 (추가 2026-11-07) |
+| T4-16 | 오케스트레이터 + 저장된 기억 | 수령인이 정해진 첫 턴에 patch 요청으로 1회 적용(버전 +1), `plan.memory.applied`, 다음 턴에는 다시 적용하지 않음 | A | 구현 (추가 2026-11-07) |
+| T4-17 | 오케스트레이터 제안 | 이번 턴에 적용된 recipient claim이 `plan.memory.proposals`로 나오고, `confirm` 전에는 저장되지 않음 | A | 구현 (추가 2026-11-07) |
 
 ## 제약 검사 — A층 무작위 테스트 (`tests/constraints.test.mjs`, P3에서 구현)
 
