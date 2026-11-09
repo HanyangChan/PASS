@@ -169,3 +169,53 @@ test('legacy account chat restores canonically, continues through the API, and s
   assert.deepEqual((await f.repo().load(empty())).messages,messages);
   assert.deepEqual((await f.repo().load(empty())).migrationNotice,'');
 });
+
+const fb = (extra = {}) => ({ conversationId: '', giftId: 'g1', rank: 1, helpful: true, agentMode: 'full-chat', engineMode: 'llm', reason: '이유', at: '2026-11-07T00:00:00.000Z', ...extra });
+
+test('card feedback rides on the chat commit stamped with the conversation id and reloads', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  repo.setFeedback([fb()]);
+  await repo.saveChat(empty(), [message('first')]);
+  const row = f.rows.conversations[0];
+  assert.deepEqual(row.conditions._pass.feedback.map(x => [x.conversationId, x.giftId, x.agentMode]), [[row.id, 'g1', 'full-chat']]);
+  const restored = await f.repo().load(empty());
+  assert.equal(restored.feedback.length, 1);
+  assert.equal(restored.feedback[0].conversationId, row.id);
+});
+
+test('feedback taps add no requests; one light update only when nothing carried them', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveFeedback(); // nothing committed yet: no write, no conversation
+  assert.equal(f.rows.conversations.length, 0);
+  await repo.saveChat(empty(), [message('first')]);
+  const stampAfterChat = f.rows.conversations[0].updated_at;
+  for (let i = 0; i < 20; i++) repo.setFeedback([fb({ helpful: i % 2 === 0 })]); // taps: memory only
+  assert.equal(f.rows.conversations[0].updated_at, stampAfterChat);
+  await repo.saveFeedback();
+  const stampAfterFlush = f.rows.conversations[0].updated_at;
+  assert.equal(stampAfterFlush, stampAfterChat + 1, 'a burst of taps costs exactly one update');
+  assert.equal(f.rows.conversations[0].conditions._pass.feedback[0].helpful, false);
+  await repo.saveFeedback();
+  assert.equal(f.rows.conversations[0].updated_at, stampAfterFlush, 'unchanged feedback is not rewritten');
+  assert.equal(f.rows.messages.length, 1, 'messages are not re-upserted by a feedback flush');
+});
+
+test('a chat commit that already carried the feedback makes the later flush a no-op', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveChat(empty(), [message('first')]);
+  repo.setFeedback([fb()]);
+  const flush = repo.saveFeedback();
+  await repo.saveChat(empty(), [message('first'), message('second')]);
+  await flush;
+  const stamp = f.rows.conversations[0].updated_at;
+  await repo.saveFeedback();
+  assert.equal(f.rows.conversations[0].updated_at, stamp);
+  assert.equal(f.rows.conversations[0].conditions._pass.feedback.length, 1);
+});
+
+test('old conversations without a feedback field still load', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveChat(empty(), [message('first')]);
+  delete f.rows.conversations[0].conditions._pass.feedback;
+  assert.deepEqual((await f.repo().load(empty())).feedback, []);
+});

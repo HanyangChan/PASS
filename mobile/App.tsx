@@ -10,6 +10,7 @@ import React, {
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
+  AppState,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -42,6 +43,8 @@ import {
   ChevronDown,
   ChevronRight,
   Star,
+  ThumbsDown,
+  ThumbsUp,
   Calendar as CalendarIcon,
   X,
 } from 'lucide-react-native';
@@ -57,7 +60,9 @@ import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
-import { giftRepository, productRepository, calendarRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository, feedbackRepository } from './src/services/localServices';
+import { cardReason } from './src/cardReason';
+import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
 import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
 import { createSnapshotPersistence } from './src/services/snapshotPersistence';
@@ -149,6 +154,8 @@ export function AppContent({
     disabledAdvisors,
     toggleAdvisor,
     resetChat,
+    cardFeedback,
+    rateCard,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -810,12 +817,20 @@ export function AppContent({
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chatCards}>
                         {result.items.map((p: any, i: number) => {
                           const g = toGift(p);
+                          const reason = cardReason(p, session.state);
+                          const mine = cardFeedback.find(f => f.giftId === g.id);
+                          const rate = (helpful: boolean) => rateCard({ giftId: g.id, rank: i + 1, helpful, reason });
                           return <View key={g.id} style={s.chatCard}>
                             <View style={s.chatCardHero}><GiftImage gift={g}/><Text style={s.rankBadge}>{i + 1}순위</Text>
                               <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} ${liked(g) ? '찜 해제' : '찜하기'}`} onPress={() => save(g)} style={s.cardHeart}><Heart size={22} color={liked(g) ? c.primary : c.muted}/></Pressable>
                             </View>
                             <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
+                              <Text numberOfLines={2} style={s.cardReason}>{reason}</Text>
                               <Button label="자세히 보기" onPress={() => open(g)}/>
+                              <View style={s.cardRate}>
+                                <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} 추천 이유가 도움이 됐어요`} accessibilityState={{ selected: mine?.helpful === true }} hitSlop={10} onPress={() => rate(true)}><ThumbsUp size={16} color={mine?.helpful === true ? c.primary : c.muted} fill={mine?.helpful === true ? c.primary : 'none'}/></Pressable>
+                                <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} 추천 이유가 도움이 안 됐어요`} accessibilityState={{ selected: mine?.helpful === false }} hitSlop={10} onPress={() => rate(false)}><ThumbsDown size={16} color={mine?.helpful === false ? c.primary : c.muted} fill={mine?.helpful === false ? c.primary : 'none'}/></Pressable>
+                              </View>
                             </View>
                           </View>;
                         })}
@@ -1139,6 +1154,9 @@ function usePassState() {
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
   const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
   const [chatError, setChatError] = useState(chatConfigurationError);
+  const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
+  const cardFeedbackRef = useRef<CardFeedback[]>([]);
+  const guestSession = useRef(randomUUID());
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   const changeAgentMode = useCallback((next: ChatAgentMode) => {
     if (chatFlight.current.controller) return;
@@ -1191,7 +1209,39 @@ function usePassState() {
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, serverChat]);
+  // Account: the in-memory list is stamped with the conversation id inside cloudRecords. Guest: the
+  // device log is keyed by a per-chat session id. Neither path runs on every tap; see the scheduler.
+  const saveFeedbackNow = useCallback(() => {
+    const task = cloud.current ? cloud.current.saveFeedback() : feedbackRepository.save(guestSession.current, cardFeedbackRef.current);
+    return task.catch(() => { setNotice(user ? '계정에 피드백을 저장하지 못했어요.' : '기기에 피드백을 저장하지 못했어요.'); });
+  }, [user]);
+  // The scheduler is created once and always calls the latest save closure through this ref.
+  const feedbackFlush = useRef<() => Promise<void> | void>(() => {});
+  feedbackFlush.current = saveFeedbackNow;
+  const feedbackScheduler = useRef<ReturnType<typeof createFeedbackScheduler> | null>(null);
+  feedbackScheduler.current ??= createFeedbackScheduler({ flush: () => feedbackFlush.current() });
+  useEffect(() => () => feedbackScheduler.current?.cancel(), []);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => { if (state !== 'active') void feedbackScheduler.current?.flushNow(); });
+    return () => subscription.remove();
+  }, []);
+  const rateCard = (card: { giftId: string; rank: number; helpful: boolean; reason: string }) => {
+    const entry: CardFeedback = {
+      ...card,
+      conversationId: cloud.current ? '' : guestSession.current,
+      agentMode: serverChat ? agentMode : 'local',
+      engineMode: serverChat ? recommendation?.mode ?? 'unknown' : 'local',
+      at: new Date().toISOString(),
+    };
+    const next = toggleFeedback(cardFeedbackRef.current, entry);
+    cardFeedbackRef.current = next; setCardFeedback(next);
+    cloud.current?.setFeedback(next);
+    feedbackScheduler.current?.schedule();
+  };
   const resetChat = () => {
+    // Save the ending conversation's feedback first; the save is queued before anything for the new chat.
+    void feedbackScheduler.current?.flushNow();
+    cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
     const next = chatService.createSession();
@@ -1210,6 +1260,8 @@ function usePassState() {
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
+      const restored = 'feedback' in records && Array.isArray(records.feedback) ? stampConversation(records.feedback as CardFeedback[], '') : [];
+      cardFeedbackRef.current = restored; setCardFeedback(restored); guestSession.current = randomUUID();
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
@@ -1291,6 +1343,8 @@ function usePassState() {
       });
     },
     resetChat,
+    cardFeedback,
+    rateCard,
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,
@@ -1699,6 +1753,8 @@ const s = StyleSheet.create({
   rankBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: c.primary, color: c.white, fontFamily: f.bold, fontSize: 12, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   cardHeart: { position: 'absolute', top: 4, right: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chatCardBody: { padding: 14, gap: 8 },
+  cardReason: { fontSize: 12, color: c.muted },
+  cardRate: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16 },
   chatCardPrice: { fontFamily: f.bold, fontSize: 20, color: c.text },
   hero: { height: 256, backgroundColor: c.image },
   heroImage: { width: '100%', height: 256 },
