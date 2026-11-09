@@ -821,16 +821,33 @@ export function AppContent({
                           const mine = cardFeedback.find(f => f.giftId === g.id);
                           const rate = (helpful: boolean) => rateCard({ giftId: g.id, rank: i + 1, helpful, reason });
                           return <View key={g.id} style={s.chatCard}>
-                            <View style={s.chatCardHero}><GiftImage gift={g}/><Text style={s.rankBadge}>{i + 1}순위</Text>
-                              <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} ${liked(g) ? '찜 해제' : '찜하기'}`} onPress={() => save(g)} style={s.cardHeart}><Heart size={22} color={liked(g) ? c.primary : c.muted}/></Pressable>
+                            <View style={s.chatCardHero}>
+                              <GiftImage gift={g}/>
+                              <Text style={s.rankBadge}>{i + 1}순위</Text>
+                              <View style={s.cardRate}>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${g.name} 추천 이유가 도움이 됐어요`}
+                                  accessibilityState={{ selected: mine?.helpful === true }}
+                                  onPress={() => rate(true)}
+                                  style={s.cardRateButton}
+                                >
+                                  <ThumbsUp size={18} color={mine?.helpful === true ? c.primary : c.muted} fill={mine?.helpful === true ? c.primary : 'none'}/>
+                                </Pressable>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${g.name} 추천 이유가 도움이 안 됐어요`}
+                                  accessibilityState={{ selected: mine?.helpful === false }}
+                                  onPress={() => rate(false)}
+                                  style={s.cardRateButton}
+                                >
+                                  <ThumbsDown size={18} color={mine?.helpful === false ? c.primary : c.muted} fill={mine?.helpful === false ? c.primary : 'none'}/>
+                                </Pressable>
+                              </View>
                             </View>
                             <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
                               <Text numberOfLines={2} style={s.cardReason}>{reason}</Text>
                               <Button label="자세히 보기" onPress={() => open(g)}/>
-                              <View style={s.cardRate}>
-                                <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} 추천 이유가 도움이 됐어요`} accessibilityState={{ selected: mine?.helpful === true }} hitSlop={10} onPress={() => rate(true)}><ThumbsUp size={16} color={mine?.helpful === true ? c.primary : c.muted} fill={mine?.helpful === true ? c.primary : 'none'}/></Pressable>
-                                <Pressable accessibilityRole="button" accessibilityLabel={`${g.name} 추천 이유가 도움이 안 됐어요`} accessibilityState={{ selected: mine?.helpful === false }} hitSlop={10} onPress={() => rate(false)}><ThumbsDown size={16} color={mine?.helpful === false ? c.primary : c.muted} fill={mine?.helpful === false ? c.primary : 'none'}/></Pressable>
-                              </View>
                             </View>
                           </View>;
                         })}
@@ -1751,10 +1768,10 @@ const s = StyleSheet.create({
   chatCard: { width: 248, backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 16, overflow: 'hidden' },
   chatCardHero: { height: 92, backgroundColor: c.image, alignItems: 'center', justifyContent: 'center' },
   rankBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: c.primary, color: c.white, fontFamily: f.bold, fontSize: 12, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  cardHeart: { position: 'absolute', top: 4, right: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  cardRate: { position: 'absolute', top: 2, right: 4 },
+  cardRateButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chatCardBody: { padding: 14, gap: 8 },
   cardReason: { fontSize: 12, color: c.muted },
-  cardRate: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16 },
   chatCardPrice: { fontFamily: f.bold, fontSize: 20, color: c.text },
   hero: { height: 256, backgroundColor: c.image },
   heroImage: { width: '100%', height: 256 },
