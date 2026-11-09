@@ -8,7 +8,7 @@ import { createApi } from '../worker.mjs';
 import { loadLocalEnv } from '../local-env.mjs';
 import { singleInitial, engineState } from '../../lib/single-gift.mjs';
 import { toEngineProduct } from '../../lib/catalog.mjs';
-import { recommend, apply } from '../../lib/engine.mjs';
+import { recommend, apply, APP_RANKING } from '../../lib/engine.mjs';
 
 const clone=structuredClone;
 const initial=()=>({state:singleInitial(),issues:[]});
@@ -60,7 +60,7 @@ export function evaluate(data,status,spec,products) {
   } else if(spec.messagePattern) add('conversation',new RegExp(spec.messagePattern).test(data.message),data.message);
   else {
     add('no_unnecessary_question',data.question?.key===null,data.question?.text);
-    const normal=recommend(products,engineState(spec.expectedState));
+    const normal=recommend(products,engineState(spec.expectedState),APP_RANKING);
     add('recommendation_ids',eq(data.view?.result?.items?.map(p=>p.id),normal.items.map(p=>p.id)),data.view?.result?.items?.map(p=>p.id));
     add('recommendation_costs',eq(data.view?.result?.items?.map(p=>p.total),normal.items.map(p=>p.total)),data.view?.result?.items?.map(p=>p.total));
     if(spec.explain) {
@@ -68,7 +68,7 @@ export function evaluate(data,status,spec,products) {
       if(normal.items.length)add('explanation_evidence',data.message?.includes(normal.items[0].name)&&data.message?.includes(normal.items[0].total.toLocaleString('ko-KR')),data.message);
     }
     if(spec.compare) {
-      const compared=recommend(products,engineState({...spec.expectedState,budget:{...spec.expectedState.budget,amount_krw:spec.compare}}));
+      const compared=recommend(products,engineState({...spec.expectedState,budget:{...spec.expectedState.budget,amount_krw:spec.compare}}),APP_RANKING);
       add('comparison_action',data.routing?.intent==='compare_budget',data.routing?.intent);
       add('hypothetical_amount',data.message?.includes(spec.compare.toLocaleString('ko-KR')),data.message);
       if(compared.items.length)add('comparison_evidence',data.message?.includes(compared.items[0].name),data.message);

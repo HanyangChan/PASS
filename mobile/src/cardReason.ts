@@ -1,4 +1,5 @@
 import { CATEGORY_NAMES, recipientCategories } from '../../lib/catalog.mjs';
+import { isGiftSet } from '../../lib/ranking.mjs';
 import type { Conditions } from './domain';
 
 // A recommended item as the engine returns it (guest engine and server agents share this shape).
@@ -6,6 +7,7 @@ import type { Conditions } from './domain';
 export type ReasonItem = {
   category?: string; sweetness?: string; packaging?: string; arrival_date?: string;
   rating_count?: number; popularity?: number;
+  name?: string; name_en?: string; gift_set?: boolean;
 };
 const names = CATEGORY_NAMES as Record<string, string>;
 const money = (amount: number) => amount % 10000 === 0 ? `${amount / 10000}만 원` : `${amount.toLocaleString('ko-KR')}원`;
@@ -15,6 +17,7 @@ const money = (amount: number) => amount % 10000 === 0 ? `${amount / 10000}만 �
 export function cardReason(item: ReasonItem, conditions: Conditions): string {
   const category = item.category ? names[item.category] ?? item.category : '';
   const picks: (string | null)[] = [
+    conditions.occasion === '명절' && isGiftSet(item) ? '명절 선물세트' : null,
     item.category && conditions.preferences.includes(`category:${item.category}`) ? `${category} 선호 반영` : null,
     conditions.preferences.includes('unsweetened') && item.sweetness === 'unsweetened' ? '단맛 없는 상품'
       : conditions.preferences.includes('less_sweet') && ['unsweetened', 'naturally_sweet'].includes(item.sweetness ?? '') ? '덜 단 상품' : null,

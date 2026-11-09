@@ -60,7 +60,7 @@ function preparePatch(state, patch, userText) {
 }
 
 /** B: a single model-driven action/observation loop; no rule intent router or critic. */
-export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCalls=5,timeoutMs=20000}={}) {
+export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCalls=5,timeoutMs=20000,ranking}={}) {
   for (const [value,max] of [[maxLlmCalls,10],[maxToolCalls,5],[timeoutMs,30000]]) if (!Number.isSafeInteger(value)||value<1||value>max) throw new TypeError('Invalid full-chat limit');
   if (decide!==undefined && typeof decide!=='function') throw new TypeError('Invalid decision function');
   return {id:'full-chat',async runTurn({session,request,products,history=[],pendingQuestion='',signal}) {
@@ -72,7 +72,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
     const routing={agent:'full-chat',route:'agent',llmCalls:0,toolCalls:0,httpAttempts:0,usage:{prompt_tokens:0,completion_tokens:0,total_tokens:0},steps:[]};
     if (request.kind!=='message') {
       const patch=request.kind==='patch'?preparePatch(session.state,request.patch,null):undefined;
-      const out=await coreTurn({session,products,request:{...request,...(patch?{patch}:{})}});
+      const out=await coreTurn({session,products,ranking,request:{...request,...(patch?{patch}:{})}});
       if (/성분/.test(pendingQuestion) && !Object.hasOwn(patch??{},'excluded_ingredients') && same(out.session.state.recipients,session.state.recipients)) return {...out,kind:'question',question:pendingQuestion,routing:{...routing,route:'host'}};
       return {...out,routing:{...routing,route:'host'}};
     }
@@ -131,12 +131,12 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         const action=decision.action;
         if(action==='update_conditions') {
           const patch=preparePatch(staged.state,decision.patch,request.text);
-          const out=await coreTurn({session:staged,products,request:{kind:'patch',expectedVersion:staged.version,patch}});
+          const out=await coreTurn({session:staged,products,ranking,request:{kind:'patch',expectedVersion:staged.version,patch}});
           if(!same(out.session.state.recipients,staged.state.recipients) || patch.excluded_ingredients?.length || /알레르기\s*(?:없음|없어|없어요|해제|취소)/.test(request.text)) ingredientBlocked=false;
           staged=out.session;last=out;
         } else {
           if(ingredientBlocked) return {session:structuredClone(session),kind:'question',question:pendingQuestion,trace:[],routing};
-          last=await coreTurn({session:staged,products,request:{kind:action==='compare_budget'?'what_if_budget':'view',expectedVersion:staged.version,...(action==='compare_budget'?{amount_krw:decision.amount_krw}:{})}});
+          last=await coreTurn({session:staged,products,ranking,request:{kind:action==='compare_budget'?'what_if_budget':'view',expectedVersion:staged.version,...(action==='compare_budget'?{amount_krw:decision.amount_krw}:{})}});
           if(action==='explain_recommendation') last={...last,intent:'explain'};
         }
         if(ingredientBlocked) return {session:structuredClone(session),kind:'question',question:pendingQuestion,trace:[],routing:{...routing,stopReason:'missing_ingredient'}};

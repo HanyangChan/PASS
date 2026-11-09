@@ -1,5 +1,8 @@
 // Explicit tea and coffee preferences share a catalog category.
 const TYPE_PREFERENCES=['type:tea','type:coffee'];
+export function isGiftSet(product) {
+ return product.gift_set === true || /선물\s*(?:세트|박스)|\bgift[\s-]*set\b/i.test(`${product.name??''} ${product.name_en??''}`);
+}
 export function productTypes(product) {
  if(product.category!=='coffee_tea')return [];
  const name=`${product.name??''} ${product.name_en??''}`;

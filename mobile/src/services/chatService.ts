@@ -1,5 +1,5 @@
 import { singleInitial, singleQuestion, singleTurn, engineState, finishSingle } from '../../../lib/single-gift.mjs';
-import { recommend, apply } from '../../../lib/engine.mjs';
+import { recommend, apply, APP_RANKING } from '../../../lib/engine.mjs';
 import { budgetAlternatives } from '../../../lib/counterfactual.mjs';
 import type { ChatSession, Conditions, ConditionPatch, Gift, EngineProduct } from '../domain';
 import { giftFromProduct } from '../catalog.ts';
@@ -24,8 +24,8 @@ export function createLocalChatService(products: Product[]) {
       const state = engineState(session.state);
       return {
         question: singleQuestion(session),
-        result: recommend(products, state),
-        comparison: budgetAlternatives(products, state),
+        result: recommend(products, state, APP_RANKING),
+        comparison: budgetAlternatives(products, state, APP_RANKING),
       };
     },
     toGift(product: RankedProduct, conditions: Conditions): Gift {

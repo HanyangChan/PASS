@@ -18,7 +18,7 @@ const Turn = Annotation.Root({
 // C: interpret the message (common rules first, then attribution, at most one LLM call) and
 // store only what the user said through the common core.
 async function attributeNode({ input }) {
-  const { session, request, products, llm } = input;
+  const { session, request, products, llm, ranking } = input;
   let attribution = { patch: {}, questions: [], unresolved: false, items: [], provider: 'none', llmCalls: 0 };
   if (request.kind === 'message') {
     const rules = parseRules(request.text);
@@ -33,8 +33,8 @@ async function attributeNode({ input }) {
   const proposed = request.kind === 'message' ? attribution.patch : request.kind === 'patch' ? request.patch : {};
   const patch = input.preparePatch?.(session.state, proposed) ?? proposed;
   const persisted = Object.keys(patch).length
-    ? await runTurn({ session, products, request: { kind: 'patch', expectedVersion: request.expectedVersion, patch } })
-    : await runTurn({ session, products, request: { kind: 'view', expectedVersion: request.expectedVersion } });
+    ? await runTurn({ session, products, ranking, request: { kind: 'patch', expectedVersion: request.expectedVersion, patch } })
+    : await runTurn({ session, products, ranking, request: { kind: 'view', expectedVersion: request.expectedVersion } });
   return { attribution, persisted };
 }
 
@@ -47,7 +47,7 @@ const advisorNode = name => ({ input, persisted, attribution }) => {
 // Merge: opinions are shown for every agent; only enabled agents add suggestions and the
 // soft auto-preferences, which are evaluated on a copy and never stored in the session.
 async function mergeNode({ input, persisted, attribution, signals }) {
-  const { products, disabled = [], context } = input;
+  const { products, disabled = [], context, ranking } = input;
   const on = s => !disabled.includes(s.agent);
   const ordered = AGENTS.map(a => signals.find(s => s.agent === a)).filter(Boolean);
   const opinions = ordered.flatMap(s => s.opinions.filter(o => o.source).map(o => ({ agent: s.agent, ...o, enabled: on(s) })));
@@ -55,11 +55,11 @@ async function mergeNode({ input, persisted, attribution, signals }) {
   const auto = ordered.filter(on).flatMap(s => s.auto.preferences ?? []).filter(p => !base.preferences.includes(p));
   const temp = structuredClone(persisted.session);
   const evaluated = auto.length
-    ? await runTurn({ session: temp, products, request: { kind: 'patch', expectedVersion: temp.version, patch: { preferences: [...base.preferences, ...auto] } } })
+    ? await runTurn({ session: temp, products, ranking, request: { kind: 'patch', expectedVersion: temp.version, patch: { preferences: [...base.preferences, ...auto] } } })
     : persisted;
   const state = evaluated.evaluatedState ?? evaluated.session.state;
   const suggestions = ordered.filter(on).flatMap(s => s.suggestions.map(x => {
-    const items = rankProducts(products, apply(state, x.patch)).items;
+    const items = rankProducts(products, apply(state, x.patch), ranking).items;
     return { agent: s.agent, ...x, preview: { candidates: items.length, top: items[0]?.name ?? null } };
   }));
   const remembered = context.memory ?? {};
@@ -96,12 +96,12 @@ const graph = new StateGraph(Turn)
  * common runTurn, plus `context` ({today, memory, purchases, calendar} for the current
  * recipient), `disabled` agent names and an optional `llm` attributor.
  */
-export async function runAgentTurn({ session, request, products, context = {}, disabled = [], llm, preparePatch }) {
-  if (request?.kind === 'what_if_budget') return runTurn({ session, request, products });
+export async function runAgentTurn({ session, request, products, context = {}, disabled = [], llm, preparePatch, ranking }) {
+  if (request?.kind === 'what_if_budget') return runTurn({ session, request, products, ranking });
   if (typeof context.today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(context.today)) throw new TypeError('context.today must be YYYY-MM-DD');
   const unknown = disabled.filter(a => !AGENTS.includes(a));
   if (unknown.length) throw new RangeError(`Unknown agents: ${unknown.join(', ')}`);
-  const { output } = await graph.invoke({ input: { session, request, products, context, disabled, llm, preparePatch } });
+  const { output } = await graph.invoke({ input: { session, request, products, context, disabled, llm, preparePatch, ranking } });
   return output;
 }
 export const agentNames = AGENTS;

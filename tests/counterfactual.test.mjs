@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {initial,apply,recommend,rankProducts} from '../lib/engine.mjs';
+import {initial,apply,recommend,rankProducts,APP_RANKING} from '../lib/engine.mjs';
 import {budgetAlternatives} from '../lib/counterfactual.mjs';
 const catalog=JSON.parse(fs.readFileSync(new URL('./fixtures/food-demo.json',import.meta.url)));
 const state=(patch={})=>apply(apply(initial(),{quantity:1,budget:{amount_krw:30000,scope:'per_set',shipping_included:false}}),patch);
@@ -90,4 +90,12 @@ test('unknown sweetness is described as missing information, never undefined',()
  const a=budgetAlternatives(data,state()).alternatives[0];
  assert.ok(a.facts.includes('단맛: 정보 없음 → 단맛 없음'));
  assert.ok(a.facts.every(f=>!f.includes('undefined')));
+});
+
+test('budget alternative explanation reports the recomputed rank',()=>{
+ const data=[product('A',24000,{rating_count:10}),product('B',33000,{rating_count:500})];
+ const a=budgetAlternatives(data,state(),APP_RANKING).alternatives[0];
+ assert.equal(a.effect,'top_changed');assert.equal(a.target.id,'B');assert.match(a.rankingReason,/1위/);
+ const b=budgetAlternatives([product('A',24000,{rating_count:500}),product('B',33000,{rating_count:10})],state(),APP_RANKING).alternatives[0];
+ assert.equal(b.effect,'top_three_changed');assert.match(b.rankingReason,/2위/);
 });

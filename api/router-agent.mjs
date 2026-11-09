@@ -3,6 +3,7 @@ import { createAgent } from '../baseline/agents/a-router/index.mjs';
 import { createSession } from '../baseline/src/index.mjs';
 import { runTurn as coreTurn } from '../baseline/src/index.mjs';
 import { engineState, publicState, finishSingle } from '../lib/single-gift.mjs';
+import { APP_RANKING } from '../lib/engine.mjs';
 import { validateState } from '../lib/llm.mjs';
 import { createSubagentInterpreter } from '../baseline/agents/a-router/subagents/interpreter.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
@@ -33,7 +34,7 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
     if (!Array.isArray(turn.session.issues)||turn.session.issues.some(q=>typeof q!=='string'||q.length>400)) throw Error('invalid_extraction');
     return {patch:changedPatch(stateBefore,turn.session.state),questions:turn.session.issues,unresolved:turn.session.issues.length>0};
   } : undefined;
-  const agent=createAgent({interpret,singleGift:true});
+  const agent=createAgent({interpret,singleGift:true,ranking:APP_RANKING});
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const output=await agent.runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??'',history:input.history??[],signal});
   if (output.routing.route==='llm_error') throw new RouterInterpretationError(output.routing);
@@ -55,9 +56,9 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
     const summary=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.name} (${p.budget_cost_krw.toLocaleString('ko-KR')}원)`).join(', '):'조건에 맞는 상품이 없습니다.';
     message=`예산을 ${amount.toLocaleString('ko-KR')}원으로 가정해 다시 계산했어요. ${summary}\n현재 예산은 그대로입니다. 적용하려면 조건에서 예산을 변경해 주세요.`;
   } else if (output.routing.intent==='explain' && output.result && !issues.length) {
-    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 예산대 적합도와 리뷰 수를 함께 보고 유사 상품이 겹치지 않도록 선택합니다.':output.result.message;
+    message=output.result.message;
   }
-  if ((output.kind==='comparison'||output.routing.intent==='explain') && output.result?.notice) message+=`\n${output.result.notice}`;
+  if (output.kind==='comparison' && output.result?.notice) message+=`\n${output.result.notice}`;
   if(state.preferences.includes(FRAGRANCE_TAG)&&!message.includes(FRAGRANCE_NOTICE))message+='\n'+FRAGRANCE_NOTICE;
   return {...turn,message,mode:output.routing.llmCalls?'llm':input.source==='quick_reply'?'rules_fast':'rules',agent:'a-router',routing:output.routing};
 }

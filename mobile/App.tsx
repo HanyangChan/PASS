@@ -482,11 +482,11 @@ export function AppContent({
                 )}
                 {detail.link && (
                   <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(detail.link!)}>
-                    <Text style={s.sourceLink}>Amazon에서 보기</Text>
+                    <Text style={s.sourceLink}>{detail.id.startsWith('searchapi-') ? '원본 상품 보기' : 'Amazon에서 보기'}</Text>
                   </Pressable>
                 )}
                 <Text style={s.small}>
-                  {detail.source === 'engine'
+                  {detail.id.startsWith('searchapi-') ? '국내 쇼핑 검색 결과의 상품 정보예요. 실제 가격과 배송비는 판매처에서 확인해 주세요.' : detail.source === 'engine'
                     ? '상품 정보: Kaggle Amazon Products Dataset (Lokesh Parab), CC BY-NC 4.0. 가격·배송은 데모 값이에요.'
                     : '상품·가격·평점은 프로토타입용 정보예요. 실제 구매는 제공하지 않아요.'}
                 </Text>
@@ -781,8 +781,10 @@ export function AppContent({
                     <Text style={s.small}>새 대화</Text>
                   </Pressable>
                 </View>
-                <ChatTools conditions={session.state} onVoice={setInput} onApply={(patch) => {
-                  void changeChatConditions(patch, '추천 조건을 변경했어요.').then(ok => { if (ok) setComparisonId(null); });
+                <ChatTools conditions={session.state} onVoice={setInput} pending={chatPending} requestError={chatError} onApply={async (patch) => {
+                  const applied = await changeChatConditions(patch, '추천 조건을 변경했어요.');
+                  if (applied) setComparisonId(null);
+                  return applied;
                 }} />
                 <ScrollView
                   ref={chatRef}
@@ -805,7 +807,7 @@ export function AppContent({
                       {m.text}
                     </Text>
                   ))}
-                  {!question.key && result.items.length === 0 && <View style={s.noMatches}>
+                  {!question.key && result.items.length === 0 && result.status !== 'reference' && <View style={s.noMatches}>
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
                     <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
                     <Button label="제외 조건 풀어보기" onPress={() => {
@@ -898,7 +900,7 @@ export function AppContent({
                       multiline
                       style={[s.input, s.flex, chatPending && s.inputDisabled]}
                     />
-                    <ChatTools mode="voice" conditions={session.state} onVoice={setInput} onApply={() => {}} />
+                    <ChatTools mode="voice" conditions={session.state} onVoice={setInput} />
                     </View>
                     <Pressable
                       accessibilityRole="button"
@@ -1166,7 +1168,7 @@ function usePassState() {
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; mode: string; agents?: AgentPayload } | null>(null);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
   const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
@@ -1211,7 +1213,7 @@ function usePassState() {
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
-      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
     } catch (error) {
       if (chatFlight.current.revision !== revision) return null;
@@ -1243,11 +1245,12 @@ function usePassState() {
     return () => subscription.remove();
   }, []);
   const rateCard = (card: { giftId: string; rank: number; helpful: boolean; reason: string }) => {
+    const displayed = recommendation?.key === JSON.stringify(session) ? recommendation : null;
     const entry: CardFeedback = {
       ...card,
       conversationId: cloud.current ? '' : guestSession.current,
-      agentMode: serverChat ? agentMode : 'local',
-      engineMode: serverChat ? recommendation?.mode ?? 'unknown' : 'local',
+      agentMode: displayed?.agentMode ?? 'local',
+      engineMode: displayed?.mode ?? 'local',
       at: new Date().toISOString(),
     };
     const next = toggleFeedback(cardFeedbackRef.current, entry);

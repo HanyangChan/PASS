@@ -32,6 +32,28 @@ test('advisor context does not activate B without a mode selection', async () =>
   assert.equal(turn.agents, undefined);
 });
 
+test('occasion replies and editor choices round-trip through every chat mode', async () => {
+  const settings = { LLM_PROVIDER: 'openai-compatible', LLM_API_KEY: 'synthetic', LLM_BASE_URL: 'https://proxy.example/v1/' };
+  const session = { ...mother, issues: ['피해야 할 알레르기 성분을 알려주세요.'] };
+  for (const agentMode of ['a-router', 'langgraph-advisors', 'full-chat', 'full-chat-feedback-2']) {
+    const fetcher = async url => {
+      assert.match(String(url), /\/auth\/v1\/user$/);
+      return verified();
+    };
+    const expectedHoliday = { state: { ...session.state, occasion: '명절' }, issues: session.issues };
+    for (const text of ['명절이라서요.', '설날', '추석 선물 추천해줘', '어머니께 드릴 추석 선물']) {
+      const reply = await send(body({ session, agentMode, text }), settings, fetcher);
+      assert.deepEqual(reply.session, expectedHoliday);
+    }
+    const repeated = await send(body({ session: expectedHoliday, agentMode, text: '설날' }), settings, fetcher);
+    assert.match(repeated.message, /선물하는 날을 명절로 설정했어요/);
+    for (const occasion of ['합격', '기념일', '수험']) {
+      const edited = await send(body({ operation: 'conditions', agentMode, session: expectedHoliday, patch: { occasion }, clearIssues: false }), settings, fetcher);
+      assert.deepEqual(edited.session, { state: { ...session.state, occasion }, issues: session.issues });
+    }
+  }
+});
+
 test('an unclear allergy owner becomes the open question and keeps the conditions', async () => {
   const turn = await send(body({ text: '아빠랑 엄마 중에 한 분이 견과류 알레르기야' }));
   assert.match(turn.session.issues[0], /견과류 알레르기는 누구/);

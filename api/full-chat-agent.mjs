@@ -1,6 +1,7 @@
 import { createAgent } from '../baseline/agents/full-chat/index.mjs';
 import { createSession, runTurn as coreTurn } from '../baseline/src/index.mjs';
 import { engineState, publicState, finishSingle, singleQuestion } from '../lib/single-gift.mjs';
+import { APP_RANKING } from '../lib/engine.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
 export { FullChatError } from '../baseline/agents/full-chat/index.mjs';
 
@@ -16,7 +17,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   const session={...createSession('prototype-request'),state:engineState(before)};
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const pending=singleQuestion({state:before,issues:input.issues});
-  const output=await agentFactory({env,fetcher,decide,...limits}).runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??(pending.key?pending.text:''),history:input.history??[],signal});
+  const output=await agentFactory({env,fetcher,decide,ranking:APP_RANKING,...limits}).runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??(pending.key?pending.text:''),history:input.history??[],signal});
   const state=publicState(output.session.state);
   let issues=[];
   if(output.kind==='question') {
@@ -33,7 +34,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     const summary=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.name} (${p.budget_cost_krw.toLocaleString('ko-KR')}원)`).join(', '):'조건에 맞는 상품이 없습니다.';
     message=`예산을 ${amount.toLocaleString('ko-KR')}원으로 가정해 비교했어요. ${summary}\n현재 예산은 그대로입니다. 적용하려면 예산을 변경해 달라고 알려주세요.`;
   } else if(output.intent==='explain'&&output.result) {
-    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n예산 안에서 선호와 상품 인기도를 고려합니다.':output.result.message;
+    message=output.result.cards.length?output.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 명절에는 선물세트를 우선해요. 그 안에서 예산에 가까운 가격대, 받는 분에게 어울리는 상품군, 리뷰 수를 비교해요.':output.result.message;
   }
   if((output.kind==='comparison'||output.intent==='explain')&&output.result?.notice) message+=`\n${output.result.notice}`;
   if(state.preferences.includes(FRAGRANCE_TAG)) {

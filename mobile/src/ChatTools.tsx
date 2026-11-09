@@ -6,12 +6,14 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent, type ExpoSpeech
 import { colors as c, fonts as f } from './theme';
 import { Chip } from './components';
 import { createVoiceSession } from './voiceSession.mjs';
+import { giftOccasions } from '../../lib/single-gift.mjs';
+import { normalizeGiftOccasion } from '../../lib/condition-compat.mjs';
 
 import { conditionLabel as toLabel, conditionValue as toValue, normalizeEditedConditions } from './services/conditionLabels';
 import type { Conditions } from './domain';
 const arrayFields = ['recipients', 'preferences', 'excluded_categories', 'excluded_ingredients'] as const;
 const fields = [
-  ['recipients', '받는 분', '부모님, 친구'], ['occasion', '선물하는 날', '추석, 생일'],
+  ['recipients', '받는 분', '부모님, 친구'], ['occasion', '선물하는 날', '다른 상황은 직접 입력'],
   ['amount', '예산 (원)', '50000'], ['preferences', '선호 조건', '덜 달게, 차'],
   ['excluded_categories', '제외 상품군', '과자·간식, 뷰티'], ['excluded_ingredients', '피할 성분', '땅콩, 우유'],
   ['brand', '브랜드', '브랜드 이름'], ['delivery_by', '수령 마감일', '2026-10-20'],
@@ -38,8 +40,9 @@ const modelDownloadNotes = {
   download_scheduled: '다운로드가 예약됐어요. Wi-Fi 연결 등 조건이 맞으면 진행돼요. 완료 후 다시 말하기를 눌러주세요.',
 } as const;
 const hasKorean = (locales: string[]) => locales.some(locale => locale.toLowerCase().startsWith('ko'));
-export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }: {
-  mode?: 'conditions' | 'voice'; conditions: Conditions; onApply: (patch: Partial<Conditions>) => void; onVoice: (text: string) => void;
+export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions', pending = false, requestError = '' }: {
+  mode?: 'conditions' | 'voice'; conditions: Conditions; onApply?: (patch: Partial<Conditions>) => Promise<boolean | null>; onVoice: (text: string) => void;
+  pending?: boolean; requestError?: string;
 }) {
   const [expanded, setExpanded] = useState(true);
   const [panel, setPanel] = useState<'voice' | 'conditions' | null>(null);
@@ -48,6 +51,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [shipping, setShipping] = useState<boolean | null>(null);
   const [error, setError] = useState('');
+  const [saveFailed, setSaveFailed] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const [stopping, setStopping] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -135,7 +139,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
       const value = key === 'amount' ? conditions.budget.amount_krw : conditions[key];
       return [key, Array.isArray(value) ? value.map(toLabel).join(', ') : value === null ? '' : key === 'packaging' ? toLabel(String(value)) : String(value)];
     })));
-    setShipping(conditions.budget.shipping_included); setError(''); setPanel('conditions');
+    setShipping(conditions.budget.shipping_included); setError(''); setSaveFailed(false); setPanel('conditions');
   };
   const close = () => {
     voiceSessionRef.current.close();
@@ -144,7 +148,9 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     if (listeningRef.current) { listeningRef.current = false; ExpoSpeechRecognitionModule.abort(); }
     setStopping(false); setPanel(null);
   };
-  const apply = () => {
+  const apply = async () => {
+    if (pending || !onApply) return;
+    setSaveFailed(false);
     const amount = draft.amount.trim() ? Number(draft.amount.replaceAll(',', '')) : null;
     if (amount !== null && (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount))) {
       setError('예산은 0보다 큰 정수로 입력해주세요.'); return;
@@ -158,16 +164,24 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
     if (patch.packaging && !['formal', 'basic'].includes(patch.packaging)) {
       setError('포장은 격식 있는 포장 또는 기본 포장으로 입력해주세요.'); return;
     }
+    let normalized: ReturnType<typeof normalizeEditedConditions>;
     try {
-      const normalized = normalizeEditedConditions({ ...conditions, ...patch, budget: { ...conditions.budget, ...patch.budget } });
-      // Let the user review broader legacy category mappings before applying them.
-      if (normalized.notices.length) {
-        setDraft(old => ({ ...old, preferences: normalized.state.preferences.map(toLabel).join(', '), excluded_categories: normalized.state.excluded_categories.map(toLabel).join(', '), excluded_ingredients: normalized.state.excluded_ingredients.join(', ') }));
-        setError(`${normalized.notices.join(' ')} 내용을 확인하고 다시 적용해주세요.`);
-        return;
-      }
-      onApply(normalized.state); close();
-    } catch { setError('선호 조건과 제외 상품군은 표시된 상품군 이름으로 입력해주세요. 피할 성분도 확인해주세요.'); }
+      normalized = normalizeEditedConditions({ ...conditions, ...patch, budget: { ...conditions.budget, ...patch.budget } });
+    } catch {
+      setError('선호 조건과 제외 상품군은 표시된 상품군 이름으로 입력해주세요. 피할 성분도 확인해주세요.');
+      return;
+    }
+    // Let the user review broader legacy category mappings before applying them.
+    if (normalized.notices.length) {
+      const { preferences, excluded_categories, excluded_ingredients } = normalized.state;
+      setDraft(old => ({ ...old, preferences: preferences.map(toLabel).join(', '), excluded_categories: excluded_categories.map(toLabel).join(', '), excluded_ingredients: excluded_ingredients.join(', ') }));
+      setError(`${normalized.notices.join(' ')} 내용을 확인하고 다시 적용해주세요.`);
+      return;
+    }
+    setError('');
+    const saved = await onApply(normalized.state);
+    if (saved) close();
+    else setSaveFailed(true);
   };
   return <>
     {mode === 'conditions' ? <View style={s.conditionCard}>
@@ -177,7 +191,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
       {expanded && <View style={s.summary}>
         {[
           ['받는 분', conditions.recipients.join(' · ') || '미정'],
-          ['상황', conditions.occasion || '미정'],
+          ['상황', normalizeGiftOccasion(conditions.occasion) || '미정'],
           ['예산', conditions.budget.amount_krw ? `${(conditions.budget.amount_krw / 10000).toLocaleString('ko-KR')}만 원` : '미정'],
           ['선호', conditions.preferences.map(toLabel).join(' · ') || '미정'],
           ['배송비', conditions.budget.shipping_included === null ? '미정' : conditions.budget.shipping_included ? '포함' : '별도'],
@@ -214,13 +228,24 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions' }:
               </>}
               <Pressable accessibilityRole="button" onPress={close} style={s.secondary}><Text style={s.note}>취소</Text></Pressable>
             </> : <>
-              <Text style={s.note}>대화에서 확인한 조건이에요. 비어 있는 항목은 아직 정하지 않았어요. 여러 값은 쉼표로 구분해주세요.</Text>
+              <Text style={s.note}>선물하는 날을 선택하거나 직접 입력한 뒤 변경 조건 적용을 눌러주세요. 선호나 제외 조건의 여러 값은 쉼표로 구분해주세요.</Text>
               {fields.map(([key, label, placeholder]) => <View key={key} style={s.field}><Text style={s.label}>{label}</Text>
+                {key === 'occasion' && <View style={s.tools}>
+                  {giftOccasions.map(option => <Chip
+                    key={option}
+                    label={option}
+                    selected={normalizeGiftOccasion(draft.occasion) === option}
+                    onPress={() => {
+                      setDraft(old => ({ ...old, occasion: option }));
+                      setError('');
+                    }}
+                  />)}
+                </View>}
                 <TextInput accessibilityLabel={label} value={draft[key] ?? ''} onChangeText={v => { setDraft(old => ({ ...old, [key]: v })); setError(''); }} placeholder={placeholder} keyboardType={key === 'amount' ? 'numeric' : 'default'} style={s.input}/>
               </View>)}
               <Text style={s.label}>배송비 기준</Text><View style={s.tools}>{([{ label: '미정', value: null }, { label: '배송비 포함', value: true }, { label: '상품값 기준', value: false }] as const).map(item => <Chip key={item.label} label={item.label} selected={shipping === item.value} onPress={() => setShipping(item.value)}/>)}</View>
-              {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-              <Pressable accessibilityRole="button" onPress={apply} style={s.primary}><Text style={s.white}>변경 조건 적용</Text></Pressable>
+              {(error || saveFailed) && <Text accessibilityRole="alert" style={s.error}>{error || requestError || '조건을 적용하지 못했어요. 다시 시도해주세요.'}</Text>}
+              <Pressable accessibilityRole="button" disabled={pending} onPress={() => void apply()} style={[s.primary, pending && { opacity: 0.4 }]}><Text style={s.white}>{pending ? '추천 요청 처리 중…' : '변경 조건 적용'}</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={close} style={s.secondary}><Text style={s.note}>취소</Text></Pressable>
             </>}
           </ScrollView>

@@ -4,10 +4,35 @@ import { Readable } from 'node:stream';
 import { loadLocalEnv } from './local-env.mjs';
 import { localConfig } from './dev-config.mjs';
 import { createApi } from './worker.mjs';
-const worker=createApi({onDiagnostic:event=>console.warn(JSON.stringify(event))});
+import { todayKst } from '../lib/catalog.mjs';
 let config;
-try { config=localConfig(await loadLocalEnv()); }
+let flowerAdvice;
+let catalog;
+let shoppingText;
+try {
+  config=localConfig(await loadLocalEnv());
+  if (process.env.FLOWER_DB_PATH) {
+    const { createFlowerAdvice } = await import('./flower-season.mjs');
+    flowerAdvice = createFlowerAdvice(process.env.FLOWER_DB_PATH);
+  }
+  const shoppingDbPath = process.env.SHOPPING_DB_PATH;
+  if (shoppingDbPath) {
+    const { readShoppingCatalog, rewriteShoppingRequest } = await import('./local-shopping-catalog.mjs');
+    shoppingText = rewriteShoppingRequest;
+    let day = todayKst();
+    let products = readShoppingCatalog(shoppingDbPath, day);
+    catalog = () => {
+      const today = todayKst();
+      if (day !== today) {
+        products = readShoppingCatalog(shoppingDbPath, today);
+        day = today;
+      }
+      return products;
+    };
+  }
+}
 catch(error) { console.error(`API 시작 실패: ${error.message}`); process.exit(1); }
+const worker=createApi({catalog,flowerAdvice,shoppingText,onDiagnostic:event=>console.warn(JSON.stringify(event))});
 const localLimit = limit => {
   const buckets = new Map();
   return { async limit({ key }) {

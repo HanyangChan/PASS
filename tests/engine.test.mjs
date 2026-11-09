@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {initial,apply,extract,recommend,differences,ALLERGY_NOTICE}from '../lib/engine.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {initial,apply,extract,recommend,differences,ALLERGY_NOTICE,APP_RANKING}from '../lib/engine.mjs';
 const products=JSON.parse(fs.readFileSync(new URL('./fixtures/food-demo.json',import.meta.url)));const cases=JSON.parse(fs.readFileSync(new URL('../lib/test-dialogues.json',import.meta.url)));
 for(const c of cases)test(c.id+' '+c.title,()=>{let s=initial();for(const t of c.turns){const parsed=extract(t.user,s);s=apply(s,parsed.patch);assert.deepEqual(s,t.expected_state);assert.equal(parsed.questions.length>0,t.clarification_topics.length>0)}});
 test('total budget includes per-set shipping',()=>{const s=apply(initial(),{quantity:3,same_product:true,budget:{amount_krw:78000,scope:'total',shipping_included:true}});assert.equal(recommend(products,s).items.length,0);s.budget.amount_krw=81000;assert.ok(recommend(products,s).items.every(p=>p.total===81000));});
@@ -60,4 +60,24 @@ test('one exclusion clause does not remove a category requested in another claus
  const patch=extract('향수는 포함해도 돼. 견과류는 빼줘',previous).patch;
  assert.deepEqual(patch.excluded_categories,[]);
  assert.deepEqual(patch.excluded_ingredients,['견과류']);
+});
+test('150,000 won prefers 100,000 through 150,000 including shipping, with a cheaper fallback',()=>{
+ const p=(id,price,shipping,rating_count)=>({...products[0],id,price_krw:price,shipping_fee_per_set_krw:shipping,rating_count,allergens_declared:[]});
+ const cheap=p('cheap',12500,2500,100000);
+ const data=[cheap,p('low',97500,2500,20),p('mid',117500,2500,30),p('cap',147500,2500,10),p('over',147501,2500,100000)];
+ const state=apply(initial(),{budget:{amount_krw:150000,scope:'per_set',shipping_included:true}});
+ assert.deepEqual(recommend(data,state,APP_RANKING).items.map(x=>x.id),['mid','low','cap']);
+ assert.deepEqual(recommend([cheap,data[1]],state,APP_RANKING).items.map(x=>x.id),['low','cheap']);
+});
+test('holiday sets outrank other eligible items while keeping budget, exclusions, and explicit tastes',()=>{
+ const product=(id,name,price,extra={})=>({...products[0],id,name,category:'food',price_krw:price,shipping_fee_per_set_krw:0,allergens_declared:[],...extra});
+ const set=product('set','참치 선물세트',25000);
+ const plain=product('plain','차',45000,{category:'coffee_tea',rating_count:500});
+ const excluded=product('excluded','견과 선물세트',45000,{allergens_declared:['견과류']});
+ const overBudget=product('over','과일 선물세트',60000);
+ const data=[set,plain,excluded,overBudget];
+ const state=apply(initial(),{occasion:'명절',excluded_ingredients:['견과류'],budget:{amount_krw:50000}});
+ assert.deepEqual(recommend(data,state,APP_RANKING).items.map(x=>x.id),['set','plain']);
+ assert.equal(recommend(data,apply(state,{occasion:'생일'}),APP_RANKING).items[0].id,'plain');
+ assert.equal(recommend(data,apply(state,{preferences:['category:coffee_tea']}),APP_RANKING).items[0].id,'plain');
 });
