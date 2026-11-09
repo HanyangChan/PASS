@@ -1,7 +1,7 @@
 import {mentionedAllergens} from './allergens.mjs';
 import {FRAGRANCE_TAG,FRAGRANCE_NOTICE,isFragranceProduct} from './fragrance.mjs';
 import {recipientCategories} from './catalog.mjs';
-import {typeScore} from './ranking.mjs';
+import {isGiftSet,typeScore} from './ranking.mjs';
 export const initial=()=>({occasion:null,recipients:[],quantity:null,same_product:null,budget:{amount_krw:null,scope:null,shipping_included:null},preferences:[],excluded_categories:[],excluded_ingredients:[],brand:null,delivery_by:null,packaging:null});
 export function apply(state,patch){const next=structuredClone(state); for(const [k,v] of Object.entries(patch))next[k]=k==='budget'?{...next[k],...v}:v;return next}
 export function differences(a,b,path=''){return Object.keys(b).flatMap(k=>{const p=path?`${path}.${k}`:k;return b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])?differences(a[k],b[k],p):JSON.stringify(a[k])!==JSON.stringify(b[k])?[{field:p,before:a[k],after:b[k]}]:[]})}
@@ -13,24 +13,66 @@ export function budgetCost(product, state) {
 export const ALLERGY_NOTICE='상품명 기준으로 알레르기 성분을 추정했어요. 구매 전 성분표를 꼭 확인해 주세요.';
 // Category-relative popularity, then absolute review count (so leaders of small categories do not tie on price).
 export const morePopular=(a,b)=>a.popularity-b.popularity||(a.rating_count||0)-(b.rating_count||0);
-export function rankProducts(products, s) {
- // Equal preference: popularity first, then the cheaper item. Review counts differ by orders of
- // magnitude across categories (earphones vs tea), so popularity is relative to the category leader.
+export const APP_RANKING = Object.freeze({ preferBudgetRange: true, preferHolidaySets: true });
+export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false } = {}) {
  const suited=recipientCategories(s.recipients);
- const leader={};for(const p of products)leader[p.category]=Math.max(leader[p.category]||0,p.rating_count||0);
+ const leader=new Map();
+ for (const product of products) {
+  leader.set(product.category, Math.max(leader.get(product.category) ?? 0, product.rating_count ?? 0));
+ }
  if(s.budget.scope==='total'&&!s.quantity)return {status:'needs_clarification',message:'총 몇 세트가 필요한가요?',items:[]};
  if(s.quantity>1&&s.same_product!==true)return {status:'needs_clarification',message:'모두 같은 상품으로 보낼까요?',items:[]};
- const q=s.quantity||1;
- const items=products.filter(p=>!(s.preferences.includes(FRAGRANCE_TAG)&&isFragranceProduct(p))&&!s.excluded_categories.includes(p.category)&&(!s.brand||p.brand===s.brand)&&(!s.packaging||p.packaging===s.packaging)&&(!s.delivery_by||p.arrival_date<=s.delivery_by)&&p.stock_sets>=q&&!(p.allergens_declared||[]).some(a=>s.excluded_ingredients.includes(a))).map(p=>({...p,popularity:(p.rating_count||0)/(leader[p.category]||1),total:q*(p.price_krw+(s.budget.shipping_included?p.shipping_fee_per_set_krw:0)),score:(suited.has(p.category)?1:0)+typeScore(p,s)+s.preferences.reduce((v,x)=>v+(x===`category:${p.category}`?3:x==='unsweetened'&&p.sweetness==='unsweetened'?2:x==='less_sweet'?({unsweetened:2,naturally_sweet:1,sweet:0}[p.sweetness]||0):0),0)})).filter(p=>s.budget.amount_krw===null||budgetCost(p,s)<=s.budget.amount_krw).sort((a,b)=>b.score-a.score||morePopular(b,a)||a.price_krw-b.price_krw||a.id.localeCompare(b.id));
+
+ const quantity=s.quantity||1;
+ const cap=s.budget.amount_krw;
+ const preferredMinimum=preferBudgetRange&&cap!==null?Math.ceil(cap*2/3):null;
+ const holiday=preferHolidaySets&&/^(명절|설날|추석|한가위|설)$/.test(s.occasion??'');
+ const ranked=[];
+ for (const product of products) {
+  if (s.excluded_categories.includes(product.category)
+   || (s.brand && product.brand!==s.brand)
+   || (s.packaging && product.packaging!==s.packaging)
+   || (s.delivery_by && !(product.arrival_date<=s.delivery_by))
+   || !(product.stock_sets>=quantity)
+   || (product.allergens_declared??[]).some(allergen=>s.excluded_ingredients.includes(allergen))
+   || (s.preferences.includes(FRAGRANCE_TAG) && isFragranceProduct(product))) continue;
+
+  const cost=budgetCost(product,s);
+  if (cap!==null && cost>cap) continue;
+  const explicitScore=typeScore(product,s)+s.preferences.reduce((score,preference)=>{
+   if (preference===`category:${product.category}`) return score+3;
+   if (preference==='unsweetened' && product.sweetness==='unsweetened') return score+2;
+   if (preference==='less_sweet') return score+({unsweetened:2,naturally_sweet:1}[product.sweetness]??0);
+   return score;
+  },0);
+  const budgetTier=preferredMinimum!==null&&cost>=preferredMinimum?1:0;
+  const score=explicitScore+(suited.has(product.category)?1:0);
+  const holidaySet=holiday&&isGiftSet(product)?1:0;
+  ranked.push({explicitScore,holidaySet,budgetTier,item:{
+   ...product,
+   popularity:(product.rating_count??0)/(leader.get(product.category)||1),
+   total:quantity*(product.price_krw+(s.budget.shipping_included?product.shipping_fee_per_set_krw:0)),
+   score,
+  }});
+ }
+ // Explicit tastes remain meaningful even when matching products cost less than the preferred range.
+ ranked.sort((a,b)=>((preferBudgetRange||holiday) ? b.explicitScore-a.explicitScore : 0)
+  ||b.holidaySet-a.holidaySet||b.budgetTier-a.budgetTier||b.item.score-a.item.score
+  ||morePopular(b.item,a.item)||a.item.price_krw-b.item.price_krw||a.item.id.localeCompare(b.item.id));
+ const items=ranked.map(row=>row.item);
  const fragranceNotice=s.preferences.includes(FRAGRANCE_TAG)?FRAGRANCE_NOTICE:null;
  const notice=[s.excluded_ingredients.length?ALLERGY_NOTICE:null,fragranceNotice].filter(Boolean).join(' ')||null;
  return {status:items.length?'ready':'no_match',message:items.length?`현재 조건에 맞는 상품을 골랐어요.${notice?` ${notice}`:''}`:`조건에 맞는 상품이 없어요. 예산이나 제외 조건을 조정해 주세요.${fragranceNotice?` ${notice}`:''}`,notice,items};
 }
-export function recommend(products,s){const result=rankProducts(products,s);return {...result,items:result.items.slice(0,3)}}
+export function recommend(products,s,ranking){const result=rankProducts(products,s,ranking);return {...result,items:result.items.slice(0,3)}}
 const nums={'한':1,'두':2,'세':3,'네':4,'다섯':5,'네 집':4};
 const CATEGORY_WORDS=[['food',/과일|식품|기름|오일/],['coffee_tea',/커피|홍차|녹차|전통차|차로|차를|차\s*(?:좋아|선호)/],['snack',/과자|간식|초콜릿|쿠키|한과/],['beauty',/향수|화장품|스킨케어|로션/],['makeup',/메이크업|립스틱|섀도/],['fitness',/운동|헬스|요가|피트니스/],['audio',/이어폰|헤드폰|스피커|음악/],['jewelry',/주얼리|목걸이|팔찌|귀걸이|반지/],['watch',/시계/],['bag',/가방|백팩/],['accessory',/지갑|선글라스/],['toy',/장난감|완구|인형|레고/],['health',/건강|영양제|홍삼/],['kitchen',/주방|요리/],['decor',/인테리어|장식|향초|무드등/],['personal_care',/면도기|드라이기/]];
 export function extract(text,state){const p={},questions=[];let recognized=false;const set=(k,v)=>{p[k]=v;recognized=true};
  if(/추석|설(?:날|\s|$)/.test(text))set('occasion',text.includes('추석')?'추석':'설');
+ else {
+  const occasions=new Set(Array.from(text.matchAll(/(명절|생일)(?=\s*(?:선물|$))/g),match=>match[1]));
+  if(occasions.size===1)set('occasion',[...occasions][0]);
+ }
  text=text.replaceAll('엄마','어머니').replaceAll('아빠','아버지');
  const rs=['부모님','어머니','아버지','처가','교수님','직장 상사','동료','친구','동창'].filter(x=>text.includes(x));if(rs.length)set('recipients',/에도/.test(text)?[...new Set([...state.recipients,...rs])]:rs);
  const qm=text.match(/(다섯|한|두|세|네|\d+)\s*(?:세트|집)/);if(qm)set('quantity',nums[qm[1]]||Number(qm[1]));

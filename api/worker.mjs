@@ -1,14 +1,15 @@
 import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst, CATALOG_ID } from '../lib/catalog.mjs';
 import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
-import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion } from '../lib/single-gift.mjs';
-import { apply, recommend } from '../lib/engine.mjs';
+import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, occasionReply } from '../lib/single-gift.mjs';
+import { apply, recommend, APP_RANKING } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
 import { prototypeFullChatTurn, FullChatError } from './full-chat-agent.mjs';
 import { createAgent as createFeedbackAgent } from '../baseline/agents/full-chat-feedback/index.mjs';
 import { resolveLlm } from '../lib/llm-provider.mjs';
 import { LANGGRAPH_AGENT, prototypeLangGraphTurn, readAdvisorContext } from './langgraph-agent.mjs';
+import { parseConditions } from '../baseline/agents/a-router/parser.mjs';
 
 const selectableAgents = ['a-router', LANGGRAPH_AGENT, 'full-chat', 'full-chat-feedback-2'];
 
@@ -34,13 +35,32 @@ async function readJson(request) {
     catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
   } finally { clearTimeout(timeout); void reader.cancel().catch(() => {}); }
 }
-function inputOf(raw) {
+function explicitGiftPatch(text, state, shoppingText) {
+  const occasion = occasionReply(text);
+  if (occasion) return { occasion };
+  const shopping = shoppingText?.(text);
+  if (!shopping && !/(?:명절|설날|추석|한가위)(?:에)?\s*(?:(?:드릴|줄|드리는|주는)\s+)?선물/.test(text)) return null;
+  const parsed = parseConditions(shopping ?? text, engineState(state));
+  const patch = parsed.patch;
+  if (parsed.unresolved || parsed.questions.length || parsed.limitations?.length || patch.quantity !== undefined ||
+      patch.same_product !== undefined || patch.budget?.scope !== undefined) return null;
+  if (!patch.occasion && !patch.brand) return null;
+  return patch;
+}
+function inputOf(raw, shoppingText) {
   try {
     if (!raw || !['turn', 'conditions', 'view'].includes(raw.operation)) throw Error();
     const session = { ...raw.session, state: normalizeConditions(raw.session?.state).state };
     validateState(session.state);
     if (!Array.isArray(session.issues) || session.issues.length > 12 || session.issues.some(q => typeof q !== 'string' || q.length > 400)) throw Error();
-    if (raw.operation === 'turn') return { ...validateRequest({ ...session, text: raw.text, history: raw.history, source: raw.source }), operation: 'turn' };
+    let occasionText;
+    if (raw.operation === 'turn') {
+      const turn = validateRequest({ ...session, text: raw.text, history: raw.history, source: raw.source });
+      const patch = explicitGiftPatch(turn.text, session.state, shoppingText);
+      if (!patch || (session.issues.length && patch.excluded_ingredients)) return { ...turn, operation: 'turn' };
+      occasionText = patch.occasion ? turn.text : undefined;
+      raw = { operation: 'conditions', patch, clearIssues: false };
+    }
     if (raw.operation === 'conditions') {
       if (!raw.patch || typeof raw.patch !== 'object' || Array.isArray(raw.patch) || Object.keys(raw.patch).some(key => !Object.hasOwn(session.state, key))) throw Error();
       if (raw.patch.budget !== undefined && (!raw.patch.budget || Array.isArray(raw.patch.budget) || typeof raw.patch.budget !== 'object' || Object.keys(raw.patch.budget).some(key => !['amount_krw', 'shipping_included'].includes(key)))) throw Error();
@@ -50,7 +70,7 @@ function inputOf(raw) {
       raw = { ...raw, patch, routerPatch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
-    return { ...raw, session, state: session.state, issues: session.issues };
+    return { ...raw, session, state: session.state, issues: session.issues, occasionText };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
@@ -64,9 +84,9 @@ function defaultCatalog(fetcher) {
 }
 export function recommendationView(session, products) {
   const state = engineState(session.state);
-  return { question: singleQuestion(session), result: recommend(products, state), comparison: budgetAlternatives(products, state) };
+  return { question: singleQuestion(session), result: recommend(products, state, APP_RANKING), comparison: budgetAlternatives(products, state, APP_RANKING) };
 }
-export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), onDiagnostic } = {}) {
+export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), flowerAdvice, shoppingText, onDiagnostic } = {}) {
   return {
     async fetch(request, env) {
       const origin = request.headers.get('origin');
@@ -85,7 +105,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
         const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, products: count ?? 0 },count===null?503:200);
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: CATALOG_ID, products: count ?? 0, ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -117,11 +137,21 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         if (fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) throw new ApiError(503,'configuration','전체 채팅 Agent는 서버의 OpenAI 호환 LLM 설정과 키가 필요합니다.');
         if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
         if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
-        const input = inputOf(raw);
+        const input = inputOf(raw, shoppingText);
         let advisorContext;
         if (chatAgent === LANGGRAPH_AGENT) {
           try { advisorContext = readAdvisorContext(raw.agents); }
           catch { throw new ApiError(400, 'invalid_request', '자문에 사용할 조건을 확인해주세요.'); }
+        }
+        const flowerTurn = input.operation === 'turn' ? flowerAdvice?.(input) : null;
+        if (flowerTurn) {
+          const { question, message } = flowerTurn;
+          const view = {
+            question,
+            result: { status: 'reference', items: [], message, notice: null },
+            comparison: { status: 'no_alternative', alternatives: [], message: '' },
+          };
+          return json({ ...flowerTurn, view, changes: [], mode: 'rules', agent: chatAgent || 'legacy', llmProvider: null, llmModel: null, catalog: CATALOG_ID });
         }
         let products;
         try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
@@ -145,6 +175,9 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
             try { turn = await llm.extract(input, products, llm.options); mode = 'llm'; }
             catch (error) { const failure = geminiFailure(error); diagnose(failure.code,503); return json({ error: failure.error, code: failure.code }, 503); }
           } else turn = singleTurn({ state: input.state, issues: input.issues }, input.text, products);
+        }
+        if (input.occasionText && input.routerPatch?.occasion === '명절' && turn.session.state.occasion === '명절') {
+          turn = { ...turn, message: `선물하는 날을 명절로 설정했어요.\n${turn.message}` };
         }
         const usedModel = mode === 'llm' || mode === 'agents' && turn.routing.llmCalls > 0;
         return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products), mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: CATALOG_ID });

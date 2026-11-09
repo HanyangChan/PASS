@@ -8,3 +8,15 @@
 4. **배포**: `npm run deploy:api`, Vercel 재배포 후 `/health`의 `products` 개수를 확인한다.
 
 가격은 `₹ × 16 × 2`(한국 선물 가격대 보정, 100원 단위)로 환산한다. 배송비(3만 원 이상 무료, 미만 3,000원)·도착일(2~4일)·재고(99)·포장은 규칙 합성값이며 `demo_fields`에 기록되어 앱 상세에 "데모 값"으로 표시된다. 알레르기는 상품명 키워드 추정(`lib/allergens.mjs`)이며, 키워드가 없다고 안전하다는 뜻은 아니다.
+
+## 로컬 꽃과 국내 선물세트
+
+`node scripts/catalog/flowers-local.mjs import`로 [aT 양재 월별 절화 통계](https://flower.at.or.kr/haa00_new/haa00_new.do)를 내려받는다. 같은 스크립트에 `5` 또는 `3 5`를 넘겨 5월 또는 3~5월을 조회할 수 있다.
+
+`node scripts/catalog/shopping-local.mjs <검색 스냅샷 경로>`는 스팸, 백설 식용유, 동원 참치 선물세트의 검색 스냅샷을 가져온다. JSON의 `searches` 배열에는 각 `query`와 `items`가 들어가며, 상품별로 `name`, `displayed_price_krw`, `product_link`를 사용한다. 관측 가격과 테스트용 배송비 2,500원을 추천에 사용한다.
+
+두 스크립트의 기본 DB는 `data/shopping-poc/catalog.sqlite`다. 적재한 데이터만 골라 Node 개발 서버에 연결할 수 있다.
+
+```sh
+FLOWER_DB_PATH=data/shopping-poc/catalog.sqlite SHOPPING_DB_PATH=data/shopping-poc/catalog.sqlite npm run dev:api
+```

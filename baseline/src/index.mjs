@@ -13,8 +13,8 @@ function missing(s) {
   if (s.quantity > 1 && s.same_product !== true) return '여러 명에게 같은 상품을 보낼지 확인해 주세요.';
   return null;
 }
-function resultFor(products, state) {
-  const result = recommend(products, state);
+function resultFor(products, state, ranking) {
+  const result = recommend(products, state, ranking);
   // Independent final hard-constraint gate over returned engine facts.
   for (const p of result.items) {
     if (budgetCost(p,state) > state.budget.amount_krw || state.excluded_categories.includes(p.category) || p.allergens_declared.some(a=>state.excluded_ingredients.includes(a)) || p.stock_sets < state.quantity || (state.brand && p.brand !== state.brand) || (state.packaging && p.packaging !== state.packaging) || (state.delivery_by && p.arrival_date > state.delivery_by))
@@ -27,7 +27,7 @@ function resultFor(products, state) {
 /** Pure turn: caller owns authentication, durable storage and atomic version comparison.
  * interpret({text,state}) -> Promise<{patch,questions,unresolved}> is the branch extension port.
  */
-export async function runTurn({session,request,products,interpret}) {
+export async function runTurn({session,request,products,interpret,ranking}) {
   validateSession(session);
   if (!request || !['message','patch','view','what_if_budget'].includes(request.kind) || !Number.isSafeInteger(request.expectedVersion)) throw new BaselineError('invalid_request');
   if (request.expectedVersion !== session.version) throw new BaselineError('version_conflict');
@@ -62,7 +62,7 @@ export async function runTurn({session,request,products,interpret}) {
   }
   const question=questions[0] || missing(state);
   if (question) return {session:next,kind:'question',question,trace};
-  const result=resultFor(products,state);
+  const result=resultFor(products,state,ranking);
   trace.push({stage:'engine',status:result.status},{stage:'verify',status:'passed'});
   return {session:next,kind:request.kind==='what_if_budget'?'comparison':'recommendation',evaluatedState:structuredClone(state),result,trace};
 }

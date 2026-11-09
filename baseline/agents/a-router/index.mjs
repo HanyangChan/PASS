@@ -32,7 +32,7 @@ function annotate(out, {intent,route,llmCalls=0,diagnostics}) {
 }
 
 /** Server-controlled routing; only unresolved language may invoke interpret once. */
-export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {}) {
+export function createAgent({ interpret, timeoutMs=18000, singleGift=false, ranking } = {}) {
   if (typeof singleGift!=='boolean') throw new TypeError('singleGift must be a boolean');
   const preparePatch=(state,patch)=>{
     // First identification is not a recipient switch: keep conditions supplied earlier.
@@ -53,7 +53,7 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       if (typeof pendingQuestion!=='string'||pendingQuestion.length>400 || !Array.isArray(history)||history.length>6||history.some(m=>!['user','assistant'].includes(m?.role)||typeof m.text!=='string'||m.text.length>1200)) throw new BaselineError('invalid_request');
       if (['view','what_if_budget'].includes(request.kind) && /성분/.test(pendingQuestion)) return annotate({session:structuredClone(session),kind:'question',question:pendingQuestion,trace:[]},{intent:request.kind,route:'clarification'});
       if (request.kind!=='message') {
-        const out=await runCoreTurn({session,request:request.kind==='patch'?{...request,patch:preparePatch(session.state,request.patch)}:request,products});
+        const out=await runCoreTurn({session,request:request.kind==='patch'?{...request,patch:preparePatch(session.state,request.patch)}:request,products,ranking});
         if (/성분/.test(pendingQuestion) && !Object.hasOwn(request.patch??{},'excluded_ingredients') && JSON.stringify(out.session.state.recipients)===JSON.stringify(session.state.recipients)) return annotate({session:out.session,kind:'question',question:pendingQuestion,trace:out.trace},{intent:request.kind,route:'clarification'});
         return annotate(out,{intent:request.kind,route:'rules'});
       }
@@ -63,13 +63,13 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       if (intent.kind==='clarify') return ask(intent.question);
       if (intent.kind!=='message') {
         if (/성분/.test(pendingQuestion)) return ask(pendingQuestion);
-        const out=await runCoreTurn({session,products,request:{...intent,expectedVersion:request.expectedVersion}});
+        const out=await runCoreTurn({session,products,ranking,request:{...intent,expectedVersion:request.expectedVersion}});
         if (intent.intent==='explain' && out.result?.cards.length) {
-          out.result.message=out.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+'\n선호가 같으면 예산대 적합도와 리뷰 수를 함께 보고 유사 상품이 겹치지 않도록 선택합니다.'+(out.result.notice?`\n${out.result.notice}`:'');
+          out.result.message=out.result.cards.map(p=>`${p.rank}위 ${p.explanation} 선호 점수 ${p.score}점입니다.`).join('\n')+(ranking?.preferBudgetRange?'\n선호가 같으면 명절에는 선물세트를 우선해요. 그 안에서 예산에 가까운 가격대, 받는 분에게 어울리는 상품군, 리뷰 수를 비교해요.':'\n선호가 같으면 상품군 내 상대 리뷰 수와 전체 리뷰 수를 차례로 비교합니다.')+(out.result.notice?`\n${out.result.notice}`:'');
         }
         return annotate(out,{intent:intent.intent,route:'rules'});
       }
-      const view=await runCoreTurn({session,products,request:{kind:'view',expectedVersion:session.version}});
+      const view=await runCoreTurn({session,products,ranking,request:{kind:'view',expectedVersion:session.version}});
       let parsed=parseConditions(request.text,session.state,{pendingQuestion:pendingQuestion || (view.kind==='question'?view.question:'')});
       let llmCalls=0,route=parsed.route;
       if (parsed.unresolved && parsed.route==='unresolved' && interpret) {
@@ -85,7 +85,7 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false } = {
       if (parsed.unresolved) return ask(parsed.questions[0]||'조건을 확인해 주세요.',route==='unresolved'?'clarification':route,llmCalls,diagnostics);
       // Removing a prior allergen requires an explicit rule-recognized cancellation.
       if (route==='llm' && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients)) && parsed.patch.excluded_ingredients) parsed.patch.excluded_ingredients=[...new Set([...session.state.excluded_ingredients,...parsed.patch.excluded_ingredients])];
-      const out=await runCoreTurn({session,products,request:{kind:'patch',expectedVersion:request.expectedVersion,patch:preparePatch(session.state,parsed.patch)}});
+      const out=await runCoreTurn({session,products,ranking,request:{kind:'patch',expectedVersion:request.expectedVersion,patch:preparePatch(session.state,parsed.patch)}});
       if (/성분/.test(pendingQuestion) && !Object.hasOwn(parsed.patch,'excluded_ingredients') && (!parsed.patch.recipients || JSON.stringify(parsed.patch.recipients)===JSON.stringify(session.state.recipients))) return annotate({session:out.session,kind:'question',question:pendingQuestion,trace:out.trace},{intent:intent.intent,route:'clarification',llmCalls,diagnostics});
       if (parsed.questions.length) return annotate({session:out.session,kind:'question',question:parsed.questions[0],trace:out.trace,limitations:parsed.limitations??[]},{intent:intent.intent,route,llmCalls,diagnostics});
       return annotate({...out,limitations:parsed.limitations??[]},{intent:intent.intent,route,llmCalls,diagnostics});

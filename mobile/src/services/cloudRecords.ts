@@ -3,6 +3,7 @@ import { validateState } from '../../../lib/llm.mjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decodeGifts } from '../storage.ts';
 import type { ChatMessage, ChatSession, Gift, GiftRecords } from '../domain';
+import { decodeFeedback, stampConversation, type CardFeedback } from '../cardFeedback.ts';
 
 const keyOf = (gift: Gift) => `${gift.source ?? 'prototype'}:${gift.id}`;
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -27,6 +28,11 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
   let messageIds: string[] = [];
   let messageTimes: string[] = [];
   let previousMessages: ChatMessage[] = [];
+  // Card feedback is held in memory and rides on the next chat commit; saveFeedback() is the single
+  // lighter write used when nothing else saved it. `written` is what the server last acknowledged.
+  let feedbackState: CardFeedback[] = [];
+  let written = '[]';
+  let committed: { id: string; state: ChatSession['state']; ids: string[]; issues: string[] } | null = null;
   async function assertOwner() {
     if (!active) throw new Error('계정이 변경되어 저장을 취소했어요.');
     const { data, error } = await client.auth.getSession(); check(error);
@@ -65,6 +71,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       const conversation = chats.data?.[0];
       let session = copy(emptySession), messages: ChatMessage[] = [];
       let migrationNotice = '';
+      let feedback: CardFeedback[] = [];
       if (conversation) {
         const { _pass, ...state } = conversation.conditions;
         if (!validSession(state) || !_pass || _pass.version !== 1 || !Array.isArray(_pass.message_ids) ||
@@ -88,12 +95,31 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         session = { state: normalized.state, issues: _pass.issues };
         if (normalized.notices.length) migrationNotice = `${normalized.notices.join(' ')} 조건 편집창에서 범위를 확인해주세요.`;
         conversationId = conversation.id;
+        feedback = decodeFeedback(_pass.feedback);
+        committed = { id: conversation.id, state: session.state, ids, issues: session.issues };
         messageIds = ids;
         messageTimes = ids.map(id => found.get(id)!.created_at);
       }
       previous = copy(records);
       previousMessages = copy(messages);
-      return { ...records, session, messages, migrationNotice };
+      feedbackState = copy(feedback); written = JSON.stringify(feedback);
+      return { ...records, session, messages, migrationNotice, feedback };
+    },
+    // Memory only, no request. The conversation id is stamped when a save is enqueued.
+    setFeedback(value: CardFeedback[]) { feedbackState = copy(value); },
+    saveFeedback() {
+      const id = conversationId;
+      if (!id) return Promise.resolve();
+      const feedback = stampConversation(copy(feedbackState), id);
+      if (JSON.stringify(feedback) === written) return Promise.resolve();
+      return enqueue(async () => {
+        // Not committed yet (or a newer conversation took over): the next chat commit carries it.
+        if (!committed || committed.id !== id) return;
+        if (JSON.stringify(feedback) === written) return; // a chat commit already carried it
+        const update = await client.from('conversations').update({ conditions: { ...committed.state, _pass: { version: 1, committed: true, message_ids: committed.ids, issues: committed.issues, feedback } } }).eq('id', id).eq('user_id', owner);
+        check(update.error);
+        written = JSON.stringify(feedback);
+      });
     },
     saveGifts(value: GiftRecords) {
       const snapshot = copy(value);
@@ -133,18 +159,21 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       const id = conversationId!;
       for (let index = messageIds.length; index < messages.length; index++) { messageIds.push(uuid()); messageTimes.push(new Date().toISOString()); }
       const ids = messageIds.slice(0, messages.length), times = messageTimes.slice(0, messages.length);
+      const feedback = stampConversation(copy(feedbackState), id);
       previousMessages = copy(messages);
       return enqueue(async () => {
         // Initial row is retry-safe. The final conditions update commits the ordered message IDs.
         // Readers ignore messages from an interrupted write until that commit succeeds.
-        const create = await client.from('conversations').upsert({ id, user_id: owner, conditions: { ...session.state, _pass: { version: 1, committed: false, message_ids: [], issues: [] } } }, { onConflict: 'id', ignoreDuplicates: true });
+        const create = await client.from('conversations').upsert({ id, user_id: owner, conditions: { ...session.state, _pass: { version: 1, committed: false, message_ids: [], issues: [], feedback: [] } } }, { onConflict: 'id', ignoreDuplicates: true });
         check(create.error);
         if (messages.length) {
           const result = await client.from('messages').upsert(messages.map((message, index) => ({ id: ids[index], conversation_id: id, user_id: owner, role: message.role, content: message.text, created_at: times[index] })), { onConflict: 'id' });
           check(result.error);
         }
-        const commit = await client.from('conversations').update({ conditions: { ...session.state, _pass: { version: 1, committed: true, message_ids: ids, issues: session.issues } }, title: messages.find(message => message.role === 'user')?.text.slice(0, 80) ?? '' }).eq('id', id).eq('user_id', owner);
+        const commit = await client.from('conversations').update({ conditions: { ...session.state, _pass: { version: 1, committed: true, message_ids: ids, issues: session.issues, feedback } }, title: messages.find(message => message.role === 'user')?.text.slice(0, 80) ?? '' }).eq('id', id).eq('user_id', owner);
         check(commit.error);
+        committed = { id, state: session.state, ids, issues: session.issues };
+        written = JSON.stringify(feedback);
       });
     },
   };

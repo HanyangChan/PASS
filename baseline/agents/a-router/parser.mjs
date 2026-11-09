@@ -57,6 +57,10 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
     return {patch:{budget:{shipping_included:shippingYes.test(rest)}},questions:[],unresolved:false,route:'rules'};
   }
   const take=(re,fn)=>{rest=rest.replace(re,(...args)=>{fn?.(...args);return ' ';});};
+  const occasions=[];
+  take(/(명절|설날|추석|한가위|생일)(?:에)?(?=\s*(?:(?:드릴|줄|드리는|주는)\s+)?선물|\s*$)/g,(_,occasion)=>occasions.push(/설날|추석|한가위/.test(occasion)?'명절':occasion));
+  if (unique(occasions).length>1) return question('이번 선물은 명절용인가요, 생일용인가요?');
+  if (occasions.length) patch.occasion=occasions[0];
   const recipients=[];
   take(/(직장 상사|직장동료|부모님|어머니|아버지|할머니|할아버지|교수님|선생님|엄마|아빠|친구|동료|연인|애인|손주|손녀|자녀)(?:는|은|에게|한테|께)?/g,(_,r)=>recipients.push(({엄마:'어머니',아빠:'아버지'})[r]||r));
   if (unique(recipients).length>1) return question('이번에 선물할 수령인 한 명을 지정해 주세요.');
@@ -114,7 +118,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/(\d{4})[-년]\s*(\d{1,2})[-월]\s*(\d{1,2})(?:일)?(?:까지)?/g,(_,y,m,d)=>{patch.delivery_by=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;});
   take(/배송일\s*조건\s*취소/g,()=>{patch.delivery_by=null;});
   // Only recognized filler may disappear. Unconsumed text triggers the LLM/clarification route.
-  rest=rest.replace(/추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|선물|예산|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|주세요|해주세요|변경|바꿔줘|수정|까지|요/g,'').replace(/[\s,.!?~]/g,'');
+  rest=rest.replace(/(?:(?:드릴|줄|드리는|주는)\s+)?선물(?:로)?|추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|예산(?:은|이)?|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|해주세요|변경|바꿔줘|수정|까지|요/g,'').replace(/[\s,.!?~]/g,'');
   if (rest) return unknown();
   if (!Object.keys(patch).length&&!limitations.length) return unknown();
   if (patch.delivery_by!==undefined && patch.delivery_by!==null) {
