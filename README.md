@@ -134,4 +134,6 @@ A~D 네 모드는 모두 API가 한 번 불러온 같은 상품 목록을 쓴다
 - `api/.dev.vars`에 `CATALOG_SOURCE=web` 한 줄을 넣고 `npm run dev:api`
 - 한 번만: `CATALOG_SOURCE=web npm run dev:api`
 
-배포한 Worker에서는 `npx wrangler deploy --var CATALOG_SOURCE:web`(api 폴더)로 켠다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그는 판매자 상품 사진을 쓰지 않고 카테고리 아이콘(`mobile/assets/category-icons/`)을 보여준다. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 데모 값이다. 카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.
+배포한 Worker에서는 `npx wrangler deploy --var CATALOG_SOURCE:web`(api 폴더)로 켠다.
+
+앱의 선물 랭킹 화면과 게스트 채팅도 같은 카탈로그를 쓴다. 앱은 시작할 때 채팅 서버(`EXPO_PUBLIC_CHAT_API_URL`)의 `/health`에서 `catalog` 값을 읽어 따라가므로 서버 쪽 설정 하나만 바꾸면 된다. 서버에 닿지 않으면 `mobile/.env.local`의 `EXPO_PUBLIC_CATALOG_SOURCE`(기본 `amazon`)를 쓴다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그는 판매자 상품 사진을 쓰지 않고 카테고리 아이콘(`mobile/assets/category-icons/`)을 보여준다. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 데모 값이다. 카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.

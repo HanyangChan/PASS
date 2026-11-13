@@ -45,3 +45,30 @@ test('search and filters find items outside the first 100 ranking positions', ()
   assert.equal(selectGifts(products,{sort:'낮은 가격순'})[0].id,'P129');
   assert.equal(selectGifts(products).length,100);
 });
+
+test('the app catalog follows the chat server CATALOG_SOURCE, then the app setting', async () => {
+  const { resolveCatalogSource } = await import('../src/services/catalogSource.ts');
+  const health = catalog => async () => Response.json({ ok: true, catalog });
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('naver-web-v1') }), 'web');
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('amazon-kaggle-v1+naver-web-v1'), fallback: 'amazon' }), 'both');
+  const offline = async () => { throw new TypeError('offline'); };
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), 'web');
+  assert.equal(await resolveCatalogSource({ fallback: 'naver' }), 'amazon');
+  assert.equal(await resolveCatalogSource({}), 'amazon');
+});
+
+test('web and both sources load the Korean catalog for the ranking screen and guest chat', async () => {
+  const web = [{ id: 'naver_1', name: '한우 선물세트', category: 'food', price: 99000, shipping_fee: 0, shipping_source: 'naver_listing',
+    arrival_days: 2, packaging: 'formal', packaging_source: 'inferred_gift_set', brand: null, allergens: ['쇠고기'], rating: 4.9, review_count: 120,
+    product_url: 'https://smartstore.naver.com/x/products/1', gift_set: true, occasions: ['holiday'], source: 'naver_shopping_web', mall: '한우맘' }];
+  let supabaseCalls = 0;
+  const fetcher = async () => { supabaseCalls++; return Response.json([row('A', 'snack', 5)]); };
+  const make = source => createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher, source: async () => source, webItems: async () => web });
+  const onlyWeb = await make('web').load();
+  assert.deepEqual(onlyWeb.map(p => p.id), ['naver_1']);
+  assert.equal(supabaseCalls, 0);
+  assert.equal(onlyWeb[0].image, undefined);
+  assert.equal(giftFromProduct(onlyWeb[0]).icon, 'food');
+  assert.deepEqual((await make('both').load()).map(p => p.id), ['A', 'naver_1']);
+  assert.deepEqual((await make('amazon').load()).map(p => p.id), ['A']);
+});
