@@ -199,3 +199,9 @@ test('memorial and funeral items are blocked', () => {
   assert.equal(isRelevant('추모 납골당 꽃', '장미 꽃다발'), false);
   assert.ok(isRelevant('가을 국화 꽃다발 생화', '가을 꽃다발'));
 });
+
+test('military-discharge partner gifts are blocked, ordinary girlfriend gifts are not', () => {
+  assert.equal(isRelevant('LED 전역 꽃신 플라워박스 / 곰신선물 / 군대 여자친구 꽃신선물', '플라워박스'), false);
+  assert.equal(isRelevant('곰신 꽃다발 선물', '장미 꽃다발'), false);
+  assert.ok(isRelevant('더봄 드라이플라워 목화와 수국 여친생일 선물 꽃다발', '드라이플라워 다발'));
+});

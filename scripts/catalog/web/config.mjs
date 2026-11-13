@@ -31,7 +31,9 @@ export const PER_KEYWORD = Number(process.env.PER_KEYWORD ?? 3);
 export const OUTLIER_RATIO = [0.2, 5];
 export const BLOCKED_TITLE_WORDS = ['리필', '부품', '포장박스', '케이스만', '포장재', '쇼핑백만', '부자재', '교체용',
   // Memorial and funeral items are not gifts (added 2026-11-13 after a 성묘 artificial bouquet was picked).
-  '성묘', '산소', '납골', '추모', '근조', '장례'];
+  '성묘', '산소', '납골', '추모', '근조', '장례',
+  // Military discharge gifts for a partner (전역 꽃신·곰신) do not fit general flower gifts (2026-11-13).
+  '전역', '곰신'];
 // Relevance (rule 2): a title must contain at least one core term of its keyword (spaces ignored).
 // Core terms are the keyword's words minus these generic words, unless CORE_TERMS overrides them.
 export const GENERIC_WORDS = ['선물세트', '선물박스', '선물', '세트', '혼합', '소포장', '생일', '수능', '응원', '기원', '꽃다발', '화분', '다발'];

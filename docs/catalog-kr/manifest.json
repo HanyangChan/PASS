@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-13T08:54:55.270Z",
+ "generated_at": "2026-11-13T10:28:01.114Z",
  "site": "naver",
  "source": "search.shopping.naver.com/ns/search (기본 랭킹순, 검색 결과 첫 페이지)",
  "method": {
@@ -132,7 +132,9 @@
    "납골",
    "추모",
    "근조",
-   "장례"
+   "장례",
+   "전역",
+   "곰신"
   ],
   "generic_words": [
    "선물세트",
@@ -208,7 +210,7 @@
    "price_outlier": 386,
    "outside_bands": 10,
    "not_gift_set": 89,
-   "irrelevant": 835,
+   "irrelevant": 840,
    "sold_out": 1
   }
  },
@@ -2513,7 +2515,7 @@
    "picked": 3,
    "excluded": {
     "ad": 7,
-    "irrelevant": 12
+    "irrelevant": 17
    }
   },
   {
