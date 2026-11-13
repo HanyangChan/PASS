@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CATEGORIES,CATEGORY_NAMES,toEngineProduct,fetchCatalog,cachedCatalog,todayKst} from '../lib/catalog.mjs';
 const row={id:'amz-B000000001',name:'타타 골드 홍차',name_en:'Tata Tea Gold',category:'coffee_tea',description:'커피·차',price_krw:20000,shipping_fee_krw:3000,stock:99,arrival_days:3,packaging:'basic',sweetness:'unknown',brand:'Tata',allergens:['우유'],rating:4.5,rating_count:120,image_url:'https://m.media-amazon.com/a.jpg',source_url:'https://www.amazon.in/dp/B000000001',demo_fields:['stock']};
-test('16 categories each have a Korean name',()=>{assert.equal(CATEGORIES.length,16);for(const c of CATEGORIES)assert.ok(CATEGORY_NAMES[c],c);});
+test('20 categories each have a Korean name',()=>{assert.equal(CATEGORIES.length,20);for(const c of CATEGORIES)assert.ok(CATEGORY_NAMES[c],c);});
 test('rows become engine products dated from today',()=>{
  const p=toEngineProduct(row,'2026-10-30');
  assert.equal(p.arrival_date,'2026-11-02');assert.equal(p.shipping_fee_per_set_krw,3000);assert.equal(p.stock_sets,99);

@@ -2,7 +2,7 @@
 // Usage: node scripts/catalog/web/select.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { BLOCKED_TITLE_WORDS, CORE_TERMS, GENERIC_WORDS, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
+import { BLOCKED_TITLE_WORDS, CORE_TERMS, GENERIC_WORDS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
 
 // Gift-set titles (seed keywords ending in 선물세트). Matches PR #17's gift_set flag on engine products.
 export const GIFT_SET_TITLE = /선물|세트|기프트|박스|set/i;
@@ -19,7 +19,7 @@ export function coreTerms(keyword) {
 
 export const isRelevant = (title, keyword) => {
   const text = squash(title);
-  return coreTerms(keyword).some(term => text.includes(squash(term)))
+  return coreTerms(keyword).some(term => [term, ...(TERM_ALIASES[term] ?? [])].some(form => text.includes(squash(form))))
     && !BLOCKED_TITLE_WORDS.some(word => text.includes(squash(word)));
 };
 
@@ -85,7 +85,7 @@ export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_
   return { picked, excluded, median_price: mid || null };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { priceBands } = loadSeeds();
   const lines = readFileSync(PATHS.parsed, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   const keywords = lines.map(({ items, ...record }) => {

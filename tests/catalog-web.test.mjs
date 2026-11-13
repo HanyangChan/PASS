@@ -121,3 +121,74 @@ test('gift-set rule does not apply to other seeds', () => {
   const { picked } = selectForKeyword([item('1', { title: '홍삼정 240g', price: 60000 })], { keyword: '홍삼정', priceBands });
   assert.equal(picked[0].gift_set, null);
 });
+
+test('flower container words are generic, so the flower name must appear', () => {
+  assert.deepEqual(coreTerms('튤립 꽃다발'), ['튤립']);
+  assert.deepEqual(coreTerms('수국 화분'), ['수국']);
+  assert.deepEqual(coreTerms('비누꽃 다발'), ['비누꽃']);
+  assert.deepEqual(coreTerms('가을 꽃다발'), ['가을']);
+  assert.equal(isRelevant('카네이션배달 꽃집 생화 꽃다발 꽃바구니', '용담 꽃다발'), false);
+  assert.equal(isRelevant('장미 꽃다발 100송이', '튤립 꽃다발'), false);
+});
+
+test('alternate spellings satisfy the core term', () => {
+  assert.ok(isRelevant('후리지아 꽃다발 배달', '프리지아 꽃다발'));
+  assert.ok(isRelevant('엘리건트 화이트 카라 꽃다발', '칼라 꽃다발'));
+  assert.ok(isRelevant('언제나곁에 국화꽃다발 생화', '소국 꽃다발'));
+  assert.ok(isRelevant('모두다 동양난 도자기 난화분', '동양란 화분'));
+  assert.ok(isRelevant('카모마일차 삼각티백', '캐모마일 차'));
+});
+
+test('enrich cleans promo tags, maps categories and merges occasions', async () => {
+  const { cleanName, enrich } = await import('../scripts/catalog/web/enrich.mjs');
+  assert.equal(cleanName('[N배송] [슈퍼적립] 한우 선물세트 (1.2kg)'), '한우 선물세트 (1.2kg)');
+  assert.equal(cleanName('[추석선물세트] 동원참치 M15호'), '[추석선물세트] 동원참치 M15호');
+  const product = (id, leaf, overrides = {}) => ({ id: `naver_${id}`, rank: 1, title: `상품 ${id}`, price: 30000, mall: 'm', brand: null,
+    category_path: [leaf], category_ids: [], rating: 4.5, review_count: 10, sold_out: false, delivery_badge: null, shipping_fee: 0,
+    shipping_free_over_krw: null, shipping_source: 'naver_listing', is_fresh: false, product_url: null, image_url: null,
+    price_band: 'b3', search_rank: 1, gift_set: null, ...overrides });
+  const keywords = [
+    { occasion: 'birthday', keyword: '초콜릿 선물세트', season: null, result_count: 40, collected_at: 'x', picked: [product(1, '초콜릿', { gift_set: true })] },
+    { occasion: 'exam', keyword: '수능 초콜릿', season: null, result_count: 40, collected_at: 'x', picked: [product(1, '초콜릿'), product(2, '전통주선물세트')] },
+    { occasion: 'flower', keyword: '수국 화분', season: 'summer', result_count: 40, collected_at: 'x', picked: [product(3, '조경수/묘목')] },
+    { occasion: 'flower', keyword: '튤립 꽃다발', season: 'spring', result_count: 40, collected_at: 'x', picked: [product(4, '생화')] },
+  ];
+  const { products, held, unmapped, invalid } = enrich(keywords);
+  assert.deepEqual(unmapped, []);
+  assert.deepEqual(invalid, []);
+  assert.deepEqual(held, []);
+  const liquor = products.find(p => p.id === 'naver_2');
+  assert.deepEqual([liquor.category, liquor.alcohol, liquor.occasions], ['liquor', true, ['holiday']]); // found under an exam seed
+  const choco = products.find(p => p.id === 'naver_1');
+  assert.deepEqual([choco.category, choco.occasions, choco.gift_set, choco.alcohol], ['snack', ['birthday', 'exam'], true, false]);
+  assert.deepEqual(products.filter(p => p.category === 'flower').map(p => [p.flower_subtype, p.season]), [['pot', 'summer'], ['bouquet', 'spring']]);
+  assert.equal(products.find(p => p.id === 'naver_4').arrival_days, 1); // fresh bouquet
+});
+
+test('rule mode understands the new categories without catching look-alike words', async () => {
+  const { extract, initial } = await import('../lib/engine.mjs');
+  const prefs = text => extract(text, initial()).patch.preferences ?? [];
+  const excluded = text => extract(text, initial()).patch.excluded_categories ?? [];
+  assert.ok(prefs('꽃다발 선물하고 싶어').includes('category:flower'));
+  assert.ok(prefs('꽃 좋아하셔').includes('category:flower'));
+  assert.ok(!prefs('한우 꽃등심 세트').includes('category:flower'));
+  assert.ok(prefs('필기구 선물').includes('category:stationery'));
+  assert.ok(!prefs('펜션 숙박권').includes('category:stationery'));
+  assert.ok(prefs('보조배터리 괜찮아').includes('category:digital'));
+  assert.ok(prefs('전통주 선물').includes('category:liquor'));
+  assert.ok(!prefs('와인잔 세트').includes('category:liquor'));
+  assert.ok(!prefs('기술 관련 책').includes('category:liquor'));
+  assert.ok(excluded('술은 빼줘').includes('liquor'));
+});
+
+test('A router parser maps the new category words', async () => {
+  const { parseConditions } = await import('../baseline/agents/a-router/parser.mjs');
+  const { initial } = await import('../lib/engine.mjs');
+  const parse = text => parseConditions(text, initial()).patch;
+  assert.ok(parse('꽃다발 좋아해').preferences?.includes('category:flower'));
+  assert.ok(parse('문구 좋아해요').preferences?.includes('category:stationery'));
+  assert.ok(parse('카메라 추천해줘').preferences?.includes('category:digital'));
+  assert.deepEqual(parse('술은 빼줘').excluded_categories, ['liquor']);
+  assert.equal(parse('꽃등심 좋아해').preferences?.includes('category:flower') ?? false, false);
+  assert.equal(parse('미술 좋아해').preferences?.includes('category:liquor') ?? false, false);
+});

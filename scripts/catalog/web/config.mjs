@@ -6,7 +6,7 @@ const root = new URL('../../../', import.meta.url);
 export const path = relative => fileURLToPath(new URL(relative, root));
 
 export const PATHS = {
-  seeds: path('occasion-seeds.v1.json'),
+  seeds: path('occasion-seeds.v1.1.json'),
   profile: path('.cache/crawl-profile'),
   web: path('data/catalog/web'),
   raw: path('data/catalog/web/raw'),
@@ -32,7 +32,13 @@ export const OUTLIER_RATIO = [0.2, 5];
 export const BLOCKED_TITLE_WORDS = ['리필', '부품', '포장박스', '케이스만', '포장재', '쇼핑백만', '부자재', '교체용'];
 // Relevance (rule 2): a title must contain at least one core term of its keyword (spaces ignored).
 // Core terms are the keyword's words minus these generic words, unless CORE_TERMS overrides them.
-export const GENERIC_WORDS = ['선물세트', '선물박스', '선물', '세트', '혼합', '소포장', '생일', '수능', '응원', '기원'];
+export const GENERIC_WORDS = ['선물세트', '선물박스', '선물', '세트', '혼합', '소포장', '생일', '수능', '응원', '기원', '꽃다발', '화분', '다발'];
+// Alternate spellings sellers use for the same item; any of them satisfies the core term.
+export const TERM_ALIASES = {
+  프리지아: ['후리지아'], 칼라: ['카라'], 소국: ['국화'], 동양란: ['동양난'], 다알리아: ['달리아'],
+  리시안셔스: ['리시안사스', '리시안서스'], 히아신스: ['히야신스'], 포인세티아: ['포인세치아'],
+  호접란: ['호접난'], 캐모마일: ['카모마일'], 라넌큘러스: ['라넌큐러스'], 프리저브드: ['프리저브'],
+};
 export const CORE_TERMS = {};
 
 // Facts about the collection that report.mjs copies into manifest.json.
@@ -42,6 +48,12 @@ export const COLLECTION_NOTES = {
       note: 'robots.txt 요청이 HTTP 418과 HTML 오류 페이지로 돌아와 실제 규칙을 확인할 수 없음(신뢰 불가).' },
   },
   automated_pilot: '2026-11-13 Playwright headful 파일럿: 네이버(405)·쿠팡(보안 확인) 모두 첫 품목에서 차단 → 수동 저장 모드로 전환.',
+  seed_changes: [
+    { version: 'v1.1', date: '2026-11-13', occasion: 'holiday', from: '식용유 선물세트', to: '카놀라유 선물세트', why: '결과가 올리브유뿐(올리브유 시드와 겹침), 선정 0개' },
+    { version: 'v1.1', date: '2026-11-13', occasion: 'birthday', from: '쿠키 선물박스', to: '쿠키 선물세트', why: '결과 38개가 모두 빈 포장 상자' },
+    { version: 'v1.1', date: '2026-11-13', occasion: 'exam', from: '터치 장갑', to: '스마트폰 터치 장갑', why: '결과 38개가 모두 작업용 안전장갑' },
+    { version: 'v1.1', date: '2026-11-13', occasion: 'flower', from: '용담 꽃다발', to: '가을 꽃다발', why: '결과 2개, 둘 다 용담과 무관' },
+  ],
 };
 
 export const SITES = {
