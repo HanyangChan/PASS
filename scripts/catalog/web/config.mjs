@@ -46,13 +46,7 @@ export const BLOCKED_TITLE_WORDS = ['리필', '부품', '포장박스', '케이�
   '전역', '곰신'];
 // Relevance (rule 2): a title must contain at least one core term of its keyword (spaces ignored).
 // Core terms are the keyword's words minus these generic words, unless CORE_TERMS overrides them.
-export const GENERIC_WORDS = ['선물세트', '선물박스', '선물', '세트', '혼합', '소포장', '생일', '수능', '응원', '기원', '꽃다발', '화분', '다발'];
-// Alternate spellings sellers use for the same item; any of them satisfies the core term.
-export const TERM_ALIASES = {
-  프리지아: ['후리지아'], 칼라: ['카라'], 소국: ['국화'], 동양란: ['동양난'], 다알리아: ['달리아'],
-  리시안셔스: ['리시안사스', '리시안서스'], 히아신스: ['히야신스'], 포인세티아: ['포인세치아'],
-  호접란: ['호접난'], 캐모마일: ['카모마일'], 라넌큘러스: ['라넌큐러스'], 프리저브드: ['프리저브'],
-};
+export { GENERIC_WORDS, TERM_ALIASES } from '../../../lib/item-terms.mjs';
 export const CORE_TERMS = {};
 
 // Facts about the collection that report.mjs copies into manifest.json.
