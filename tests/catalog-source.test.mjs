@@ -25,6 +25,8 @@ test('web items become engine products through toEngineProduct', () => {
   assert.equal(product.image, undefined); // seller images are never shown
   assert.equal(product.link, item.product_url);
   assert.ok(isGiftSet(product));
+  assert.equal(product.packaging, 'formal');
+  assert.equal(product.packaging_source, 'inferred_gift_set');
   assert.ok(!product.demo_fields.includes('shipping_fee_krw')); // real listed fee
   assert.ok(product.demo_fields.includes('arrival_days'));
   assert.match(product.arrival_date, /^2026-11-1[4-6]$/);
@@ -36,6 +38,7 @@ test('every web item converts to a valid engine product', () => {
     assert.ok(Number.isSafeInteger(p.price_krw) && p.price_krw > 0, item.id);
     assert.ok(p.stock_sets > 0 && typeof p.category === 'string', item.id);
   }
+  assert.ok(web.every(p => (p.packaging === 'formal') === (p.gift_set === true)));
   const liquor = web.filter(p => p.category === 'liquor').map(p => fromWebItem(p, '2026-11-13'));
   assert.ok(liquor.length && liquor.every(p => p.alcohol === true));
 });

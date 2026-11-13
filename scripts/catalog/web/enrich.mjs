@@ -57,6 +57,7 @@ export function validate(item) {
   need([true, false, null].includes(item.gift_set), 'gift_set');
   need(Number.isSafeInteger(item.arrival_days) && item.arrival_source === 'synthetic', 'arrival');
   need(Array.isArray(item.allergens), 'allergens');
+  need(['formal', 'basic'].includes(item.packaging) && (item.packaging === 'formal') === (item.packaging_source === 'inferred_gift_set'), 'packaging');
   need(item.alcohol === (item.category === 'liquor'), 'alcohol');
   need(item.category !== 'liquor' || (item.occasions.length === 1 && item.occasions[0] === 'holiday'), 'liquor_occasions');
   return issues;
@@ -77,7 +78,7 @@ export function enrich(keywords, { site = 'naver' } = {}) {
         existing.occasions = occasionsFor(existing.category, [...existing.occasions, entry.occasion]);
         existing.seed_keywords = [...new Set([...existing.seed_keywords, entry.keyword])];
         if (entry.season && !existing.season) existing.season = entry.season;
-        if (product.gift_set === true) existing.gift_set = true;
+        if (product.gift_set === true) Object.assign(existing, { gift_set: true, packaging: 'formal', packaging_source: 'inferred_gift_set' });
         continue;
       }
       const subtype = category === 'flower' ? flowerSubtype(product, entry.keyword) : null;
@@ -102,6 +103,9 @@ export function enrich(keywords, { site = 'naver' } = {}) {
         review_count: product.review_count,
         popularity_proxy: product.review_count == null ? Number((1 - (product.rank - 1) / entry.result_count).toFixed(3)) : null,
         gift_set: product.gift_set ?? null,
+        // Listings say nothing about wrapping; a gift-set title is taken as formal packaging (inferred, demo-level).
+        packaging: product.gift_set === true ? 'formal' : 'basic',
+        packaging_source: product.gift_set === true ? 'inferred_gift_set' : 'default',
         delivery_badge: product.delivery_badge,
         shipping_fee: product.shipping_fee,
         shipping_free_over_krw: product.shipping_free_over_krw ?? null,
