@@ -1,4 +1,4 @@
-// Category icons (assets/category-icons) are drawn in place of product photos; seller images are never shown.
+// Icon ids stay on saved gifts for storage compatibility; product cards show photos only.
 export const categoryIconIds = ['food', 'snack', 'coffee_tea', 'health', 'beauty', 'makeup', 'personal_care', 'kitchen', 'decor', 'jewelry', 'watch', 'bag', 'accessory', 'audio', 'toy', 'fitness', 'flower', 'stationery', 'digital', 'liquor'] as const;
 export const giftIcons = ['fruit', 'hangwa', 'nuts', 'tea', 'coffee', 'oil', 'gift', ...categoryIconIds] as const;
 export type GiftIcon = (typeof giftIcons)[number];

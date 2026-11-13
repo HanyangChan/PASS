@@ -74,7 +74,10 @@ seeds.json → ① collect → data/catalog/web/raw/<site>/<occasion>/<slug>.htm
 - 상황 태그: `occasions: string[]`. 같은 상품이 여러 상황에서 잡히면 합치고 태그만 합친다. 꽃은 `season` 유지.
 - LLM은 기본으로 쓰지 않는다. 필요해지면 레포의 현재 LLM 설정(학교 DeepSeek, OpenAI 호환)을 별도 플래그로만.
 
-### ⑤ report
+### ⑤ images (2026-11-13 추가)
+`scripts/catalog/web/images.mjs`: 선정 상품의 사진을 저장 페이지의 `_files/`에서 찾아 `data/catalog/web/images/<id>.webp`로 복사하고, 없으면 `image_url`에서 1~2초 간격으로 직접 받는다(4xx/5xx면 멈춤, 우회 없음). 그래도 없는 상품은 ③ select의 사진 규칙이 같은 품목 다음 순위 상품으로 바꾸고, 교체 목록은 manifest `photos.replaced_for_missing_photo`에 남는다. §7 참고.
+
+### ⑥ report
 §8 참고.
 
 ## 4. 출력 스키마 (`supabase/seed/products-kr.json`의 한 항목)
@@ -100,7 +103,7 @@ seeds.json → ① collect → data/catalog/web/raw/<site>/<occasion>/<slug>.htm
   shipping_source: "naver_listing" | "unknown",
   arrival_days: 2, arrival_source: "synthetic",
   allergens: ["대두"],
-  image_url: "...", product_url: "...", // 참고용, 화면 표시는 §7
+  image_url: "<Storage 버킷 주소>/<id>.webp", image_file: "<id>.webp", source_image_url: "...", product_url: "...", // §7
   source: "naver_shopping_web" | "coupang_web", collected_at: "2026-11-..."
 }
 ```
@@ -126,12 +129,17 @@ PR #17 로컬 스냅샷과 겹치는 시드(`스팸 선물세트`, `참치 선�
 | 인기도 | 네이버 목록의 `review_count`를 기존 `rating_count` 필드에 넣는다. 엔진은 지금처럼 카테고리 안 최댓값 대비 리뷰 수로 인기도를 계산한다(엔진 코드 변경 없음). 리뷰 수가 없는 상품만 `popularity_proxy = 1 - (rank-1)/결과수`를 보고서용으로 남긴다 | 네이버 파일럿 3페이지에서 리뷰 수 보유 128/131개. 리뷰 수는 검색 시점 누적값이다 |
 | 평점·리뷰 수 | 목록에 보이는 값만, 없으면 `null` | 화면에서는 값이 없으면 숨김 |
 | 배송비 | 네이버 목록의 기본 배송비(`baseFee`)를 `shipping_fee`에 넣고 `shipping_source:'naver_listing'`. 엔진 상품의 기존 배송비 필드(`shipping_fee_krw` → `shipping_fee_per_set_krw`)에만 넣고 점수 코드는 바꾸지 않는다. 조건부 무료배송 기준 금액은 `shipping_free_over_krw`에 두지만, 2026-11-13 확인한 검색 목록에는 이 정보가 없어 `null`이다. 값이 없으면 `null`, 총액 계산 시 0, `shipping_source:'unknown'` | 목록 기준 1회 주문 배송비라 제주·도서산간 추가 요금과 묶음배송 할인은 반영하지 않는다. 조건부 무료일 수 있으므로 설명 생성에서 "무료배송"을 단정하지 않는다 |
-| 도착일 | 배송 배지가 있으면 그 규칙, 없으면 유형별 합성(생화 1일, 신선식품 2일, 일반 2~3일) | `arrival_source:'synthetic'`, 실험 참가자에게 데모 값임을 안내 |
+| 도착일 | 아마존 카탈로그와 같은 규칙: `2 + hash(id) % 3`(2~4일, `scripts/catalog/demo-rules.mjs`). 포장·당도도 같은 상품명 규칙 | `arrival_source:'synthetic'`, 실험 참가자에게 데모 값임을 안내 |
 
 ## 7. 이미지 정책
 
-- 판매자 상품 이미지는 저작물이므로 **다운로드·재배포하지 않는다.** `image_url`은 내부 확인용으로만 저장.
-- 화면에는 카테고리별 SVG 아이콘(이모티콘 스타일)을 쓴다. `assets/category-icons/<category>.svg` 약 20개를 직접 제작. 실제 사진이 꼭 필요하면 Unsplash·Pexels 등 상업적 사용 허용 라이선스 이미지만, 출처 기록과 함께.
+(2026-11-13 개정: 아이콘 대신 실제 상품 사진을 쓰기로 결정)
+
+- 판매자 상품 이미지는 저작물이다. **비공개 저장소에 보관하고, 레포·공개 배포·논문 캡처에는 쓰지 않는다.** 사진 파일은 절대 Git에 커밋하지 않는다(`data/`는 `.gitignore`).
+- 보관 위치: 로컬은 `data/catalog/web/images/<id>.webp`(300px WebP, 저장 페이지에서 복사하거나 검색 페이지와 같은 크기로 직접 받음). 앱 표시용 사본은 Supabase Storage 버킷 `product-images-kr`(`scripts/catalog/web/upload-images.mjs`). `products-kr.json`의 `image_url`은 그 버킷 주소, 원래 판매자 주소는 `source_image_url`.
+- 앱이 사진을 띄우려면 버킷은 공개 읽기(URL을 알면 열람 가능)다. 버킷 주소가 레포의 `products-kr.json`에 있으므로 사실상 누구나 열 수 있다는 점을 알고 쓴다. 실험이 끝나면 버킷을 비운다.
+- 로컬 개발: `api/dev-server.mjs`가 `data/catalog/web/images/`를 `/catalog-images/`로 서빙해 Storage 없이도 사진이 뜬다(`WEB_IMAGES=storage`면 버킷 사용).
+- 카드·랭킹 화면은 사진만 보여주고 카테고리 아이콘은 쓰지 않는다.
 
 ## 8. 분석·논문용 산출물
 
@@ -154,7 +162,7 @@ PR #17 로컬 스냅샷과 겹치는 시드(`스팸 선물세트`, `참치 선�
 | S6 | `report.mjs` + 그림 | report.md·manifest·그림 생성 |
 | S7 | `toEngineProduct` 연결, `CATALOG_SOURCE` 설정 | 기존 `npm test` 전부 통과, `web`으로 바꿔 웹에서 다양한 상품 추천 확인 |
 
-**금지:** 캡차 자동 해결·프록시·차단 회피, 사용자 실제 Chrome 프로필 사용, 로그인, 상세 페이지·리뷰 본문 수집, 이미지 다운로드, 원본 HTML 커밋, 테스트에서 실제 사이트 접속, 엔진 점수 로직·A~D LLM 호출 구조 변경, `main` 직접 커밋, 브랜치·커밋에 사용자 이름 넣기.
+**금지:** 캡차 자동 해결·프록시·차단 회피, 사용자 실제 Chrome 프로필 사용, 로그인, 상세 페이지·리뷰 본문 수집, §7 범위 밖의 이미지 다운로드·이미지 파일 커밋, 원본 HTML 커밋, 테스트에서 실제 사이트 접속, 엔진 점수 로직·A~D LLM 호출 구조 변경, `main` 직접 커밋, 브랜치·커밋에 사용자 이름 넣기.
 
 ## 10. Claude Code 첫 프롬프트
 

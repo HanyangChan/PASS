@@ -16,3 +16,9 @@
 6. 원본에 없는 배송비·도착일·재고·포장을 규칙으로 합성하고 `demo_fields`에 표시
 
 이미지 파일은 포함하지 않는다(URL만 있음). 문제가 제기되면 이 파일을 삭제하고 `products`를 비활성화한다.
+
+# products-kr.json 출처
+
+- **원본**: 네이버 쇼핑 검색 결과 첫 페이지(2026-11-13 수동 저장). 수집 방법과 선정 규칙은 `docs/catalog-kr/report.md`, `docs/catalog-kr/manifest.json`, `pass-crawl-spec.md`에 있다.
+- **상품 사진**: 판매자 이미지는 저작물이다. **비공개 저장소에 보관하고, 레포·공개 배포·논문 캡처에는 사용하지 않는다.** 사진 파일은 Git에 커밋하지 않는다. 로컬 사본은 `data/catalog/web/images/`(커밋 제외), 앱 표시용 사본은 Supabase Storage 버킷 `product-images-kr`이며 `image_url`이 그 주소다. 원래 판매자 이미지 주소는 `source_image_url`에 남긴다.
+- 문제가 제기되면 버킷을 비우고 `CATALOG_SOURCE`를 `amazon`으로 되돌린다.

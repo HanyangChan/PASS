@@ -3,63 +3,8 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Star, ChevronRight } from 'lucide-react-native';
 import CheckIcon from '../assets/figma/check.svg';
 import HeartIcon from '../assets/figma/heart.svg';
-import FruitIcon from '../assets/figma/fruit.svg';
-import HangwaIcon from '../assets/figma/hangwa.svg';
-import NutsIcon from '../assets/figma/nuts.svg';
-import TeaIcon from '../assets/figma/tea.svg';
-import CoffeeIcon from '../assets/figma/coffee.svg';
-import OilIcon from '../assets/figma/oil.svg';
-import GiftIcon from '../assets/figma/gift.svg';
-import FoodCategoryIcon from '../assets/category-icons/food.svg';
-import SnackCategoryIcon from '../assets/category-icons/snack.svg';
-import CoffeeTeaCategoryIcon from '../assets/category-icons/coffee_tea.svg';
-import HealthCategoryIcon from '../assets/category-icons/health.svg';
-import BeautyCategoryIcon from '../assets/category-icons/beauty.svg';
-import MakeupCategoryIcon from '../assets/category-icons/makeup.svg';
-import PersonalCareCategoryIcon from '../assets/category-icons/personal_care.svg';
-import KitchenCategoryIcon from '../assets/category-icons/kitchen.svg';
-import DecorCategoryIcon from '../assets/category-icons/decor.svg';
-import JewelryCategoryIcon from '../assets/category-icons/jewelry.svg';
-import WatchCategoryIcon from '../assets/category-icons/watch.svg';
-import BagCategoryIcon from '../assets/category-icons/bag.svg';
-import AccessoryCategoryIcon from '../assets/category-icons/accessory.svg';
-import AudioCategoryIcon from '../assets/category-icons/audio.svg';
-import ToyCategoryIcon from '../assets/category-icons/toy.svg';
-import FitnessCategoryIcon from '../assets/category-icons/fitness.svg';
-import FlowerCategoryIcon from '../assets/category-icons/flower.svg';
-import StationeryCategoryIcon from '../assets/category-icons/stationery.svg';
-import DigitalCategoryIcon from '../assets/category-icons/digital.svg';
-import LiquorCategoryIcon from '../assets/category-icons/liquor.svg';
 import { colors as c, fonts as f } from './theme';
 import type { Gift } from './catalog';
-const categoryIcons: Record<string, typeof FruitIcon> = {
-  fruit: FruitIcon,
-  hangwa: HangwaIcon,
-  nuts: NutsIcon,
-  tea: TeaIcon,
-  coffee: CoffeeIcon,
-  oil: OilIcon,
-  food: FoodCategoryIcon,
-  snack: SnackCategoryIcon,
-  coffee_tea: CoffeeTeaCategoryIcon,
-  health: HealthCategoryIcon,
-  beauty: BeautyCategoryIcon,
-  makeup: MakeupCategoryIcon,
-  personal_care: PersonalCareCategoryIcon,
-  kitchen: KitchenCategoryIcon,
-  decor: DecorCategoryIcon,
-  jewelry: JewelryCategoryIcon,
-  watch: WatchCategoryIcon,
-  bag: BagCategoryIcon,
-  accessory: AccessoryCategoryIcon,
-  audio: AudioCategoryIcon,
-  toy: ToyCategoryIcon,
-  fitness: FitnessCategoryIcon,
-  flower: FlowerCategoryIcon,
-  stationery: StationeryCategoryIcon,
-  digital: DigitalCategoryIcon,
-  liquor: LiquorCategoryIcon,
-};
 export const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
 export function Chip({
   label,
@@ -85,7 +30,6 @@ export function Chip({
 export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
   const failed = !!gift.image && failedUrl === gift.image;
-  const Icon = categoryIcons[gift.icon] ?? GiftIcon;
   return (
     <View style={[s.image, { width: size, height: size }]}>
       {gift.image && !failed ? (
@@ -96,12 +40,11 @@ export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
           resizeMode="cover"
           onError={() => setFailedUrl(gift.image)}
         />
-      ) : failed ? (
-        <Text style={[s.small, { padding: 8, textAlign: 'center' }]}>
-          사진을 불러오지 못했어요
-        </Text>
       ) : (
-        <Icon />
+        // Product cards show photos only (no category icons); a missing or broken photo leaves a plain tile.
+        <Text style={[s.small, { padding: 8, textAlign: 'center' }]}>
+          {failed ? '사진을 불러오지 못했어요' : '사진 없음'}
+        </Text>
       )}
     </View>
   );

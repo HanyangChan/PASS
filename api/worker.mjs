@@ -87,7 +87,7 @@ function defaultCatalog(fetcher) {
       rows ??= cachedCatalog(() => fetchCatalog({ url: env.SUPABASE_URL, key: env.SUPABASE_PUBLISHABLE_KEY, fetcher }));
       lists.push((await rows()).map(row => toEngineProduct(row, today)));
     }
-    if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today)));
+    if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today, { imageBase: env.WEB_IMAGE_BASE })));
     return mergeCatalogs(...lists);
   };
 }
@@ -115,7 +115,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
         const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: catalogLabel(env), products: count ?? 0, ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: catalogLabel(env), products: count ?? 0, ...(env.WEB_IMAGE_BASE ? { webImageBase: env.WEB_IMAGE_BASE } : {}), ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });

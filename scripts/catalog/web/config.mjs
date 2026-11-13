@@ -16,7 +16,19 @@ export const PATHS = {
   selected: path('data/catalog/web/selected.json'),
   products: path('supabase/seed/products-kr.json'),
   manifest: path('data/catalog/web/manifest.json'),
+  // Seller photos: kept out of Git (/data/ is ignored), served locally by api/dev-server.mjs.
+  images: path('data/catalog/web/images'),
+  imagesLog: path('data/catalog/web/images-log.json'),
 };
+
+// Seller photos live in a Supabase Storage bucket, never in the repo (spec §7). products-kr.json
+// points image_url at the bucket's public path; scripts/catalog/web/upload-images.mjs fills it.
+export const IMAGE_BUCKET = 'product-images-kr';
+export const IMAGE_STORAGE_BASE = `${process.env.SUPABASE_URL || 'https://zenmtrokvnwsekidcniy.supabase.co'}/storage/v1/object/public/${IMAGE_BUCKET}`;
+export const imageFile = id => `${id}.webp`;
+// The search page asked for 300px WebP thumbnails; direct downloads ask for the same size.
+export const IMAGE_QUERY = 'type=f300_webp';
+export const IMAGE_PACING_MS = [1000, 2000];
 
 // Spec §0/§1: human-paced browsing.
 export const PACING = {

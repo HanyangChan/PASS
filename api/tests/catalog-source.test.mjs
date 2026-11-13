@@ -58,6 +58,19 @@ for (const agent of ['a-router', 'langgraph-advisors', 'legacy']) {
     const turn = await chat(createApi({ fetcher }), { CATALOG_SOURCE: 'web', CHAT_AGENT: agent }, '부모님 명절 선물 예산 5만원');
     assert.equal(turn.catalog, 'naver-web-v1');
     assert.ok(turn.view.result.items.length > 0, JSON.stringify(turn.view.result).slice(0, 200));
-    assert.ok(turn.view.result.items.every(item => item.id.startsWith('naver_') && !item.image));
+    assert.ok(turn.view.result.items.every(item => item.id.startsWith('naver_')
+      && item.image === `https://zenmtrokvnwsekidcniy.supabase.co/storage/v1/object/public/product-images-kr/${item.id}.webp`));
   });
 }
+
+test('WEB_IMAGE_BASE serves web photos from another copy (the local dev server) and is reported on /health', async () => {
+  const { fetcher } = fakeSupabase();
+  const api = createApi({ fetcher });
+  const base = 'http://127.0.0.1:8788/catalog-images';
+  const health = await (await api.fetch(new Request('https://api.example/health'), env({ CATALOG_SOURCE: 'web', WEB_IMAGE_BASE: base }))).json();
+  assert.equal(health.webImageBase, base);
+  const turn = await chat(api, { CATALOG_SOURCE: 'web', CHAT_AGENT: 'a-router', WEB_IMAGE_BASE: base }, '부모님 명절 선물 예산 5만원');
+  assert.ok(turn.view.result.items.length && turn.view.result.items.every(item => item.image === `${base}/${item.id}.webp`));
+  const plain = await (await api.fetch(new Request('https://api.example/health'), env({ CATALOG_SOURCE: 'web' }))).json();
+  assert.equal(plain.webImageBase, undefined);
+});

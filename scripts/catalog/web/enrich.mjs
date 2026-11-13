@@ -1,11 +1,11 @@
 // ④ enrich (no network): selected.json → supabase/seed/products-kr.json (spec §4, §6).
 // Usage: node scripts/catalog/web/enrich.mjs
-import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { tagAllergens } from '../../../lib/allergens.mjs';
 import { CATEGORIES } from '../../../lib/catalog.mjs';
-import { PATHS, SITES, path } from './config.mjs';
+import { arrivalDays, packagingFor, sweetnessFor } from '../demo-rules.mjs';
+import { IMAGE_STORAGE_BASE, PATHS, SITES, imageFile, path } from './config.mjs';
 
 export const CATEGORY_MAP = JSON.parse(readFileSync(new URL('./category-map.v1.json', import.meta.url), 'utf8'));
 const EDIBLE = new Set(['food', 'snack', 'coffee_tea', 'health', 'liquor']);
@@ -32,14 +32,6 @@ export function flowerSubtype(product, keyword) {
   return null;
 }
 
-// Demo arrival rule (spec §6): badge → 1 day, fresh flowers 1, fresh food 2, otherwise 2–3 (stable per id).
-export function arrivalDays(product, category, subtype) {
-  if (product.delivery_badge) return 1;
-  if (category === 'flower' && subtype === 'bouquet') return 1;
-  if (product.is_fresh) return 2;
-  return 2 + (createHash('sha256').update(product.id).digest()[0] % 2);
-}
-
 export function validate(item) {
   const issues = [];
   const need = (ok, field) => { if (!ok) issues.push(field); };
@@ -55,9 +47,11 @@ export function validate(item) {
   need(item.shipping_fee === null || Number.isSafeInteger(item.shipping_fee), 'shipping_fee');
   need(['naver_listing', 'unknown'].includes(item.shipping_source), 'shipping_source');
   need([true, false, null].includes(item.gift_set), 'gift_set');
-  need(Number.isSafeInteger(item.arrival_days) && item.arrival_source === 'synthetic', 'arrival');
+  need(item.arrival_days === arrivalDays(item.id) && item.arrival_source === 'synthetic', 'arrival');
   need(Array.isArray(item.allergens), 'allergens');
-  need(['formal', 'basic'].includes(item.packaging) && (item.packaging === 'formal') === (item.packaging_source === 'inferred_gift_set'), 'packaging');
+  need(item.image_url === `${IMAGE_STORAGE_BASE}/${imageFile(item.id)}` && item.image_file === imageFile(item.id), 'image');
+  need(item.packaging === packagingFor(item.name) && item.packaging_source === 'name_rule', 'packaging');
+  need(item.sweetness === sweetnessFor(item.name), 'sweetness');
   need(item.alcohol === (item.category === 'liquor'), 'alcohol');
   need(item.category !== 'liquor' || (item.occasions.length === 1 && item.occasions[0] === 'holiday'), 'liquor_occasions');
   return issues;
@@ -78,7 +72,7 @@ export function enrich(keywords, { site = 'naver' } = {}) {
         existing.occasions = occasionsFor(existing.category, [...existing.occasions, entry.occasion]);
         existing.seed_keywords = [...new Set([...existing.seed_keywords, entry.keyword])];
         if (entry.season && !existing.season) existing.season = entry.season;
-        if (product.gift_set === true) Object.assign(existing, { gift_set: true, packaging: 'formal', packaging_source: 'inferred_gift_set' });
+        if (product.gift_set === true) existing.gift_set = true;
         continue;
       }
       const subtype = category === 'flower' ? flowerSubtype(product, entry.keyword) : null;
@@ -103,18 +97,22 @@ export function enrich(keywords, { site = 'naver' } = {}) {
         review_count: product.review_count,
         popularity_proxy: product.review_count == null ? Number((1 - (product.rank - 1) / entry.result_count).toFixed(3)) : null,
         gift_set: product.gift_set ?? null,
-        // Listings say nothing about wrapping; a gift-set title is taken as formal packaging (inferred, demo-level).
-        packaging: product.gift_set === true ? 'formal' : 'basic',
-        packaging_source: product.gift_set === true ? 'inferred_gift_set' : 'default',
+        // Listings say nothing about wrapping or sugar: the Amazon name rules (../demo-rules.mjs) decide, demo-level.
+        packaging: packagingFor(name),
+        packaging_source: 'name_rule',
+        sweetness: sweetnessFor(name),
         delivery_badge: product.delivery_badge,
         shipping_fee: product.shipping_fee,
         shipping_free_over_krw: product.shipping_free_over_krw ?? null,
         shipping_source: product.shipping_source,
-        arrival_days: arrivalDays(product, category, subtype),
+        arrival_days: arrivalDays(product.id),
         arrival_source: 'synthetic',
         alcohol: category === 'liquor',
         allergens: EDIBLE.has(category) ? tagAllergens(name) : [],
-        image_url: product.image_url,
+        // Photo copy in the Storage bucket (scripts/catalog/web/upload-images.mjs); the seller's original stays as source_image_url.
+        image_url: `${IMAGE_STORAGE_BASE}/${imageFile(product.id)}`,
+        image_file: imageFile(product.id),
+        source_image_url: product.image_url,
         product_url: product.product_url,
         source: SITES[site].source,
         collected_at: entry.collected_at,

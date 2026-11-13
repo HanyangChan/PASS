@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-13T10:28:01.114Z",
+ "generated_at": "2026-11-13T12:19:32.789Z",
  "site": "naver",
  "source": "search.shopping.naver.com/ns/search (기본 랭킹순, 검색 결과 첫 페이지)",
  "method": {
@@ -190,7 +190,19 @@
     "프리저브"
    ]
   },
-  "gift_set_rule": "\"…선물세트\" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false"
+  "gift_set_rule": "\"…선물세트\" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false",
+  "photo_rule": "사진(저장 페이지의 파일 또는 images.mjs가 받은 파일)이 없는 상품은 건너뛰고 같은 품목의 다음 순위 상품을 고름"
+ },
+ "photos": {
+  "storage": "판매자 이미지는 Git에 커밋하지 않음. 로컬 data/catalog/web/images/, 배포용은 Supabase Storage 버킷(upload-images.mjs). 레포·공개 배포·논문 캡처에 사용하지 않음",
+  "from_saved_pages": 506,
+  "downloaded": 84,
+  "download_pacing_ms": [
+   1000,
+   2000
+  ],
+  "download_stops": [],
+  "replaced_for_missing_photo": []
  },
  "category_map": {
   "version": "v1",

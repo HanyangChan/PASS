@@ -1,5 +1,7 @@
 // Node adapter for the same Worker handler. Local limits are per process, not production limits.
 import http from 'node:http';
+import { createReadStream, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { loadLocalEnv } from './local-env.mjs';
 import { localConfig } from './dev-config.mjs';
@@ -11,8 +13,13 @@ let config;
 let flowerAdvice;
 let catalog;
 let shoppingText;
+// Web catalog photos (data/catalog/web/images/, never committed) are served here so local runs need no Storage.
+const IMAGES_DIR = fileURLToPath(new URL('../data/catalog/web/images/', import.meta.url));
+const IMAGE_PATH = /^\/catalog-images\/(naver_\d+\.webp)$/;
+let imageBase;
 try {
   config=localConfig(await loadLocalEnv());
+  if (config.env.WEB_IMAGES !== 'storage' && existsSync(IMAGES_DIR)) imageBase = `http://127.0.0.1:${config.port}/catalog-images`;
   if (process.env.FLOWER_DB_PATH) {
     const { createFlowerAdvice } = await import('./flower-season.mjs');
     flowerAdvice = createFlowerAdvice(process.env.FLOWER_DB_PATH);
@@ -28,7 +35,7 @@ try {
       const rows = readShoppingCatalog(shoppingDbPath, today);
       const observations = rows.filter(product => product.id.startsWith('searchapi-'));
       const amazon = source === 'web' ? [] : rows.filter(product => !product.id.startsWith('searchapi-'));
-      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today));
+      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today, { imageBase }));
       return mergeCatalogs(amazon, web, observations);
     };
     let day = todayKst();
@@ -55,12 +62,20 @@ const localLimit = limit => {
   } };
 };
 const {port,llm}=config;
-const env={...config.env,IP_LIMITER:localLimit(120),USER_LIMITER:localLimit(30)};
+const env={...config.env,...(imageBase?{WEB_IMAGE_BASE:imageBase}:{}),IP_LIMITER:localLimit(120),USER_LIMITER:localLimit(30)};
 const server = http.createServer(async (req, res) => {
   const controller=new AbortController();
   const aborted=()=>controller.abort();
   const closed=()=>{if(!res.writableEnded)controller.abort();};
   req.once('aborted',aborted);res.once('close',closed);
+  const image = req.method === 'GET' && imageBase ? req.url.match(IMAGE_PATH) : null;
+  if (image) {
+    const file = IMAGES_DIR + image[1];
+    if (!existsSync(file)) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'max-age=3600' });
+    createReadStream(file).pipe(res);
+    return;
+  }
   try {
     const request = new Request(`http://127.0.0.1:${port}${req.url}`, { signal: controller.signal, method: req.method, headers: { ...req.headers, 'CF-Connecting-IP': req.socket.remoteAddress }, ...(req.method === 'GET' || req.method === 'HEAD' ? {} : { body: Readable.toWeb(req), duplex: 'half' }) });
     const response = await worker.fetch(request, env);
@@ -74,4 +89,5 @@ server.on('error',error=>{
 });
 server.listen(port, '127.0.0.1', () => {
   console.log(`Recommendation API: http://127.0.0.1:${port} (${llm.provider}: ${llm.options.model}, ${llm.options.apiKey ? 'LLM enabled' : '규칙 모드 가능 (A/B), C/D는 LLM_API_KEY 필요'})`);
+  if (imageBase) console.log(`Web catalog photos: ${imageBase}/ (data/catalog/web/images)`);
 });

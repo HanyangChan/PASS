@@ -162,7 +162,10 @@ test('enrich cleans promo tags, maps categories and merges occasions', async () 
   const choco = products.find(p => p.id === 'naver_1');
   assert.deepEqual([choco.category, choco.occasions, choco.gift_set, choco.alcohol], ['snack', ['birthday', 'exam'], true, false]);
   assert.deepEqual(products.filter(p => p.category === 'flower').map(p => [p.flower_subtype, p.season]), [['pot', 'summer'], ['bouquet', 'spring']]);
-  assert.equal(products.find(p => p.id === 'naver_4').arrival_days, 1); // fresh bouquet
+  const { arrivalDays } = await import('../scripts/catalog/demo-rules.mjs');
+  assert.ok(products.every(p => p.arrival_days === arrivalDays(p.id) && p.arrival_days >= 2 && p.arrival_days <= 4));
+  // Packaging follows the name rule, not the gift-set seed: "상품 1" stays basic even though gift_set is true.
+  assert.deepEqual([choco.packaging, choco.packaging_source, choco.sweetness], ['basic', 'name_rule', 'unknown']);
 });
 
 test('rule mode understands the new categories without catching look-alike words', async () => {

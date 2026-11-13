@@ -3,7 +3,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CATEGORY_NAMES } from '../../../lib/catalog.mjs';
-import { BLOCKED_TITLE_WORDS, COLLECTION_NOTES, GENERIC_WORDS, OUTLIER_RATIO, PACING, PATHS, PER_KEYWORD, TERM_ALIASES, loadSeeds, path } from './config.mjs';
+import { BLOCKED_TITLE_WORDS, COLLECTION_NOTES, GENERIC_WORDS, IMAGE_PACING_MS, OUTLIER_RATIO, PACING, PATHS, PER_KEYWORD, TERM_ALIASES, loadSeeds, path } from './config.mjs';
 import { CATEGORY_MAP } from './enrich.mjs';
 
 const OCCASIONS = { holiday: '명절', birthday: '생일', exam: '수험', flower: '꽃' };
@@ -12,7 +12,8 @@ const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 
 const seeds = loadSeeds();
 const parsed = readFileSync(PATHS.parsed, 'utf8').trim().split('\n').map(line => JSON.parse(line));
-const { keywords } = readJson(PATHS.selected);
+const { keywords, photo_replacements: photoReplacements = [] } = readJson(PATHS.selected);
+const imagesLog = existsSync(PATHS.imagesLog) ? Object.values(readJson(PATHS.imagesLog)) : [];
 const products = readJson(PATHS.products);
 const amazon = readJson(path('supabase/seed/products-amazon.json'));
 
@@ -52,7 +53,16 @@ const manifest = {
   robots: COLLECTION_NOTES.robots,
   selection: { per_keyword: PER_KEYWORD, outlier_ratio: OUTLIER_RATIO, price_bands: seeds.priceBands,
     blocked_title_words: BLOCKED_TITLE_WORDS, generic_words: GENERIC_WORDS, term_aliases: TERM_ALIASES,
-    gift_set_rule: '"…선물세트" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false' },
+    gift_set_rule: '"…선물세트" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false',
+    photo_rule: '사진(저장 페이지의 파일 또는 images.mjs가 받은 파일)이 없는 상품은 건너뛰고 같은 품목의 다음 순위 상품을 고름' },
+  photos: {
+    storage: '판매자 이미지는 Git에 커밋하지 않음. 로컬 data/catalog/web/images/, 배포용은 Supabase Storage 버킷(upload-images.mjs). 레포·공개 배포·논문 캡처에 사용하지 않음',
+    from_saved_pages: sum(imagesLog.map(l => l.copied.length + (l.converted?.length ?? 0))),
+    downloaded: sum(imagesLog.map(l => l.downloaded.length)),
+    download_pacing_ms: IMAGE_PACING_MS,
+    download_stops: imagesLog.map(l => l.stopped).filter(Boolean),
+    replaced_for_missing_photo: photoReplacements,
+  },
   category_map: { version: CATEGORY_MAP.version, status: CATEGORY_MAP.status, excluded: CATEGORY_MAP.exclude_site_categories },
   counts: {
     pages: parsed.length, results: sum(parsed.map(l => l.items.length)),
@@ -224,8 +234,8 @@ ${table(['카테고리', '아마존 n', '아마존 중앙값', '네이버 n', '�
 - **수집:** ${manifest.collection_period.first?.slice(0, 10)}~${manifest.collection_period.last?.slice(0, 10)}, 네이버 쇼핑 검색 결과 첫 페이지, 수동 저장 ${parsed.length}페이지.
 - **품목 선정:** 상황(명절·생일·수험·꽃)마다 서로 다른 품목 50개를 시드로 정했다(\`${seeds.version}\`).
 - **상품 선정 규칙:** 광고·가격 없음·품절 제외 → 제목에 핵심어 필요(꽃다발·화분 같은 일반어 제외, 이표기 허용)와 금지어 제외 → 품목별 가격 중앙값의 ${OUTLIER_RATIO[0]}배 미만·${OUTLIER_RATIO[1]}배 초과 제외 → 서로 다른 가격대에서 순위가 가장 높은 상품부터 품목당 ${PER_KEYWORD}개 → 같은 판매처·브랜드 1개, 같은 상품 중복 제거. "…선물세트" 품목은 선물세트 표기 상품을 우선.
-- **합성·대체 필드:** 도착일은 규칙 합성(배송 배지 1일, 생화 꽃다발 1일, 신선식품 2일, 그 밖 2~3일). 인기도는 검색 시점의 누적 리뷰 수. 배송비는 목록의 기본 배송비로, 지역 추가 요금과 조건부 무료는 반영하지 않았다. 알레르기는 상품명 키워드 추정이다.
-- **한계:** 검색 랭킹(광고 제외)에 의존하고 랭킹 알고리즘은 공개되지 않았다. 가격·리뷰 수는 수집 시점 값이다. 브랜드 필드가 없어 판매처 기준으로만 다양성을 맞췄다. robots.txt를 확인할 수 없었고, 허락이 약관을 대신하지 않는다. 상품 이미지는 표시하지 않는다.
+- **합성·대체 필드:** 도착일·포장·당도는 아마존 카탈로그와 같은 규칙(\`scripts/catalog/demo-rules.mjs\`)으로 합성했다. 도착일은 상품 id 해시로 2~4일, 포장은 상품명에 gift/hamper/combo/set/box·선물·세트·기프트·박스·바구니가 있으면 격식 포장, 당도는 무가당·무설탕·제로슈거·슈가프리·설탕무첨가(영문 sugar free 등)가 있으면 단맛 없음이다. 선물세트 여부(\`gift_set\`)는 포장과 따로 기록한다. 인기도는 검색 시점의 누적 리뷰 수. 배송비는 목록의 기본 배송비로, 지역 추가 요금과 조건부 무료는 반영하지 않았다. 알레르기는 상품명 키워드 추정이다.
+- **한계:** 검색 랭킹(광고 제외)에 의존하고 랭킹 알고리즘은 공개되지 않았다. 가격·리뷰 수는 수집 시점 값이다. 브랜드 필드가 없어 판매처 기준으로만 다양성을 맞췄다. robots.txt를 확인할 수 없었고, 허락이 약관을 대신하지 않는다. 상품 사진은 판매자 이미지라 레포·공개 배포·논문 캡처에 쓰지 않는다.
 `;
 writeFileSync(join(PATHS.web, 'report.md'), report);
 console.log(JSON.stringify({ manifest: 'data/catalog/web/manifest.json', report: 'data/catalog/web/report.md', figures: readdirSync(FIGURES) }));

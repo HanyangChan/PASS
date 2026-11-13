@@ -2,6 +2,7 @@
 // Usage: node scripts/catalog/web/select.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { photoChecker } from './images.mjs';
 import { BLOCKED_TITLE_WORDS, CORE_TERMS, GENERIC_WORDS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
 
 // Gift-set titles (seed keywords ending in 선물세트). Matches PR #17's gift_set flag on engine products.
@@ -31,7 +32,9 @@ function median(values) {
 }
 
 /** Returns { picked, excluded } for one keyword's parsed items (already in display order). */
-export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_KEYWORD }) {
+// hasPhoto (optional): photo rule. Products without a usable photo are skipped at pick time, so the next
+// ranked product with a photo takes the slot; the price median (rule 3) still uses every eligible item.
+export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_KEYWORD, hasPhoto = null }) {
   const excluded = [];
   const drop = (item, reason) => { excluded.push({ id: item.id, reason }); return false; };
   // search_rank counts organic results only (ads never get a rank).
@@ -61,6 +64,9 @@ export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_
   const picked = [], malls = new Set(), brands = new Set(), ids = new Set(), titles = new Set(), usedBands = new Set();
   const conflicts = item => (item.mall && malls.has(item.mall)) || (item.brand && brands.has(item.brand))
     || ids.has(item.id) || titles.has(normalizeTitle(item.title));
+  // Photo rule, checked only for a product about to be picked: without a photo it is skipped for good.
+  const noPhoto = new Set();
+  const photoOk = item => !hasPhoto || (!noPhoto.has(item.id) && (hasPhoto(item) || (noPhoto.add(item.id), drop(item, 'no_photo'))));
   const take = (item, giftSet) => {
     picked.push({ ...item, gift_set: giftSet });
     if (item.mall) malls.add(item.mall);
@@ -72,29 +78,37 @@ export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_
   const pickFrom = (list, giftSet, limit) => {
     for (const item of list) {
       if (picked.length >= limit) return;
-      if (!usedBands.has(item.price_band) && !conflicts(item)) take(item, giftSet);
+      if (!usedBands.has(item.price_band) && !conflicts(item) && photoOk(item)) take(item, giftSet);
     }
     for (const item of list) {
       if (picked.length >= limit) return;
-      if (!ids.has(item.id) && !conflicts(item)) take(item, giftSet);
+      if (!ids.has(item.id) && !conflicts(item) && photoOk(item)) take(item, giftSet);
     }
   };
   pickFrom(gifts, giftRule ? true : null, perKeyword);
   if (giftRule && picked.length < MIN_GIFT_PICKS) pickFrom(others, false, perKeyword);
-  for (const item of others) if (!ids.has(item.id)) drop(item, 'not_gift_set');
+  for (const item of others) if (!ids.has(item.id) && !noPhoto.has(item.id)) drop(item, 'not_gift_set');
   return { picked, excluded, median_price: mid || null };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { priceBands } = loadSeeds();
+  // Photo rule: a photo copied/downloaded by images.mjs, or one a saved page holds. Run images.mjs, then
+  // select.mjs again: the result is the same for the same files on disk.
+  const hasPhoto = photoChecker();
+  const replacements = [];
   const lines = readFileSync(PATHS.parsed, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   const keywords = lines.map(({ items, ...record }) => {
-    const { picked, excluded, median_price } = selectForKeyword(items, { keyword: record.keyword, priceBands });
+    const { picked, excluded, median_price } = selectForKeyword(items, { keyword: record.keyword, priceBands, hasPhoto });
+    const without = selectForKeyword(items, { keyword: record.keyword, priceBands }).picked.map(p => p.id);
+    const now = picked.map(p => p.id);
+    const removed = without.filter(id => !now.includes(id)), added = now.filter(id => !without.includes(id));
+    if (removed.length || added.length) replacements.push({ occasion: record.occasion, keyword: record.keyword, removed, added });
     const reasons = Object.groupBy(excluded, entry => entry.reason);
     return { ...record, result_count: items.length, median_price, picked,
       excluded_counts: Object.fromEntries(Object.entries(reasons).map(([reason, list]) => [reason, list.length])) };
   });
-  writeFileSync(PATHS.selected, JSON.stringify({ per_keyword: PER_KEYWORD, keywords }, null, 1));
+  writeFileSync(PATHS.selected, JSON.stringify({ per_keyword: PER_KEYWORD, photo_replacements: replacements, keywords }, null, 1));
   const short = keywords.filter(entry => entry.picked.length < 2).map(entry => `${entry.occasion}/${entry.keyword}(${entry.picked.length})`);
-  console.log(JSON.stringify({ keywords: keywords.length, products: keywords.reduce((n, entry) => n + entry.picked.length, 0), under_two: short }));
+  console.log(JSON.stringify({ keywords: keywords.length, products: keywords.reduce((n, entry) => n + entry.picked.length, 0), under_two: short, photo_replacements: replacements }));
 }
