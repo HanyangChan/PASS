@@ -118,3 +118,20 @@ A안의 Supervisor·전문 서브 에이전트·종합 판단 초기 구현을 �
 ## PR 로컬 검토
 
 Node 22.13 이상에서 저장소 루트의 `npm run setup` → `npm run setup:local` → `npm run dev:api` 순으로 실행합니다. 웹은 다른 터미널에서 `npm --prefix mobile run web -- --port 8766`으로 시작합니다. A 규칙 모드가 기본이며 서버 채팅은 Supabase 로그인이 필요합니다. C/D에는 서버 LLM 키가 추가로 필요합니다. B는 규칙과 자문을 실행하고, 서버 키가 있으면 어려운 귀속 판단에 모델을 사용합니다. 기존 환경 파일은 덮어쓰지 않습니다. [설정·포트·CORS·상태 확인 안내](api/README.md#로컬-시험)를 참고하세요.
+
+## 상품 카탈로그 선택 (`CATALOG_SOURCE`)
+
+A~D 네 모드는 모두 API가 한 번 불러온 같은 상품 목록을 쓴다. 이 목록은 `CATALOG_SOURCE`로 고른다. 기본값은 `amazon`이라 설정하지 않으면 지금과 같다.
+
+| 값 | 상품 |
+|---|---|
+| `amazon`(기본) | Supabase의 아마존(Kaggle) 카탈로그 |
+| `web` | 네이버 쇼핑에서 모은 한국 선물 카탈로그 `supabase/seed/products-kr.json`(명절·생일·수험·꽃, 590개) |
+| `both` | 둘을 합친 목록(같은 상품만 중복 제거) |
+
+웹 데모·실험에서 `web`을 켜는 방법은 둘 중 하나다.
+
+- `api/.dev.vars`에 `CATALOG_SOURCE=web` 한 줄을 넣고 `npm run dev:api`
+- 한 번만: `CATALOG_SOURCE=web npm run dev:api`
+
+배포한 Worker에서는 `npx wrangler deploy --var CATALOG_SOURCE:web`(api 폴더)로 켠다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그는 판매자 상품 사진을 쓰지 않고 카테고리 아이콘(`mobile/assets/category-icons/`)을 보여준다. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 데모 값이다. 카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.

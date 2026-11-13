@@ -5,6 +5,8 @@ import { loadLocalEnv } from './local-env.mjs';
 import { localConfig } from './dev-config.mjs';
 import { createApi } from './worker.mjs';
 import { todayKst } from '../lib/catalog.mjs';
+import { catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 let config;
 let flowerAdvice;
 let catalog;
@@ -19,12 +21,22 @@ try {
   if (shoppingDbPath) {
     const { readShoppingCatalog, rewriteShoppingRequest } = await import('./local-shopping-catalog.mjs');
     shoppingText = rewriteShoppingRequest;
+    // The snapshot holds the Amazon rows plus PR #17 observations; CATALOG_SOURCE decides which base list
+    // goes with the observations, and only the same product is dropped when lists overlap.
+    const source = catalogSource(config.env.CATALOG_SOURCE);
+    const build = today => {
+      const rows = readShoppingCatalog(shoppingDbPath, today);
+      const observations = rows.filter(product => product.id.startsWith('searchapi-'));
+      const amazon = source === 'web' ? [] : rows.filter(product => !product.id.startsWith('searchapi-'));
+      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today));
+      return mergeCatalogs(amazon, web, observations);
+    };
     let day = todayKst();
-    let products = readShoppingCatalog(shoppingDbPath, day);
+    let products = build(day);
     catalog = () => {
       const today = todayKst();
       if (day !== today) {
-        products = readShoppingCatalog(shoppingDbPath, today);
+        products = build(today);
         day = today;
       }
       return products;

@@ -21,7 +21,7 @@ test('catalog gifts carry image, link, rating count and demo fields; rankings fo
   const products = await repo.load();
   const gift = giftFromProduct(products[0]);
   assert.equal(gift.category, '과자·간식'); assert.equal(gift.image, 'https://m.media-amazon.com/i.jpg'); assert.equal(gift.link, 'https://www.amazon.in/dp/A');
-  assert.equal(gift.ratingCount, 5); assert.deepEqual(gift.demoFields, ['stock']); assert.deepEqual(gift.allergensDeclared, ['우유']); assert.equal(gift.icon, 'gift');
+  assert.equal(gift.ratingCount, 5); assert.deepEqual(gift.demoFields, ['stock']); assert.deepEqual(gift.allergensDeclared, ['우유']); assert.equal(gift.icon, 'snack');
   const ranks = rankGifts(products);
   assert.deepEqual(Object.keys(ranks), ['전체', '부모님', '친구', '직장동료']);
   assert.deepEqual(ranks['전체'].map(g => g.id), ['B', 'C', 'A']);
