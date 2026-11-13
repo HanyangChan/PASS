@@ -6,7 +6,7 @@ const root = new URL('../../../', import.meta.url);
 export const path = relative => fileURLToPath(new URL(relative, root));
 
 export const PATHS = {
-  seeds: path('occasion-seeds.v1.1.json'),
+  seeds: path('occasion-seeds.v1.2.json'),
   profile: path('.cache/crawl-profile'),
   web: path('data/catalog/web'),
   raw: path('data/catalog/web/raw'),
@@ -29,7 +29,9 @@ export const PACING = {
 // Spec §5.
 export const PER_KEYWORD = Number(process.env.PER_KEYWORD ?? 3);
 export const OUTLIER_RATIO = [0.2, 5];
-export const BLOCKED_TITLE_WORDS = ['리필', '부품', '포장박스', '케이스만', '포장재', '쇼핑백만', '부자재', '교체용'];
+export const BLOCKED_TITLE_WORDS = ['리필', '부품', '포장박스', '케이스만', '포장재', '쇼핑백만', '부자재', '교체용',
+  // Memorial and funeral items are not gifts (added 2026-11-13 after a 성묘 artificial bouquet was picked).
+  '성묘', '산소', '납골', '추모', '근조', '장례'];
 // Relevance (rule 2): a title must contain at least one core term of its keyword (spaces ignored).
 // Core terms are the keyword's words minus these generic words, unless CORE_TERMS overrides them.
 export const GENERIC_WORDS = ['선물세트', '선물박스', '선물', '세트', '혼합', '소포장', '생일', '수능', '응원', '기원', '꽃다발', '화분', '다발'];
@@ -53,6 +55,7 @@ export const COLLECTION_NOTES = {
     { version: 'v1.1', date: '2026-11-13', occasion: 'birthday', from: '쿠키 선물박스', to: '쿠키 선물세트', why: '결과 38개가 모두 빈 포장 상자' },
     { version: 'v1.1', date: '2026-11-13', occasion: 'exam', from: '터치 장갑', to: '스마트폰 터치 장갑', why: '결과 38개가 모두 작업용 안전장갑' },
     { version: 'v1.1', date: '2026-11-13', occasion: 'flower', from: '용담 꽃다발', to: '가을 꽃다발', why: '결과 2개, 둘 다 용담과 무관' },
+    { version: 'v1.2', date: '2026-11-13', occasion: 'exam', from: '스마트폰 터치 장갑', to: '겨울 터치장갑', why: 'v1.1 결과도 작업용 안전장갑뿐. 네이버 안전장갑 카테고리는 매핑에서 제외. 새 결과로도 선정 2개 미만이면 시드에서 뺀다' },
   ],
 };
 

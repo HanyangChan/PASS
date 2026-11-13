@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif" role="img" aria-label="상황별 상품 가격 분포(로그 눈금)">
+<title>상황별 상품 가격 분포(로그 눈금)</title>
+<rect width="720" height="360" fill="#fcfcfb"/>
+<text x="72" y="24" font-size="15" font-weight="600" fill="#0b0b0b">상황별 상품 가격 분포</text>
+<text x="72" y="42" font-size="12" fill="#52514e">네이버 쇼핑 검색 결과에서 고른 상품, 가격 축은 로그 눈금(원). 상자=사분위, 선=중앙값, 수염=로그 눈금 기준 1.5×IQR</text>
+<line x1="197.43631664085876" x2="197.43631664085876" y1="56" y2="312" stroke="#e4e3df" stroke-width="1"/>
+<text x="197.43631664085876" y="330" font-size="11" fill="#52514e" text-anchor="middle">1천</text>
+<line x1="376.8951143900069" x2="376.8951143900069" y1="56" y2="312" stroke="#e4e3df" stroke-width="1"/>
+<text x="376.8951143900069" y="330" font-size="11" fill="#52514e" text-anchor="middle">1만</text>
+<line x1="462.5187211425626" x2="462.5187211425626" y1="56" y2="312" stroke="#e4e3df" stroke-width="1"/>
+<text x="462.5187211425626" y="330" font-size="11" fill="#52514e" text-anchor="middle">3만</text>
+<line x1="556.353912139155" x2="556.353912139155" y1="56" y2="312" stroke="#e4e3df" stroke-width="1"/>
+<text x="556.353912139155" y="330" font-size="11" fill="#52514e" text-anchor="middle">10만</text>
+<line x1="681.7902287800138" x2="681.7902287800138" y1="56" y2="312" stroke="#e4e3df" stroke-width="1"/>
+<text x="681.7902287800138" y="330" font-size="11" fill="#52514e" text-anchor="middle">50만</text>
+<g><title>명절 148개 · 중앙값 38,800원 · 사분위 26,738원~55,225원 · 범위 5,400원~309,000원</title>
+<text x="60" y="92" font-size="13" fill="#0b0b0b" text-anchor="end">명절</text>
+<line x1="372.89741937695794" x2="453.54569921729626" y1="88" y2="88" stroke="#184f95" stroke-width="2"/>
+<line x1="510.0778992832714" x2="588.2661677997668" y1="88" y2="88" stroke="#184f95" stroke-width="2"/>
+<line x1="372.89741937695794" x2="372.89741937695794" y1="82" y2="94" stroke="#184f95" stroke-width="2"/>
+<line x1="588.2661677997668" x2="588.2661677997668" y1="82" y2="94" stroke="#184f95" stroke-width="2"/>
+<rect x="453.54569921729626" y="74" width="56.53220006597513" height="28" rx="4" fill="#2a78d6" fill-opacity="0.28" stroke="#2a78d6" stroke-width="2"/>
+<line x1="482.5661479416995" x2="482.5661479416995" y1="74" y2="102" stroke="#184f95" stroke-width="3"/>
+<text x="482.5661479416995" y="68" font-size="11" fill="#52514e" text-anchor="middle">38,800원</text>
+</g>
+<circle cx="328.870820257667" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 5,400원</title></circle>
+<circle cx="349.0965948819787" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 7,000원</title></circle>
+<circle cx="358.5233952709062" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 7,900원</title></circle>
+<circle cx="359.5037599657268" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 8,000원</title></circle>
+<circle cx="620.9295551873562" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 229,000원</title></circle>
+<circle cx="644.2812718037366" cy="88" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>명절 이상값 309,000원</title></circle>
+<g><title>생일 150개 · 중앙값 39,150원 · 사분위 20,725원~71,750원 · 범위 2,900원~449,000원</title>
+<text x="60" y="156" font-size="13" fill="#0b0b0b" text-anchor="end">생일</text>
+<line x1="312.9095603715415" x2="433.6928438930134" y1="152" y2="152" stroke="#184f95" stroke-width="2"/>
+<line x1="530.4798846215581" x2="673.4052563318922" y1="152" y2="152" stroke="#184f95" stroke-width="2"/>
+<line x1="312.9095603715415" x2="312.9095603715415" y1="146" y2="158" stroke="#184f95" stroke-width="2"/>
+<line x1="673.4052563318922" x2="673.4052563318922" y1="146" y2="158" stroke="#184f95" stroke-width="2"/>
+<rect x="433.6928438930134" y="138" width="96.7870407285447" height="28" rx="4" fill="#2a78d6" fill-opacity="0.28" stroke="#2a78d6" stroke-width="2"/>
+<line x1="483.2660445747962" x2="483.2660445747962" y1="138" y2="166" stroke="#184f95" stroke-width="3"/>
+<text x="483.2660445747962" y="132" font-size="11" fill="#52514e" text-anchor="middle">39,150원</text>
+</g>
+<circle cx="280.4177054254185" cy="152" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>생일 이상값 2,900원</title></circle>
+<g><title>수험 149개 · 중앙값 21,900원 · 사분위 8,000원~37,900원 · 범위 500원~168,000원</title>
+<text x="60" y="220" font-size="13" fill="#0b0b0b" text-anchor="end">수험</text>
+<line x1="201.23892277709703" x2="359.5037599657268" y1="216" y2="216" stroke="#184f95" stroke-width="2"/>
+<line x1="480.73701134139395" x2="596.7876449594024" y1="216" y2="216" stroke="#184f95" stroke-width="2"/>
+<line x1="201.23892277709703" x2="201.23892277709703" y1="210" y2="222" stroke="#184f95" stroke-width="2"/>
+<line x1="596.7876449594024" x2="596.7876449594024" y1="210" y2="222" stroke="#184f95" stroke-width="2"/>
+<rect x="359.5037599657268" y="202" width="121.23325137566718" height="28" rx="4" fill="#2a78d6" fill-opacity="0.28" stroke="#2a78d6" stroke-width="2"/>
+<line x1="437.9908059399874" x2="437.9908059399874" y1="202" y2="230" stroke="#184f95" stroke-width="3"/>
+<text x="437.9908059399874" y="196" font-size="11" fill="#52514e" text-anchor="middle">21,900원</text>
+</g>
+<circle cx="143.4138355325694" cy="216" r="4" fill="#fcfcfb" stroke="#184f95" stroke-width="2"><title>수험 이상값 500원</title></circle>
+<g><title>꽃 147개 · 중앙값 26,100원 · 사분위 10,000원~45,400원 · 범위 2,400원~111,000원</title>
+<text x="60" y="284" font-size="13" fill="#0b0b0b" text-anchor="end">꽃</text>
+<line x1="265.6685689691343" x2="376.8951143900069" y1="280" y2="280" stroke="#184f95" stroke-width="2"/>
+<line x1="494.8095677977838" x2="564.4875194226187" y1="280" y2="280" stroke="#184f95" stroke-width="2"/>
+<line x1="265.6685689691343" x2="265.6685689691343" y1="274" y2="286" stroke="#184f95" stroke-width="2"/>
+<line x1="564.4875194226187" x2="564.4875194226187" y1="274" y2="286" stroke="#184f95" stroke-width="2"/>
+<rect x="376.8951143900069" y="266" width="117.91445340777693" height="28" rx="4" fill="#2a78d6" fill-opacity="0.28" stroke="#2a78d6" stroke-width="2"/>
+<line x1="451.66491893052984" x2="451.66491893052984" y1="266" y2="294" stroke="#184f95" stroke-width="3"/>
+<text x="451.66491893052984" y="260" font-size="11" fill="#52514e" text-anchor="middle">26,100원</text>
+</g>
+
+</svg>

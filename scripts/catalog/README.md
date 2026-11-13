@@ -24,3 +24,5 @@ FLOWER_DB_PATH=data/shopping-poc/catalog.sqlite SHOPPING_DB_PATH=data/shopping-p
 ## 한국 선물 상품 수동 저장 (`scripts/catalog/web/`)
 
 자동 수집이 막히면 `node scripts/catalog/web/collect.mjs --site naver --manual-list`로 URL 목록(`data/catalog/web/manual/naver-urls.tsv`)을 만든 뒤 `node scripts/catalog/web/manual-helper.mjs --site naver --occasion holiday`를 실행한다(`--occasion`은 `holiday`·`birthday`·`exam`·`flower`, 생략하면 전체). 도우미는 아직 저장하지 않은 다음 검색 결과를 Chrome 시크릿 창으로 열고, 저장할 파일명을 클립보드에 넣고, 저장 폴더를 터미널에 보여준다. 페이지가 다 뜨면 스크롤하지 말고 `Cmd+S` → 형식 "웹페이지, 전체" → `Cmd+Shift+G`로 그 폴더로 이동 → 파일명 붙여넣기로 저장한 다음 터미널에서 Enter를 누르면, 파일이 생겼는지 확인하고 다음 품목으로 넘어간다(`s` 건너뛰기, `q` 종료, 다시 실행하면 저장된 파일은 건너뜀). 보안 확인이 뜨면 직접 풀어도 되지만 로그인은 하지 않는다. 저장한 HTML은 `/data/` 아래라 Git에 올라가지 않는다.
+
+수집이 끝나면 `node scripts/catalog/web/parse.mjs --site naver` → `select.mjs` → `enrich.mjs`(→ `supabase/seed/products-kr.json`) → `report.mjs`(→ `data/catalog/web/report.md`, `manifest.json`, `figures/`) 순서로 돌린다. 모두 저장된 페이지만 읽는다. 논문용 사본은 `docs/catalog-kr/`에 복사해 커밋한다.

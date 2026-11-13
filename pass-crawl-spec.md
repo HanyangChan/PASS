@@ -2,7 +2,7 @@
 
 작성일 2026-11-11 · 대상: PASS 레포 `main` 기준 작업 브랜치 `data/naver-catalog` · 실행: 사용자 Mac의 Claude Code
 
-이 문서는 Claude Code가 한국 선물 상황별 실제 상품 데이터를 수집·정리하는 작업의 단일 기준이다. 품목 목록은 같은 폴더의 `occasion-seeds.v1.1.json`을 쓴다.
+이 문서는 Claude Code가 한국 선물 상황별 실제 상품 데이터를 수집·정리하는 작업의 단일 기준이다. 품목 목록은 같은 폴더의 `occasion-seeds.v1.2.json`을 쓴다.
 
 **v2.1 수정(2026-11-13):** 최종 카탈로그 위치를 `supabase/seed/products-kr.json`으로 변경, 수동 저장 경로에 사이트 폴더 추가, PR #17 겹침 처리 명시, 네이버 robots.txt 신뢰 불가 기록. 사이트는 네이버로 결정. 선물세트 규칙(§5-6) 추가, 배송비는 네이버 목록 실제 값, 인기도는 리뷰 수 기준(§6).
 
@@ -40,7 +40,7 @@
 
 1. Playwright 설치(레포에 없으면): `npm i -D playwright && npx playwright install chromium`
 2. `.gitignore`에 `.cache/`, `data/catalog/web/raw/`, `data/catalog/web/manual/`이 들어가는지 확인한다. 원본 HTML은 레포에 올리지 않는다(정제된 `supabase/seed/products-kr.json`만 올림. `/data/` 전체가 Git 제외라서 최종 카탈로그는 아마존 데이터와 같은 `supabase/seed/`에 둔다).
-3. `occasion-seeds.v1.1.json`을 팀이 검토한다. 품목 교체·추가는 이 파일만 고치면 된다.
+3. `occasion-seeds.v1.2.json`을 팀이 검토한다. 품목 교체·추가는 이 파일만 고치면 된다.
 4. 수집하는 동안 노트북을 켜 두고 브라우저 창을 닫지 않는다.
 
 ## 3. 파이프라인
@@ -159,7 +159,7 @@ PR #17 로컬 스냅샷과 겹치는 시드(`스팸 선물세트`, `참치 선�
 ## 10. Claude Code 첫 프롬프트
 
 ```
-레포 루트의 pass-crawl-spec.md(v2)와 occasion-seeds.v1.1.json을 읽고, 이 명세를 단일 기준으로 작업해줘.
+레포 루트의 pass-crawl-spec.md(v2)와 occasion-seeds.v1.2.json을 읽고, 이 명세를 단일 기준으로 작업해줘.
 
 [0. 최신화]
 - .git 안에 남은 .lock 파일(예: .git/objects/maintenance.lock)이 있으면 지운 뒤

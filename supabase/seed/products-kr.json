@@ -17940,119 +17940,32 @@
   "collected_at": "2026-11-13T08:22:49.599Z"
  },
  {
-  "id": "naver_12684076159",
-  "name": "3M 슈퍼그립200터치 작업장갑 스마트폰 터치강화",
+  "id": "naver_7452559574",
+  "name": "K2 뉴이지웜 방한장갑 겨울 기모 패딩 터치장갑 남자 여자 겨울용품",
   "brand": null,
-  "mall": "3M아이에스엠",
-  "price": 2500,
+  "mall": "구구세이프",
+  "price": 28600,
   "category": "accessory",
   "site_category": [
-   "안전장갑"
+   "남성장갑"
   ],
   "site_category_ids": [
-   "50000008",
-   "50000165",
-   "50001031",
-   "50003450"
+   "50000001",
+   "50000182",
+   "50000552"
   ],
   "occasions": [
    "exam"
   ],
   "season": null,
-  "seed_keyword": "스마트폰 터치 장갑",
+  "seed_keyword": "겨울 터치장갑",
   "seed_keywords": [
-   "스마트폰 터치 장갑"
-  ],
-  "price_band": "b1",
-  "search_rank": 1,
-  "rating": 4.94,
-  "review_count": 531,
-  "popularity_proxy": null,
-  "gift_set": null,
-  "delivery_badge": "오늘출발",
-  "shipping_fee": 2500,
-  "shipping_free_over_krw": null,
-  "shipping_source": "naver_listing",
-  "arrival_days": 1,
-  "arrival_source": "synthetic",
-  "alcohol": false,
-  "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_9022858/90228587083.4.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/12684076159",
-  "source": "naver_shopping_web",
-  "collected_at": "2026-11-13T08:44:25.006Z"
- },
- {
-  "id": "naver_4849091718",
-  "name": "한우 HW-604 NBR 작업용 스마트폰터치 코팅장갑 10켤레",
-  "brand": null,
-  "mall": "한우장갑",
-  "price": 15500,
-  "category": "accessory",
-  "site_category": [
-   "안전장갑"
-  ],
-  "site_category_ids": [
-   "50000008",
-   "50000165",
-   "50001031",
-   "50003450"
-  ],
-  "occasions": [
-   "exam"
-  ],
-  "season": null,
-  "seed_keyword": "스마트폰 터치 장갑",
-  "seed_keywords": [
-   "스마트폰 터치 장갑"
+   "겨울 터치장갑"
   ],
   "price_band": "b2",
-  "search_rank": 12,
+  "search_rank": 1,
   "rating": 4.86,
-  "review_count": 682,
-  "popularity_proxy": null,
-  "gift_set": null,
-  "delivery_badge": "오늘출발",
-  "shipping_fee": 0,
-  "shipping_free_over_krw": null,
-  "shipping_source": "naver_listing",
-  "arrival_days": 1,
-  "arrival_source": "synthetic",
-  "alcohol": false,
-  "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8239361/82393614954.7.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/4849091718",
-  "source": "naver_shopping_web",
-  "collected_at": "2026-11-13T08:44:25.006Z"
- },
- {
-  "id": "naver_3766269266",
-  "name": "3M 프로그립 4000 터치 겨울 기모 방한 작업 장갑 / 스마트폰 터치 미끄럼방지",
-  "brand": null,
-  "mall": "3M-HKMRO",
-  "price": 3600,
-  "category": "accessory",
-  "site_category": [
-   "안전장갑"
-  ],
-  "site_category_ids": [
-   "50000008",
-   "50000165",
-   "50001031",
-   "50003450"
-  ],
-  "occasions": [
-   "exam"
-  ],
-  "season": null,
-  "seed_keyword": "스마트폰 터치 장갑",
-  "seed_keywords": [
-   "스마트폰 터치 장갑"
-  ],
-  "price_band": "b1",
-  "search_rank": 3,
-  "rating": 4.83,
-  "review_count": 725,
+  "review_count": 583,
   "popularity_proxy": null,
   "gift_set": null,
   "delivery_badge": "오늘출발",
@@ -18063,10 +17976,94 @@
   "arrival_source": "synthetic",
   "alcohol": false,
   "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8131078/81310787228.1.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/3766269266",
+  "image_url": "https://shopping-phinf.pstatic.net/main_8499705/84997059895.1.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/7452559574",
   "source": "naver_shopping_web",
-  "collected_at": "2026-11-13T08:44:25.006Z"
+  "collected_at": "2026-11-13T08:54:32.545Z"
+ },
+ {
+  "id": "naver_4693871359",
+  "name": "카이맨코리아 2396 히트랙 겨울 방한장갑 (9size, 남녀공용, 스마트폰터치)",
+  "brand": null,
+  "mall": "카이맨코리아",
+  "price": 35000,
+  "category": "accessory",
+  "site_category": [
+   "남성장갑"
+  ],
+  "site_category_ids": [
+   "50000001",
+   "50000182",
+   "50000552"
+  ],
+  "occasions": [
+   "exam"
+  ],
+  "season": null,
+  "seed_keyword": "겨울 터치장갑",
+  "seed_keywords": [
+   "겨울 터치장갑"
+  ],
+  "price_band": "b3",
+  "search_rank": 3,
+  "rating": 4.77,
+  "review_count": 2838,
+  "popularity_proxy": null,
+  "gift_set": null,
+  "delivery_badge": null,
+  "shipping_fee": 3000,
+  "shipping_free_over_krw": null,
+  "shipping_source": "naver_listing",
+  "arrival_days": 3,
+  "arrival_source": "synthetic",
+  "alcohol": false,
+  "allergens": [],
+  "image_url": "https://shopping-phinf.pstatic.net/main_8223839/82238392077.2.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/4693871359",
+  "source": "naver_shopping_web",
+  "collected_at": "2026-11-13T08:54:32.545Z"
+ },
+ {
+  "id": "naver_7409587540",
+  "name": "방한장갑 겨울장갑 남자 스웨이드 스마트폰 터치 남성 털 장갑",
+  "brand": null,
+  "mall": "SOLID",
+  "price": 5900,
+  "category": "accessory",
+  "site_category": [
+   "남성장갑"
+  ],
+  "site_category_ids": [
+   "50000001",
+   "50000182",
+   "50000552"
+  ],
+  "occasions": [
+   "exam"
+  ],
+  "season": null,
+  "seed_keyword": "겨울 터치장갑",
+  "seed_keywords": [
+   "겨울 터치장갑"
+  ],
+  "price_band": "b1",
+  "search_rank": 4,
+  "rating": 4.66,
+  "review_count": 939,
+  "popularity_proxy": null,
+  "gift_set": null,
+  "delivery_badge": "오늘출발",
+  "shipping_fee": 3000,
+  "shipping_free_over_krw": null,
+  "shipping_source": "naver_listing",
+  "arrival_days": 1,
+  "arrival_source": "synthetic",
+  "alcohol": false,
+  "allergens": [],
+  "image_url": "https://shopping-phinf.pstatic.net/main_8495408/84954087862.4.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/7409587540",
+  "source": "naver_shopping_web",
+  "collected_at": "2026-11-13T08:54:32.545Z"
  },
  {
   "id": "naver_10159007086",
@@ -20099,11 +20096,11 @@
   "collected_at": "2026-11-13T08:25:39.389Z"
  },
  {
-  "id": "naver_11830655517",
-  "name": "데이지꽃다발 모루꽃다발 완제품 여자친구선물 샤스타데이지",
+  "id": "naver_12024331041",
+  "name": "안개꽃 데이지 들꽃조화부케 셀프웨딩부케 조화꽃다발",
   "brand": null,
-  "mall": "플로라온니",
-  "price": 47000,
+  "mall": "플라워리프",
+  "price": 37000,
   "category": "flower",
   "flower_subtype": "preserved",
   "site_category": [
@@ -20123,21 +20120,21 @@
    "데이지 꽃다발"
   ],
   "price_band": "b3",
-  "search_rank": 9,
-  "rating": 5,
-  "review_count": 7,
+  "search_rank": 11,
+  "rating": 4.96,
+  "review_count": 82,
   "popularity_proxy": null,
   "gift_set": null,
   "delivery_badge": null,
-  "shipping_fee": 0,
+  "shipping_fee": 4000,
   "shipping_free_over_krw": null,
   "shipping_source": "naver_listing",
-  "arrival_days": 3,
+  "arrival_days": 2,
   "arrival_source": "synthetic",
   "alcohol": false,
   "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8937516/89375166104.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/11830655517",
+  "image_url": "https://shopping-phinf.pstatic.net/main_8956884/89568841733.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/12024331041",
   "source": "naver_shopping_web",
   "collected_at": "2026-11-13T08:25:39.389Z"
  },
@@ -21844,11 +21841,11 @@
   "collected_at": "2026-11-13T08:26:50.962Z"
  },
  {
-  "id": "naver_9816433150",
-  "name": "드라이플라워 프리저브드플라워 장미 천일홍 미니꽃다발 납골당꽃",
+  "id": "naver_5973336607",
+  "name": "드라이플라워 프리저브드플라워 미니 꽃다발 작은 천일홍 안개꽃다발 퍼플",
   "brand": null,
-  "mall": "블루엣",
-  "price": 4800,
+  "mall": "비바플라워",
+  "price": 5000,
   "category": "flower",
   "flower_subtype": "preserved",
   "site_category": [
@@ -21865,26 +21862,24 @@
   "season": "autumn",
   "seed_keyword": "천일홍 꽃다발",
   "seed_keywords": [
-   "천일홍 꽃다발",
-   "프리저브드 플라워",
-   "드라이플라워 다발"
+   "천일홍 꽃다발"
   ],
   "price_band": "b1",
-  "search_rank": 1,
-  "rating": 5,
-  "review_count": 6,
+  "search_rank": 2,
+  "rating": 4.83,
+  "review_count": 2816,
   "popularity_proxy": null,
   "gift_set": null,
-  "delivery_badge": null,
+  "delivery_badge": "오늘출발",
   "shipping_fee": 3500,
   "shipping_free_over_krw": null,
   "shipping_source": "naver_listing",
-  "arrival_days": 3,
+  "arrival_days": 1,
   "arrival_source": "synthetic",
   "alcohol": false,
   "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8736093/87360935423.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/9816433150",
+  "image_url": "https://shopping-phinf.pstatic.net/main_8351783/83517836095.4.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/5973336607",
   "source": "naver_shopping_web",
   "collected_at": "2026-11-13T08:26:55.476Z"
  },
@@ -21975,11 +21970,11 @@
   "collected_at": "2026-11-13T08:26:55.476Z"
  },
  {
-  "id": "naver_10953596147",
-  "name": "모란 작약 조화 꽃 가을 성묘 산소 조화 꽃꽂이 꽃다발 실크플라워",
+  "id": "naver_9962082067",
+  "name": "페피타 싱글로즈 다알리아 조화 국화 가을 꽃 장식 꽃다발 실크플라워",
   "brand": null,
   "mall": "페피타",
-  "price": 6800,
+  "price": 8400,
   "category": "flower",
   "flower_subtype": "preserved",
   "site_category": [
@@ -21999,9 +21994,9 @@
    "가을 꽃다발"
   ],
   "price_band": "b1",
-  "search_rank": 3,
-  "rating": 4.79,
-  "review_count": 173,
+  "search_rank": 4,
+  "rating": 4.96,
+  "review_count": 71,
   "popularity_proxy": null,
   "gift_set": null,
   "delivery_badge": "오늘출발",
@@ -22012,8 +22007,8 @@
   "arrival_source": "synthetic",
   "alcohol": false,
   "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8849810/88498102182.1.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/10953596147",
+  "image_url": "https://shopping-phinf.pstatic.net/main_8750658/87506584340.5.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/9962082067",
   "source": "naver_shopping_web",
   "collected_at": "2026-11-13T08:44:38.265Z"
  },
@@ -22666,11 +22661,11 @@
   "collected_at": "2026-11-13T08:27:29.528Z"
  },
  {
-  "id": "naver_4794225083",
-  "name": "프리저브드플라워 목화 미니꽃다발 납골당꽃",
+  "id": "naver_4716005797",
+  "name": "빼빼로데이 수능 합격 미니 꽃다발 드라이플라워 선물 목화 핑크 수국 프리저브드 미스티블루",
   "brand": null,
-  "mall": "달달한비누꽃",
-  "price": 5500,
+  "mall": "에버블룸",
+  "price": 6510,
   "category": "flower",
   "flower_subtype": "preserved",
   "site_category": [
@@ -22690,21 +22685,21 @@
    "목화 꽃다발"
   ],
   "price_band": "b1",
-  "search_rank": 3,
-  "rating": 4.78,
-  "review_count": 166,
+  "search_rank": 20,
+  "rating": 4.77,
+  "review_count": 90,
   "popularity_proxy": null,
   "gift_set": null,
   "delivery_badge": null,
   "shipping_fee": 3000,
   "shipping_free_over_krw": null,
   "shipping_source": "naver_listing",
-  "arrival_days": 2,
+  "arrival_days": 3,
   "arrival_source": "synthetic",
   "alcohol": false,
   "allergens": [],
-  "image_url": "https://shopping-phinf.pstatic.net/main_8233874/82338747644.jpg",
-  "product_url": "https://smartstore.naver.com/main/products/4794225083",
+  "image_url": "https://shopping-phinf.pstatic.net/main_8226052/82260526819.5.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/4716005797",
   "source": "naver_shopping_web",
   "collected_at": "2026-11-13T08:27:29.528Z"
  },
@@ -24334,7 +24329,8 @@
   "season": "all",
   "seed_keyword": "프리저브드 플라워",
   "seed_keywords": [
-   "프리저브드 플라워"
+   "프리저브드 플라워",
+   "드라이플라워 다발"
   ],
   "price_band": "b3",
   "search_rank": 5,
@@ -24352,6 +24348,49 @@
   "allergens": [],
   "image_url": "https://shopping-phinf.pstatic.net/main_1133265/11332658344.13.jpg",
   "product_url": "https://smartstore.naver.com/main/products/719406647",
+  "source": "naver_shopping_web",
+  "collected_at": "2026-11-13T08:28:52.108Z"
+ },
+ {
+  "id": "naver_305555583",
+  "name": "드라이플라워 안개꽃 모음 프리저브드플라워",
+  "brand": null,
+  "mall": "플라라",
+  "price": 3500,
+  "category": "flower",
+  "flower_subtype": "preserved",
+  "site_category": [
+   "보존화"
+  ],
+  "site_category_ids": [
+   "50000008",
+   "50000079",
+   "50001807"
+  ],
+  "occasions": [
+   "flower"
+  ],
+  "season": "all",
+  "seed_keyword": "프리저브드 플라워",
+  "seed_keywords": [
+   "프리저브드 플라워"
+  ],
+  "price_band": "b1",
+  "search_rank": 7,
+  "rating": 4.75,
+  "review_count": 2104,
+  "popularity_proxy": null,
+  "gift_set": null,
+  "delivery_badge": "오늘출발",
+  "shipping_fee": 3000,
+  "shipping_free_over_krw": null,
+  "shipping_source": "naver_listing",
+  "arrival_days": 1,
+  "arrival_source": "synthetic",
+  "alcohol": false,
+  "allergens": [],
+  "image_url": "https://shopping-phinf.pstatic.net/main_8627672/8627672616.6.jpg",
+  "product_url": "https://smartstore.naver.com/main/products/305555583",
   "source": "naver_shopping_web",
   "collected_at": "2026-11-13T08:28:52.108Z"
  },

@@ -192,3 +192,10 @@ test('A router parser maps the new category words', async () => {
   assert.equal(parse('꽃등심 좋아해').preferences?.includes('category:flower') ?? false, false);
   assert.equal(parse('미술 좋아해').preferences?.includes('category:liquor') ?? false, false);
 });
+
+test('memorial and funeral items are blocked', () => {
+  assert.equal(isRelevant('모란 작약 조화 꽃 가을 성묘 산소 조화 꽃꽂이 꽃다발', '가을 꽃다발'), false);
+  assert.equal(isRelevant('근조 화환 3단', '꽃바구니'), false);
+  assert.equal(isRelevant('추모 납골당 꽃', '장미 꽃다발'), false);
+  assert.ok(isRelevant('가을 국화 꽃다발 생화', '가을 꽃다발'));
+});
