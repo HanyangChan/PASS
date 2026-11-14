@@ -8,6 +8,7 @@ export function localConfig(values,{nodeVersion=process.versions.node}={}) {
   const SUPABASE_PUBLISHABLE_KEY=values.SUPABASE_PUBLISHABLE_KEY||values.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   let validUrl=false;try{const url=new URL(SUPABASE_URL);validUrl=url.protocol==='https:'&&!url.username&&!url.password;}catch{}
   if(!validUrl||!SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_')||!usableSetting('SUPABASE_URL',SUPABASE_URL)||!usableSetting('SUPABASE_PUBLISHABLE_KEY',SUPABASE_PUBLISHABLE_KEY))throw Error('Supabase 공개 설정이 필요합니다. 저장소 루트에서 npm run setup:local을 실행하거나 mobile/.env.local / api/.dev.vars를 설정하세요.');
+  if(values.ITEM_FILTER&&!['on','off'].includes(values.ITEM_FILTER))throw Error('ITEM_FILTER는 on 또는 off여야 합니다.');
   if(values.CATALOG_SOURCE&&!['amazon','web','both'].includes(values.CATALOG_SOURCE))throw Error('CATALOG_SOURCE는 amazon, web, both 중 하나여야 합니다.');
   const CHAT_AGENT=values.CHAT_AGENT||'a-router';
   if(!modes.includes(CHAT_AGENT))throw Error('CHAT_AGENT 설정을 확인하세요. a-router, full-chat, full-chat-feedback-2 등을 사용할 수 있습니다.');

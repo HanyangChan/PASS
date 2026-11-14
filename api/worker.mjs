@@ -1,6 +1,7 @@
 import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst } from '../lib/catalog.mjs';
 import { CATALOG_IMAGE_PATH, catalogId, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import { currentItem, itemFilterEnabled, itemVocabulary, narrowByItem } from '../lib/item-filter.mjs';
 import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, occasionReply } from '../lib/single-gift.mjs';
@@ -155,6 +156,9 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         if (fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) throw new ApiError(503,'configuration','전체 채팅 Agent는 서버의 OpenAI 호환 LLM 설정과 키가 필요합니다.');
         if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE && !['single','subagents'].includes(env.A_ROUTER_LLM_MODE)) throw new ApiError(503,'configuration','서브 에이전트 모드 설정을 확인해주세요.');
         if (chatAgent === 'a-router' && env.A_ROUTER_LLM_MODE === 'subagents' && llm.provider !== 'openai-compatible') throw new ApiError(503,'configuration','서브 에이전트 모드는 OpenAI 호환 공급자를 사용해주세요.');
+        // The item filter keeps its current item in session.item_filter; agents never see that key.
+        const carriedItem = raw?.session && Object.hasOwn(raw.session, 'item_filter') ? raw.session.item_filter : undefined;
+        if (carriedItem !== undefined) { const { item_filter, ...rest } = raw.session; raw.session = rest; }
         const input = inputOf(raw, shoppingText);
         let advisorContext;
         if (chatAgent === LANGGRAPH_AGENT) {
@@ -173,6 +177,14 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         }
         let products;
         try { products = await catalog(env, { apiBase }); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
+        let item = null, itemFilter = null;
+        if (itemFilterEnabled(env)) {
+          // Without a carried item (older client, reloaded chat) the user's recent messages are read instead.
+          const said = input.operation === 'turn' ? [input.text] : [];
+          const texts = carriedItem === undefined ? [...(input.history ?? []).filter(m => m.role === 'user').map(m => m.text), ...said] : said;
+          item = currentItem(texts, itemVocabulary(products), typeof carriedItem === 'string' ? carriedItem : null);
+          ({ products, applied: itemFilter } = narrowByItem(products, item));
+        }
         let turn, mode = 'rules';
         if (advisorContext) {
           turn = await prototypeLangGraphTurn(input, products, { env, fetcher, signal: request.signal, advisorContext });
@@ -198,7 +210,8 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
           turn = { ...turn, message: `선물하는 날을 명절로 설정했어요.\n${turn.message}` };
         }
         const usedModel = mode === 'llm' || mode === 'agents' && turn.routing.llmCalls > 0;
-        return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products), mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: catalogLabel(env) });
+        const itemFields = itemFilterEnabled(env) ? { session: { ...turn.session, item_filter: item }, itemFilter } : {};
+        return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products), ...itemFields, mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: catalogLabel(env) });
       } catch (error) {
         if (error instanceof FullChatError) { const code=error.code==='configuration'?'configuration':'agent_unavailable';diagnose(code,503,error.routing);return json({error:'전체 채팅 Agent가 요청을 완료하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code,routing:error.routing},503); }
         if (error instanceof RouterInterpretationError) { diagnose('interpretation_unavailable',503,error.routing); return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503); }
