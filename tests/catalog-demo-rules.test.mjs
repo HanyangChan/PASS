@@ -32,6 +32,15 @@ test('Amazon and web rules give the same packaging and sweetness for the same na
     ['Sugar Free Mints', 'Coca-Cola Zero Sugar', '무가당 두유', '제로슈거 콜라', '제로 슈거 콜라', '슈가프리 캔디', '설탕무첨가 잼']);
 });
 
+test('a bare 선물 names the occasion, not the wrapping: only gift-set words make packaging formal', () => {
+  assert.equal(packagingFor('출산선물 아기 양말'), 'basic');
+  assert.equal(packagingFor('한우 선물세트'), 'formal');
+  for (const name of ['생일 선물 머그컵', '부모님 선물 안마기', '꽃선물 장미 꽃다발', '수능 합격 선물 초콜릿']) assert.equal(packagingFor(name), 'basic', name);
+  for (const name of ['과일 선물박스', '리본 선물포장 향초', '과일 선물바구니', '견과 선물 세트', '홍삼 기프트']) assert.equal(packagingFor(name), 'formal', name);
+  assert.equal(webItem('출산선물 아기 양말').packaging, 'basic');
+  assert.equal(webItem('한우 선물세트').packaging, 'formal');
+});
+
 test('arrival days use the same hash in both catalogs: 2–4 days, stable per id', () => {
   assert.equal(amazonRow('x').arrival_days, arrivalDays('B000000099'));
   assert.equal(webItem('x').arrival_days, arrivalDays('naver_99'));

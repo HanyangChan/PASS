@@ -1,4 +1,4 @@
-// ⑤ images: product photos for the picked products → data/catalog/web/images/<id>.webp (never committed).
+// ⑤ images: product photos for the picked products → supabase/seed/images-kr/<id>.webp (committed, spec §7).
 // 1. Copy the photo the saved search page already holds (<page>_files/<image file name>).
 // 2. Otherwise download it from image_url (shopping-phinf.pstatic.net) at 1–2 s intervals, as the
 //    search page did (?type=f300_webp). Any 4xx/5xx stops the run; no proxies or disguised clients.

@@ -59,18 +59,25 @@ for (const agent of ['a-router', 'langgraph-advisors', 'legacy']) {
     assert.equal(turn.catalog, 'naver-web-v1');
     assert.ok(turn.view.result.items.length > 0, JSON.stringify(turn.view.result).slice(0, 200));
     assert.ok(turn.view.result.items.every(item => item.id.startsWith('naver_')
-      && item.image === `https://zenmtrokvnwsekidcniy.supabase.co/storage/v1/object/public/product-images-kr/${item.id}.webp`));
+      && item.image === `https://api.example/catalog-images/${item.id}.webp`)); // this API's own address
   });
 }
 
-test('WEB_IMAGE_BASE serves web photos from another copy (the local dev server) and is reported on /health', async () => {
+test('the Worker serves web photos at /catalog-images/<file> from the ASSETS binding, and nothing else from it', async () => {
   const { fetcher } = fakeSupabase();
   const api = createApi({ fetcher });
-  const base = 'http://127.0.0.1:8788/catalog-images';
-  const health = await (await api.fetch(new Request('https://api.example/health'), env({ CATALOG_SOURCE: 'web', WEB_IMAGE_BASE: base }))).json();
-  assert.equal(health.webImageBase, base);
-  const turn = await chat(api, { CATALOG_SOURCE: 'web', CHAT_AGENT: 'a-router', WEB_IMAGE_BASE: base }, '부모님 명절 선물 예산 5만원');
-  assert.ok(turn.view.result.items.length && turn.view.result.items.every(item => item.image === `${base}/${item.id}.webp`));
-  const plain = await (await api.fetch(new Request('https://api.example/health'), env({ CATALOG_SOURCE: 'web' }))).json();
-  assert.equal(plain.webImageBase, undefined);
+  const asked = [];
+  const ASSETS = { fetch: async url => {
+    asked.push(new URL(url).pathname);
+    try { return new Response(readFileSync(new URL(`../../supabase/seed/images-kr${new URL(url).pathname}`, import.meta.url))); }
+    catch { return new Response(null, { status: 404 }); }
+  } };
+  const get = path => api.fetch(new Request(`https://api.example${path}`), env({ ASSETS }));
+  const photo = await get(`/catalog-images/${web[0].image_file}`);
+  assert.equal(photo.status, 200);
+  assert.equal(photo.headers.get('content-type'), 'image/webp');
+  assert.equal(Buffer.from(await photo.arrayBuffer()).toString('ascii', 8, 12), 'WEBP');
+  assert.equal((await get('/catalog-images/naver_1.webp')).status, 404);
+  for (const path of ['/catalog-images/../wrangler.jsonc', '/catalog-images/x.webp', `/${web[0].image_file}`]) assert.equal((await get(path)).status, 404, path);
+  assert.deepEqual(asked, [`/${web[0].image_file}`, '/naver_1.webp']); // the file-name check runs before ASSETS
 });

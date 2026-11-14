@@ -4,6 +4,8 @@
 
 이 문서는 Claude Code가 한국 선물 상황별 실제 상품 데이터를 수집·정리하는 작업의 단일 기준이다. 품목 목록은 같은 폴더의 `occasion-seeds.v1.2.json`을 쓴다.
 
+**v2.2 수정(2026-11-14):** 상품 사진을 팀 공유용으로 레포(`supabase/seed/images-kr/`)에 포함하고 Supabase Storage 버킷을 쓰지 않음(§7). 포장 규칙에서 단독 "선물" 제외.
+
 **v2.1 수정(2026-11-13):** 최종 카탈로그 위치를 `supabase/seed/products-kr.json`으로 변경, 수동 저장 경로에 사이트 폴더 추가, PR #17 겹침 처리 명시, 네이버 robots.txt 신뢰 불가 기록. 사이트는 네이버로 결정. 선물세트 규칙(§5-6) 추가, 배송비는 네이버 목록 실제 값, 인기도는 리뷰 수 기준(§6).
 
 **v1에서 바뀐 점:** 네이버 쇼핑 검색 API는 개발자센터 신규 신청이 종료(2026-07-31)됐고 NAVER API HUB로도 이관되지 않아 쓸 수 없다. 수집은 **브라우저 자동화(Playwright)로 쇼핑몰 검색 결과 페이지를 읽는 방식**으로 바꾼다. 조교님께 크롤링 허락을 받았다.
@@ -75,7 +77,7 @@ seeds.json → ① collect → data/catalog/web/raw/<site>/<occasion>/<slug>.htm
 - LLM은 기본으로 쓰지 않는다. 필요해지면 레포의 현재 LLM 설정(학교 DeepSeek, OpenAI 호환)을 별도 플래그로만.
 
 ### ⑤ images (2026-11-13 추가)
-`scripts/catalog/web/images.mjs`: 선정 상품의 사진을 저장 페이지의 `_files/`에서 찾아 `data/catalog/web/images/<id>.webp`로 복사하고, 없으면 `image_url`에서 1~2초 간격으로 직접 받는다(4xx/5xx면 멈춤, 우회 없음). 그래도 없는 상품은 ③ select의 사진 규칙이 같은 품목 다음 순위 상품으로 바꾸고, 교체 목록은 manifest `photos.replaced_for_missing_photo`에 남는다. §7 참고.
+`scripts/catalog/web/images.mjs`: 선정 상품의 사진을 저장 페이지의 `_files/`에서 찾아 `supabase/seed/images-kr/<id>.webp`로 복사하고, 없으면 `image_url`에서 1~2초 간격으로 직접 받는다(4xx/5xx면 멈춤, 우회 없음). 그래도 없는 상품은 ③ select의 사진 규칙이 같은 품목 다음 순위 상품으로 바꾸고, 교체 목록은 manifest `photos.replaced_for_missing_photo`에 남는다. §7 참고.
 
 ### ⑥ report
 §8 참고.
@@ -103,7 +105,7 @@ seeds.json → ① collect → data/catalog/web/raw/<site>/<occasion>/<slug>.htm
   shipping_source: "naver_listing" | "unknown",
   arrival_days: 2, arrival_source: "synthetic",
   allergens: ["대두"],
-  image_url: "<Storage 버킷 주소>/<id>.webp", image_file: "<id>.webp", source_image_url: "...", product_url: "...", // §7
+  image_file: "<id>.webp", source_image_url: "...", product_url: "...", // §7. 사진 주소는 API가 <API 주소>/catalog-images/<image_file>로 만든다
   source: "naver_shopping_web" | "coupang_web", collected_at: "2026-11-..."
 }
 ```
@@ -133,12 +135,12 @@ PR #17 로컬 스냅샷과 겹치는 시드(`스팸 선물세트`, `참치 선�
 
 ## 7. 이미지 정책
 
-(2026-11-13 개정: 아이콘 대신 실제 상품 사진을 쓰기로 결정)
+(2026-11-13 개정: 아이콘 대신 실제 상품 사진을 쓰기로 결정. 2026-11-14 개정: 팀 공유용으로 레포에 포함)
 
-- 판매자 상품 이미지는 저작물이다. **비공개 저장소에 보관하고, 레포·공개 배포·논문 캡처에는 쓰지 않는다.** 사진 파일은 절대 Git에 커밋하지 않는다(`data/`는 `.gitignore`).
-- 보관 위치: 로컬은 `data/catalog/web/images/<id>.webp`(300px WebP, 저장 페이지에서 복사하거나 검색 페이지와 같은 크기로 직접 받음). 앱 표시용 사본은 Supabase Storage 버킷 `product-images-kr`(`scripts/catalog/web/upload-images.mjs`). `products-kr.json`의 `image_url`은 그 버킷 주소, 원래 판매자 주소는 `source_image_url`.
-- 앱이 사진을 띄우려면 버킷은 공개 읽기(URL을 알면 열람 가능)다. 버킷 주소가 레포의 `products-kr.json`에 있으므로 사실상 누구나 열 수 있다는 점을 알고 쓴다. 실험이 끝나면 버킷을 비운다.
-- 로컬 개발: `api/dev-server.mjs`가 `data/catalog/web/images/`를 `/catalog-images/`로 서빙해 Storage 없이도 사진이 뜬다(`WEB_IMAGES=storage`면 버킷 사용).
+- 판매자 상품 이미지는 저작물이다. **팀 공유용으로 레포에 포함하고, 원본 주소는 `source_image_url`로 기록하며, 논문 캡처에는 사용하지 않는다.** 팀원이 pull만 하면 사진이 뜨도록 하기 위한 것이다.
+- 보관 위치: `supabase/seed/images-kr/<id>.webp`(300px WebP, 590개 약 8MB, 저장 페이지에서 복사하거나 검색 페이지와 같은 크기로 직접 받음, `images.mjs`). `products-kr.json`에는 파일 이름 `image_file`만 두고, 원래 판매자 주소는 `source_image_url`에 둔다. 외부 저장소(Supabase Storage 버킷)는 쓰지 않는다.
+- 서빙: API가 `/catalog-images/<image_file>`로 내려주고(파일 이름 형식 `naver_<숫자>.webp`만 허용), 상품의 사진 주소는 `<API 주소>/catalog-images/<image_file>`이다(`lib/catalog-source.mjs`의 `fromWebItem`). 로컬은 `api/dev-server.mjs`가 이 폴더를 직접 읽고, 배포 Worker는 같은 폴더를 static assets(`ASSETS` 바인딩, `run_worker_first`)로 올려 같은 경로로만 내려준다.
+- 문제가 제기되면 이 폴더를 지우고 `CATALOG_SOURCE`를 `amazon`으로 되돌린다.
 - 카드·랭킹 화면은 사진만 보여주고 카테고리 아이콘은 쓰지 않는다.
 
 ## 8. 분석·논문용 산출물
@@ -162,7 +164,7 @@ PR #17 로컬 스냅샷과 겹치는 시드(`스팸 선물세트`, `참치 선�
 | S6 | `report.mjs` + 그림 | report.md·manifest·그림 생성 |
 | S7 | `toEngineProduct` 연결, `CATALOG_SOURCE` 설정 | 기존 `npm test` 전부 통과, `web`으로 바꿔 웹에서 다양한 상품 추천 확인 |
 
-**금지:** 캡차 자동 해결·프록시·차단 회피, 사용자 실제 Chrome 프로필 사용, 로그인, 상세 페이지·리뷰 본문 수집, §7 범위 밖의 이미지 다운로드·이미지 파일 커밋, 원본 HTML 커밋, 테스트에서 실제 사이트 접속, 엔진 점수 로직·A~D LLM 호출 구조 변경, `main` 직접 커밋, 브랜치·커밋에 사용자 이름 넣기.
+**금지:** 캡차 자동 해결·프록시·차단 회피, 사용자 실제 Chrome 프로필 사용, 로그인, 상세 페이지·리뷰 본문 수집, §7 범위 밖의 이미지 다운로드·이미지 파일 커밋(§7의 `supabase/seed/images-kr/`만 허용), 원본 HTML 커밋, 테스트에서 실제 사이트 접속, 엔진 점수 로직·A~D LLM 호출 구조 변경, `main` 직접 커밋, 브랜치·커밋에 사용자 이름 넣기.
 
 ## 10. Claude Code 첫 프롬프트
 

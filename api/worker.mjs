@@ -1,6 +1,6 @@
 import { normalizeConditions } from '../lib/condition-compat.mjs';
 import { fetchCatalog, toEngineProduct, cachedCatalog, todayKst } from '../lib/catalog.mjs';
-import { catalogId, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import { CATALOG_IMAGE_PATH, catalogId, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
 import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
 import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, occasionReply } from '../lib/single-gift.mjs';
@@ -77,9 +77,10 @@ function inputOf(raw, shoppingText) {
 }
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
 // CATALOG_SOURCE=amazon (default) | web | both picks the product list every chat mode receives.
+// apiBase is this API's own address: web photos are served from it at /catalog-images/.
 function defaultCatalog(fetcher) {
   let rows = null;
-  return async env => {
+  return async (env, { apiBase } = {}) => {
     const source = catalogSource(env.CATALOG_SOURCE);
     const today = todayKst();
     const lists = [];
@@ -87,7 +88,7 @@ function defaultCatalog(fetcher) {
       rows ??= cachedCatalog(() => fetchCatalog({ url: env.SUPABASE_URL, key: env.SUPABASE_PUBLISHABLE_KEY, fetcher }));
       lists.push((await rows()).map(row => toEngineProduct(row, today)));
     }
-    if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today, { imageBase: env.WEB_IMAGE_BASE })));
+    if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today, { apiBase })));
     return mergeCatalogs(...lists);
   };
 }
@@ -106,16 +107,23 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
       const diagnose = (code,status,routing) => { try { onDiagnostic?.({event:'recommendation_request_failed',requestId:headers['X-Request-ID'],code,status,...(routing?{routing}:{})}); } catch {} };
       if (origin && !allowed.includes(origin)) return json({ error: '허용되지 않은 요청입니다.', code: 'origin_denied' }, 403);
       if (origin) Object.assign(headers, { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' });
-      const path = new URL(request.url).pathname;
+      const { pathname: path, origin: apiBase } = new URL(request.url);
+      // Web catalog photos (supabase/seed/images-kr/, Worker static assets bound as ASSETS in wrangler.jsonc).
+      const photo = request.method === 'GET' && env.ASSETS ? path.match(CATALOG_IMAGE_PATH) : null;
+      if (photo) {
+        const file = await env.ASSETS.fetch(new URL(`/${photo[1]}`, request.url));
+        if (!file.ok) return new Response(null, { status: 404 });
+        return new Response(file.body, { headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=86400' } });
+      }
       if (path === '/health' && request.method === 'GET') {
         let count = null;
-        try { count = (await catalog(env)).length; } catch {}
+        try { count = (await catalog(env, { apiBase })).length; } catch {}
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
         const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
-        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: catalogLabel(env), products: count ?? 0, ...(env.WEB_IMAGE_BASE ? { webImageBase: env.WEB_IMAGE_BASE } : {}), ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
+        return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: catalogLabel(env), products: count ?? 0, ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -164,7 +172,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
           return json({ ...flowerTurn, view, changes: [], mode: 'rules', agent: chatAgent || 'legacy', llmProvider: null, llmModel: null, catalog: catalogLabel(env) });
         }
         let products;
-        try { products = await catalog(env); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
+        try { products = await catalog(env, { apiBase }); } catch { throw new ApiError(503, 'catalog_unavailable', '상품 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); }
         let turn, mode = 'rules';
         if (advisorContext) {
           turn = await prototypeLangGraphTurn(input, products, { env, fetcher, signal: request.signal, advisorContext });

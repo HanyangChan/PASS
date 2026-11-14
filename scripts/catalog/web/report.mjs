@@ -56,7 +56,7 @@ const manifest = {
     gift_set_rule: '"…선물세트" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false',
     photo_rule: '사진(저장 페이지의 파일 또는 images.mjs가 받은 파일)이 없는 상품은 건너뛰고 같은 품목의 다음 순위 상품을 고름' },
   photos: {
-    storage: '판매자 이미지는 Git에 커밋하지 않음. 로컬 data/catalog/web/images/, 배포용은 Supabase Storage 버킷(upload-images.mjs). 레포·공개 배포·논문 캡처에 사용하지 않음',
+    storage: '팀 공유용으로 레포 supabase/seed/images-kr/에 포함, API가 /catalog-images/로 서빙. 원본 주소는 source_image_url. 논문 캡처에는 사용하지 않음',
     from_saved_pages: sum(imagesLog.map(l => l.copied.length + (l.converted?.length ?? 0))),
     downloaded: sum(imagesLog.map(l => l.downloaded.length)),
     download_pacing_ms: IMAGE_PACING_MS,

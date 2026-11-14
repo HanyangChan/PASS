@@ -7,19 +7,18 @@ import { loadLocalEnv } from './local-env.mjs';
 import { localConfig } from './dev-config.mjs';
 import { createApi } from './worker.mjs';
 import { todayKst } from '../lib/catalog.mjs';
-import { catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import { CATALOG_IMAGE_PATH, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
 import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 let config;
 let flowerAdvice;
 let catalog;
 let shoppingText;
-// Web catalog photos (data/catalog/web/images/, never committed) are served here so local runs need no Storage.
-const IMAGES_DIR = fileURLToPath(new URL('../data/catalog/web/images/', import.meta.url));
-const IMAGE_PATH = /^\/catalog-images\/(naver_\d+\.webp)$/;
-let imageBase;
+// Web catalog photos are committed in supabase/seed/images-kr/ and served at /catalog-images/<file>.
+const IMAGES_DIR = fileURLToPath(new URL('../supabase/seed/images-kr/', import.meta.url));
+let apiBase;
 try {
   config=localConfig(await loadLocalEnv());
-  if (config.env.WEB_IMAGES !== 'storage' && existsSync(IMAGES_DIR)) imageBase = `http://127.0.0.1:${config.port}/catalog-images`;
+  apiBase = `http://127.0.0.1:${config.port}`;
   if (process.env.FLOWER_DB_PATH) {
     const { createFlowerAdvice } = await import('./flower-season.mjs');
     flowerAdvice = createFlowerAdvice(process.env.FLOWER_DB_PATH);
@@ -35,7 +34,7 @@ try {
       const rows = readShoppingCatalog(shoppingDbPath, today);
       const observations = rows.filter(product => product.id.startsWith('searchapi-'));
       const amazon = source === 'web' ? [] : rows.filter(product => !product.id.startsWith('searchapi-'));
-      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today, { imageBase }));
+      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today, { apiBase }));
       return mergeCatalogs(amazon, web, observations);
     };
     let day = todayKst();
@@ -62,13 +61,13 @@ const localLimit = limit => {
   } };
 };
 const {port,llm}=config;
-const env={...config.env,...(imageBase?{WEB_IMAGE_BASE:imageBase}:{}),IP_LIMITER:localLimit(120),USER_LIMITER:localLimit(30)};
+const env={...config.env,IP_LIMITER:localLimit(120),USER_LIMITER:localLimit(30)};
 const server = http.createServer(async (req, res) => {
   const controller=new AbortController();
   const aborted=()=>controller.abort();
   const closed=()=>{if(!res.writableEnded)controller.abort();};
   req.once('aborted',aborted);res.once('close',closed);
-  const image = req.method === 'GET' && imageBase ? req.url.match(IMAGE_PATH) : null;
+  const image = req.method === 'GET' ? req.url.match(CATALOG_IMAGE_PATH) : null;
   if (image) {
     const file = IMAGES_DIR + image[1];
     if (!existsSync(file)) { res.writeHead(404); res.end(); return; }
@@ -89,5 +88,4 @@ server.on('error',error=>{
 });
 server.listen(port, '127.0.0.1', () => {
   console.log(`Recommendation API: http://127.0.0.1:${port} (${llm.provider}: ${llm.options.model}, ${llm.options.apiKey ? 'LLM enabled' : '규칙 모드 가능 (A/B), C/D는 LLM_API_KEY 필요'})`);
-  if (imageBase) console.log(`Web catalog photos: ${imageBase}/ (data/catalog/web/images)`);
 });

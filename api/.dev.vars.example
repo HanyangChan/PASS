@@ -27,5 +27,3 @@ A_ROUTER_LLM_MODE=single
 
 # Product catalog for every chat mode: amazon (default), web (Korean Naver catalog, supabase/seed/products-kr.json) or both
 # CATALOG_SOURCE=web
-# Web catalog photos: local (default when data/catalog/web/images/ exists; served at /catalog-images/) or storage (Supabase bucket)
-# WEB_IMAGES=storage

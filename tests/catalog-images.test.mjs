@@ -1,29 +1,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { IMAGE_STORAGE_BASE, PATHS } from '../scripts/catalog/web/config.mjs';
+import { PATHS } from '../scripts/catalog/web/config.mjs';
 import { collectImages, photoChecker } from '../scripts/catalog/web/images.mjs';
 import { selectForKeyword } from '../scripts/catalog/web/select.mjs';
 
 const web = JSON.parse(readFileSync(PATHS.products, 'utf8'));
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 '), Buffer.alloc(8)]);
 
-test('all 590 web products point at their photo in the Storage bucket, never at the seller', () => {
+test('all 590 web products name their committed photo file only, never a hosted or seller address', () => {
   assert.equal(web.length, 590);
   for (const item of web) {
     assert.equal(item.image_file, `${item.id}.webp`, item.id);
-    assert.equal(item.image_url, `${IMAGE_STORAGE_BASE}/${item.image_file}`, item.id);
+    assert.ok(!('image_url' in item), item.id);
     assert.match(item.source_image_url, /^https:\/\/shopping-phinf\.pstatic\.net\//, item.id);
   }
 });
 
-// The photos are not in Git (data/ is ignored): this check runs where images.mjs has been run.
-test('the local images folder holds a WebP photo for every web product', { skip: !existsSync(PATHS.images) && 'data/catalog/web/images/ 없음 (images.mjs 실행 전)' }, () => {
+// The photos are committed (supabase/seed/images-kr/), so this always runs: 590/590, no extras.
+test('supabase/seed/images-kr holds a WebP photo for every web product and nothing else', () => {
   const files = new Set(readdirSync(PATHS.images));
   const missing = web.filter(item => !files.has(item.image_file)).map(item => item.id);
   assert.deepEqual(missing, []);
+  assert.equal(files.size, web.length);
   for (const item of web) assert.equal(readFileSync(join(PATHS.images, item.image_file)).toString('ascii', 8, 12), 'WEBP', item.id);
 });
 

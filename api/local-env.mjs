@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-const allowed=/^(?:LLM_|GEMINI_|SUPABASE_|EXPO_PUBLIC_)|^(?:CHAT_AGENT|APP_ORIGINS|A_ROUTER_LLM_MODE|API_PORT|CATALOG_SOURCE|WEB_IMAGES)$/;
+const allowed=/^(?:LLM_|GEMINI_|SUPABASE_|EXPO_PUBLIC_)|^(?:CHAT_AGENT|APP_ORIGINS|A_ROUTER_LLM_MODE|API_PORT|CATALOG_SOURCE)$/;
 export function usableSetting(key,value) {
   return !/^(?:EXPO_PUBLIC_)?SUPABASE_(?:URL|PUBLISHABLE_KEY)$/.test(key)||Boolean(value&&!/your-project|replace_me|your[_-]?(?:url|key)|<[^>]+>/i.test(value));
 }

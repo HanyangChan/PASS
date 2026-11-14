@@ -23,8 +23,8 @@ test('web items become engine products through toEngineProduct', () => {
   assert.equal(product.rating_count, item.review_count);
   assert.deepEqual(product.allergens_declared, item.allergens);
   assert.equal(product.allergen_information_complete, false);
-  assert.equal(product.image, item.image_url); // our Storage copy, never the seller's own address
-  assert.equal(fromWebItem(item, '2026-11-13', { imageBase: 'http://127.0.0.1:8788/catalog-images/' }).image, `http://127.0.0.1:8788/catalog-images/${item.id}.webp`);
+  assert.equal(product.image, undefined); // no API address: no photo, and never the seller's own address
+  assert.equal(fromWebItem(item, '2026-11-13', { apiBase: 'http://127.0.0.1:8788/' }).image, `http://127.0.0.1:8788/catalog-images/${item.id}.webp`);
   assert.equal(product.link, item.product_url);
   assert.ok(isGiftSet(product));
   assert.equal(product.packaging, item.packaging);

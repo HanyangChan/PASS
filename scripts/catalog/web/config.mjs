@@ -16,15 +16,13 @@ export const PATHS = {
   selected: path('data/catalog/web/selected.json'),
   products: path('supabase/seed/products-kr.json'),
   manifest: path('data/catalog/web/manifest.json'),
-  // Seller photos: kept out of Git (/data/ is ignored), served locally by api/dev-server.mjs.
-  images: path('data/catalog/web/images'),
+  // Product photos, committed for the team (spec §7) and served at /catalog-images/ by the API.
+  images: path('supabase/seed/images-kr'),
   imagesLog: path('data/catalog/web/images-log.json'),
 };
 
-// Seller photos live in a Supabase Storage bucket, never in the repo (spec §7). products-kr.json
-// points image_url at the bucket's public path; scripts/catalog/web/upload-images.mjs fills it.
-export const IMAGE_BUCKET = 'product-images-kr';
-export const IMAGE_STORAGE_BASE = `${process.env.SUPABASE_URL || 'https://zenmtrokvnwsekidcniy.supabase.co'}/storage/v1/object/public/${IMAGE_BUCKET}`;
+// products-kr.json keeps only the file name (image_file); the API builds the address as
+// <API>/catalog-images/<image_file> (lib/catalog-source.mjs). The seller's original is source_image_url.
 export const imageFile = id => `${id}.webp`;
 // The search page asked for 300px WebP thumbnails; direct downloads ask for the same size.
 export const IMAGE_QUERY = 'type=f300_webp';

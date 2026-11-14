@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { tagAllergens } from '../../../lib/allergens.mjs';
 import { CATEGORIES } from '../../../lib/catalog.mjs';
 import { arrivalDays, packagingFor, sweetnessFor } from '../demo-rules.mjs';
-import { IMAGE_STORAGE_BASE, PATHS, SITES, imageFile, path } from './config.mjs';
+import { PATHS, SITES, imageFile, path } from './config.mjs';
 
 export const CATEGORY_MAP = JSON.parse(readFileSync(new URL('./category-map.v1.json', import.meta.url), 'utf8'));
 const EDIBLE = new Set(['food', 'snack', 'coffee_tea', 'health', 'liquor']);
@@ -49,7 +49,7 @@ export function validate(item) {
   need([true, false, null].includes(item.gift_set), 'gift_set');
   need(item.arrival_days === arrivalDays(item.id) && item.arrival_source === 'synthetic', 'arrival');
   need(Array.isArray(item.allergens), 'allergens');
-  need(item.image_url === `${IMAGE_STORAGE_BASE}/${imageFile(item.id)}` && item.image_file === imageFile(item.id), 'image');
+  need(!('image_url' in item) && item.image_file === imageFile(item.id), 'image');
   need(item.packaging === packagingFor(item.name) && item.packaging_source === 'name_rule', 'packaging');
   need(item.sweetness === sweetnessFor(item.name), 'sweetness');
   need(item.alcohol === (item.category === 'liquor'), 'alcohol');
@@ -109,8 +109,7 @@ export function enrich(keywords, { site = 'naver' } = {}) {
         arrival_source: 'synthetic',
         alcohol: category === 'liquor',
         allergens: EDIBLE.has(category) ? tagAllergens(name) : [],
-        // Photo copy in the Storage bucket (scripts/catalog/web/upload-images.mjs); the seller's original stays as source_image_url.
-        image_url: `${IMAGE_STORAGE_BASE}/${imageFile(product.id)}`,
+        // Photo committed as supabase/seed/images-kr/<id>.webp; the seller's original stays as source_image_url.
         image_file: imageFile(product.id),
         source_image_url: product.image_url,
         product_url: product.product_url,

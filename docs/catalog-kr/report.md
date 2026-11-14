@@ -1,6 +1,6 @@
 # 한국 선물 상품 카탈로그 수집 보고서
 
-생성 2026-11-13 · 시드 v1.2 · 카테고리 매핑 v1 · `scripts/catalog/web/report.mjs`로 재생성
+생성 2026-11-14 · 시드 v1.2 · 카테고리 매핑 v1 · `scripts/catalog/web/report.mjs`로 재생성
 
 ## 1. 수집 개요
 

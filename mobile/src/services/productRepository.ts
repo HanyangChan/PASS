@@ -6,7 +6,7 @@ type Storage = { getItem(key: string): Promise<string | null>; setItem(key: stri
 export const catalogKey = 'pass.catalog.v1';
 const DAY = 86400000;
 // Guests and signed-in users read the same public catalog; the last copy survives offline starts.
-// source() picks amazon | web | both (see catalogSource.ts), optionally with where web photos are served;
+// source() picks amazon | web | both (see catalogSource.ts), with the chat server that serves the web photos;
 // webItems() loads supabase/seed/products-kr.json.
 export function createProductRepository({ url, key, storage, fetcher = fetch, now = Date.now, source = async () => 'amazon', webItems }: {
   url: string; key: string; storage: Storage; fetcher?: typeof fetch; now?: () => number;
@@ -32,12 +32,12 @@ export function createProductRepository({ url, key, storage, fetcher = fetch, no
   return {
     async load(): Promise<EngineProduct[]> {
       const choice = await source();
-      const { source: chosen, webImageBase } = typeof choice === 'string' ? { source: choice, webImageBase: undefined } : choice;
+      const { source: chosen, apiBase } = typeof choice === 'string' ? { source: choice, apiBase: undefined } : choice;
       const today = todayKst(now());
       const amazon = chosen === 'web' ? [] : await loadAmazon();
       if (chosen === 'amazon') return amazon;
       if (!webItems) throw new Error('상품 정보를 불러오지 못했어요.');
-      const web = (await webItems()).map(item => fromWebItem(item, today, { imageBase: webImageBase })) as EngineProduct[];
+      const web = (await webItems()).map(item => fromWebItem(item, today, { apiBase })) as EngineProduct[];
       return mergeCatalogs(amazon, web) as EngineProduct[];
     },
   };

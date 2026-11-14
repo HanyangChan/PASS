@@ -20,5 +20,5 @@
 # products-kr.json 출처
 
 - **원본**: 네이버 쇼핑 검색 결과 첫 페이지(2026-11-13 수동 저장). 수집 방법과 선정 규칙은 `docs/catalog-kr/report.md`, `docs/catalog-kr/manifest.json`, `pass-crawl-spec.md`에 있다.
-- **상품 사진**: 판매자 이미지는 저작물이다. **비공개 저장소에 보관하고, 레포·공개 배포·논문 캡처에는 사용하지 않는다.** 사진 파일은 Git에 커밋하지 않는다. 로컬 사본은 `data/catalog/web/images/`(커밋 제외), 앱 표시용 사본은 Supabase Storage 버킷 `product-images-kr`이며 `image_url`이 그 주소다. 원래 판매자 이미지 주소는 `source_image_url`에 남긴다.
-- 문제가 제기되면 버킷을 비우고 `CATALOG_SOURCE`를 `amazon`으로 되돌린다.
+- **상품 사진**: 판매자 이미지는 저작물이다. **팀 공유용으로 레포에 포함하고(`supabase/seed/images-kr/<id>.webp`, 300px WebP 590개), 원본 주소는 `source_image_url`로 기록하며, 논문 캡처에는 사용하지 않는다.** `products-kr.json`에는 파일 이름(`image_file`)만 있고, 앱은 API의 `/catalog-images/<image_file>`에서 사진을 받는다.
+- 문제가 제기되면 `supabase/seed/images-kr/`를 지우고 `CATALOG_SOURCE`를 `amazon`으로 되돌린다.

@@ -56,25 +56,25 @@ test('the app catalog follows the chat server CATALOG_SOURCE, then the app setti
   assert.equal(await resolveCatalogSource({ fallback: 'naver' }), 'amazon');
   assert.equal(await resolveCatalogSource({}), 'amazon');
   const { resolveCatalog } = await import('../src/services/catalogSource.ts');
-  const withPhotos = async () => Response.json({ ok: true, catalog: 'naver-web-v1', webImageBase: 'http://127.0.0.1:8788/catalog-images' });
-  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: withPhotos }), { source: 'web', webImageBase: 'http://127.0.0.1:8788/catalog-images' });
-  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('naver-web-v1') }), { source: 'web' });
+  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788/', fetcher: health('naver-web-v1') }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });
+  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });
+  assert.deepEqual(await resolveCatalog({ fallback: 'web' }), { source: 'web' });
 });
 
 test('web and both sources load the Korean catalog for the ranking screen and guest chat', async () => {
   const web = [{ id: 'naver_1', name: '한우 선물세트', category: 'food', price: 99000, shipping_fee: 0, shipping_source: 'naver_listing',
     arrival_days: 2, packaging: 'formal', packaging_source: 'inferred_gift_set', brand: null, allergens: ['쇠고기'], rating: 4.9, review_count: 120,
     product_url: 'https://smartstore.naver.com/x/products/1', gift_set: true, occasions: ['holiday'], source: 'naver_shopping_web', mall: '한우맘',
-    image_url: 'https://p.supabase.co/storage/v1/object/public/product-images-kr/naver_1.webp', image_file: 'naver_1.webp' }];
+    image_file: 'naver_1.webp' }];
   let supabaseCalls = 0;
   const fetcher = async () => { supabaseCalls++; return Response.json([row('A', 'snack', 5)]); };
   const make = source => createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher, source: async () => source, webItems: async () => web });
   const onlyWeb = await make('web').load();
   assert.deepEqual(onlyWeb.map(p => p.id), ['naver_1']);
   assert.equal(supabaseCalls, 0);
-  assert.equal(giftFromProduct(onlyWeb[0]).image, 'https://p.supabase.co/storage/v1/object/public/product-images-kr/naver_1.webp');
+  assert.equal(giftFromProduct(onlyWeb[0]).image, undefined); // no chat server known: no photo address
   const local = createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher,
-    source: async () => ({ source: 'web', webImageBase: 'http://127.0.0.1:8788/catalog-images' }), webItems: async () => web });
+    source: async () => ({ source: 'web', apiBase: 'http://127.0.0.1:8788' }), webItems: async () => web });
   assert.equal((await local.load())[0].image, 'http://127.0.0.1:8788/catalog-images/naver_1.webp');
   assert.deepEqual((await make('both').load()).map(p => p.id), ['A', 'naver_1']);
   assert.deepEqual((await make('amazon').load()).map(p => p.id), ['A']);
