@@ -3,6 +3,13 @@
   "main": "worker.mjs",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
+  // Web catalog photos (committed in supabase/seed/images-kr/). The Worker runs first and serves them
+  // only at /catalog-images/<file> through the ASSETS binding (api/worker.mjs).
+  "assets": {
+    "directory": "../supabase/seed/images-kr",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
   "vars": {
     "CHAT_AGENT": "a-router",
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",

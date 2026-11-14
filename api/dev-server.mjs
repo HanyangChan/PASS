@@ -1,16 +1,24 @@
 // Node adapter for the same Worker handler. Local limits are per process, not production limits.
 import http from 'node:http';
+import { createReadStream, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { loadLocalEnv } from './local-env.mjs';
 import { localConfig } from './dev-config.mjs';
 import { createApi } from './worker.mjs';
 import { todayKst } from '../lib/catalog.mjs';
+import { CATALOG_IMAGE_PATH, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 let config;
 let flowerAdvice;
 let catalog;
 let shoppingText;
+// Web catalog photos are committed in supabase/seed/images-kr/ and served at /catalog-images/<file>.
+const IMAGES_DIR = fileURLToPath(new URL('../supabase/seed/images-kr/', import.meta.url));
+let apiBase;
 try {
   config=localConfig(await loadLocalEnv());
+  apiBase = `http://127.0.0.1:${config.port}`;
   if (process.env.FLOWER_DB_PATH) {
     const { createFlowerAdvice } = await import('./flower-season.mjs');
     flowerAdvice = createFlowerAdvice(process.env.FLOWER_DB_PATH);
@@ -19,12 +27,22 @@ try {
   if (shoppingDbPath) {
     const { readShoppingCatalog, rewriteShoppingRequest } = await import('./local-shopping-catalog.mjs');
     shoppingText = rewriteShoppingRequest;
+    // The snapshot holds the Amazon rows plus PR #17 observations; CATALOG_SOURCE decides which base list
+    // goes with the observations, and only the same product is dropped when lists overlap.
+    const source = catalogSource(config.env.CATALOG_SOURCE);
+    const build = today => {
+      const rows = readShoppingCatalog(shoppingDbPath, today);
+      const observations = rows.filter(product => product.id.startsWith('searchapi-'));
+      const amazon = source === 'web' ? [] : rows.filter(product => !product.id.startsWith('searchapi-'));
+      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today, { apiBase }));
+      return mergeCatalogs(amazon, web, observations);
+    };
     let day = todayKst();
-    let products = readShoppingCatalog(shoppingDbPath, day);
+    let products = build(day);
     catalog = () => {
       const today = todayKst();
       if (day !== today) {
-        products = readShoppingCatalog(shoppingDbPath, today);
+        products = build(today);
         day = today;
       }
       return products;
@@ -49,6 +67,14 @@ const server = http.createServer(async (req, res) => {
   const aborted=()=>controller.abort();
   const closed=()=>{if(!res.writableEnded)controller.abort();};
   req.once('aborted',aborted);res.once('close',closed);
+  const image = req.method === 'GET' ? req.url.match(CATALOG_IMAGE_PATH) : null;
+  if (image) {
+    const file = IMAGES_DIR + image[1];
+    if (!existsSync(file)) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'max-age=3600' });
+    createReadStream(file).pipe(res);
+    return;
+  }
   try {
     const request = new Request(`http://127.0.0.1:${port}${req.url}`, { signal: controller.signal, method: req.method, headers: { ...req.headers, 'CF-Connecting-IP': req.socket.remoteAddress }, ...(req.method === 'GET' || req.method === 'HEAD' ? {} : { body: Readable.toWeb(req), duplex: 'half' }) });
     const response = await worker.fetch(request, env);

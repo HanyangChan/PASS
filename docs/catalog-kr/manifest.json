@@ -1,0 +1,2703 @@
+{
+ "generated_at": "2026-11-14T09:19:32.588Z",
+ "site": "naver",
+ "source": "search.shopping.naver.com/ns/search (기본 랭킹순, 검색 결과 첫 페이지)",
+ "method": {
+  "mode": [
+   "manual"
+  ],
+  "manual_save": "Chrome 시크릿 창에서 사람이 열고 \"웹페이지, 전체\"로 저장(로그인 없음, 스크롤 없음). scripts/catalog/web/manual-helper.mjs 사용",
+  "automated_pilot": "2026-11-13 Playwright headful 파일럿: 네이버(405)·쿠팡(보안 확인) 모두 첫 품목에서 차단 → 수동 저장 모드로 전환.",
+  "automated_pacing": {
+   "delayMs": [
+    4000,
+    8000
+   ],
+   "restEvery": 25,
+   "restMs": [
+    60000,
+    120000
+   ],
+   "maxConsecutiveBlocks": 2
+  },
+  "parse": "페이지에 내장된 Next.js flight 데이터(self.__next_f)의 상품 카드 JSON. CSS 선택자 없음"
+ },
+ "collection_period": {
+  "first": "2026-11-13T04:26:58.247Z",
+  "last": "2026-11-13T08:54:32.545Z"
+ },
+ "seeds": {
+  "version": "v1.2",
+  "keywords": 200,
+  "changes": [
+   {
+    "version": "v1.1",
+    "date": "2026-11-13",
+    "occasion": "holiday",
+    "from": "식용유 선물세트",
+    "to": "카놀라유 선물세트",
+    "why": "결과가 올리브유뿐(올리브유 시드와 겹침), 선정 0개"
+   },
+   {
+    "version": "v1.1",
+    "date": "2026-11-13",
+    "occasion": "birthday",
+    "from": "쿠키 선물박스",
+    "to": "쿠키 선물세트",
+    "why": "결과 38개가 모두 빈 포장 상자"
+   },
+   {
+    "version": "v1.1",
+    "date": "2026-11-13",
+    "occasion": "exam",
+    "from": "터치 장갑",
+    "to": "스마트폰 터치 장갑",
+    "why": "결과 38개가 모두 작업용 안전장갑"
+   },
+   {
+    "version": "v1.1",
+    "date": "2026-11-13",
+    "occasion": "flower",
+    "from": "용담 꽃다발",
+    "to": "가을 꽃다발",
+    "why": "결과 2개, 둘 다 용담과 무관"
+   },
+   {
+    "version": "v1.2",
+    "date": "2026-11-13",
+    "occasion": "exam",
+    "from": "스마트폰 터치 장갑",
+    "to": "겨울 터치장갑",
+    "why": "v1.1 결과도 작업용 안전장갑뿐. 네이버 안전장갑 카테고리는 매핑에서 제외. 새 결과로도 선정 2개 미만이면 시드에서 뺀다"
+   }
+  ]
+ },
+ "robots": {
+  "naver": {
+   "fetched_at": "2026-11-13T04:13:59Z",
+   "http_status": 418,
+   "trusted": false,
+   "note": "robots.txt 요청이 HTTP 418과 HTML 오류 페이지로 돌아와 실제 규칙을 확인할 수 없음(신뢰 불가)."
+  }
+ },
+ "selection": {
+  "per_keyword": 3,
+  "outlier_ratio": [
+   0.2,
+   5
+  ],
+  "price_bands": [
+   {
+    "id": "b1",
+    "label": "1만 원 미만",
+    "min": 0,
+    "max": 9999
+   },
+   {
+    "id": "b2",
+    "label": "1~3만 원",
+    "min": 10000,
+    "max": 29999
+   },
+   {
+    "id": "b3",
+    "label": "3~5만 원",
+    "min": 30000,
+    "max": 49999
+   },
+   {
+    "id": "b4",
+    "label": "5~10만 원",
+    "min": 50000,
+    "max": 99999
+   },
+   {
+    "id": "b5",
+    "label": "10만 원 이상",
+    "min": 100000,
+    "max": 500000
+   }
+  ],
+  "blocked_title_words": [
+   "리필",
+   "부품",
+   "포장박스",
+   "케이스만",
+   "포장재",
+   "쇼핑백만",
+   "부자재",
+   "교체용",
+   "성묘",
+   "산소",
+   "납골",
+   "추모",
+   "근조",
+   "장례",
+   "전역",
+   "곰신"
+  ],
+  "generic_words": [
+   "선물세트",
+   "선물박스",
+   "선물",
+   "세트",
+   "혼합",
+   "소포장",
+   "생일",
+   "수능",
+   "응원",
+   "기원",
+   "꽃다발",
+   "화분",
+   "다발"
+  ],
+  "term_aliases": {
+   "프리지아": [
+    "후리지아"
+   ],
+   "칼라": [
+    "카라"
+   ],
+   "소국": [
+    "국화"
+   ],
+   "동양란": [
+    "동양난"
+   ],
+   "다알리아": [
+    "달리아"
+   ],
+   "리시안셔스": [
+    "리시안사스",
+    "리시안서스"
+   ],
+   "히아신스": [
+    "히야신스"
+   ],
+   "포인세티아": [
+    "포인세치아"
+   ],
+   "호접란": [
+    "호접난"
+   ],
+   "캐모마일": [
+    "카모마일"
+   ],
+   "라넌큘러스": [
+    "라넌큐러스"
+   ],
+   "프리저브드": [
+    "프리저브"
+   ]
+  },
+  "gift_set_rule": "\"…선물세트\" 시드는 제목에 선물/세트/기프트/박스/set이 있는 상품 우선, 2개 미만이면 완화하고 gift_set:false",
+  "photo_rule": "사진(저장 페이지의 파일 또는 images.mjs가 받은 파일)이 없는 상품은 건너뛰고 같은 품목의 다음 순위 상품을 고름"
+ },
+ "photos": {
+  "storage": "팀 공유용으로 레포 supabase/seed/images-kr/에 포함, API가 /catalog-images/로 서빙. 원본 주소는 source_image_url. 논문 캡처에는 사용하지 않음",
+  "from_saved_pages": 506,
+  "downloaded": 84,
+  "download_pacing_ms": [
+   1000,
+   2000
+  ],
+  "download_stops": [],
+  "replaced_for_missing_photo": []
+ },
+ "category_map": {
+  "version": "v1",
+  "status": "approved 2026-11-13",
+  "excluded": {
+   "선물박스": "쿠키 선물박스 검색 결과 38개가 모두 빈 포장 상자(240~1,200원)라 상품이 아님",
+   "안전장갑": "작업용 안전장갑. 터치 장갑 검색 결과가 모두 이 카테고리였음(2026-11-13)"
+  }
+ },
+ "counts": {
+  "pages": 200,
+  "results": 8824,
+  "picked": 600,
+  "products": 590,
+  "excluded_by_reason": {
+   "ad": 1454,
+   "price_outlier": 386,
+   "outside_bands": 10,
+   "not_gift_set": 89,
+   "irrelevant": 840,
+   "sold_out": 1
+  }
+ },
+ "keywords": [
+  {
+   "occasion": "holiday",
+   "keyword": "한우 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:26:58.247Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 1,
+    "outside_bands": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "한돈 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:35:00.572Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "LA갈비 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:35:28.483Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "굴비 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:45:30.214Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "전복 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:45:49.775Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 6
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "갈치 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:45:58.596Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "명란 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:46:08.740Z",
+   "results": 39,
+   "picked": 3,
+   "excluded": {
+    "ad": 4,
+    "price_outlier": 2,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "장어 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:46:18.701Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "not_gift_set": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "사과 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:46:27.699Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "배 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:46:35.654Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "샤인머스캣 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:00.420Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 29
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "한라봉 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:07.745Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 1,
+    "irrelevant": 1,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "곶감 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:13.284Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "과일 혼합 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:21.716Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "견과류 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:28.999Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 13,
+    "price_outlier": 2,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "홍삼 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:38.374Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 5,
+    "not_gift_set": 10
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "홍삼정",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:46.139Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 6
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "꿀 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:47:52.685Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "price_outlier": 2,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "참기름 들기름 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:01.932Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "not_gift_set": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "김 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:10.131Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "not_gift_set": 11
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "멸치 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:17.943Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "표고버섯 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:25.257Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "한과 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:34.756Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 4
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "약과 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:41.780Z",
+   "results": 38,
+   "picked": 3,
+   "excluded": {
+    "ad": 3,
+    "price_outlier": 2,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "떡 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:49.623Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 5,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "육포 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:48:58.888Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 2,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "스팸 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:49:17.220Z",
+   "results": 50,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 6
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "참치 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:49:23.745Z",
+   "results": 50,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "카놀라유 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:43:40.039Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 14,
+    "price_outlier": 1,
+    "not_gift_set": 4
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "올리브유 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:49:39.760Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 17,
+    "not_gift_set": 9
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "전통장 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:49:46.229Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 3,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "수제청 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:49:53.575Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 5
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "배도라지즙",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:05.665Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 24
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "양갱 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:15.395Z",
+   "results": 38,
+   "picked": 3,
+   "excluded": {
+    "ad": 3,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "커피 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:26.431Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 11,
+    "price_outlier": 2,
+    "not_gift_set": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "전통차 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:37.083Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 13
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "전통주 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:44.921Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 37
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "와인 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:50:52.600Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "쌀 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:00.808Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 2,
+    "price_outlier": 2,
+    "not_gift_set": 4
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "샴푸 생활용품 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:10.872Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 21
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "치약 칫솔 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:19.232Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 1,
+    "price_outlier": 2,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "수건 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:30.950Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 6,
+    "price_outlier": 1,
+    "not_gift_set": 3
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "비누 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:38.709Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 7
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "양말 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:46.052Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 5,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "안마기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:51:56.990Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 24,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "온열 찜질기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:52:05.659Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "발마사지기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:52:14.292Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 21,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "반찬 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:52:22.437Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 8,
+    "price_outlier": 10,
+    "not_gift_set": 13
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "어묵 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:52:29.817Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "holiday",
+   "keyword": "천일염 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:52:36.823Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 9,
+    "price_outlier": 1,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "생일 케이크",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:54:24.566Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "향수",
+   "mode": "manual",
+   "collected_at": "2026-11-13T04:54:36.491Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 14,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "핸드크림 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:41:37.626Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 2,
+    "price_outlier": 3,
+    "not_gift_set": 6
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "립밤 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:41:46.500Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 8,
+    "ad": 8,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "바디워시 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:41:55.123Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 12,
+    "not_gift_set": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "기초 화장품 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:01.747Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 20
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "텀블러",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:08.427Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 6
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "머그컵 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:14.929Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 17
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "무선 이어폰",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:29.566Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 3,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "블루투스 스피커",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:35.352Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "스마트워치 스트랩",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:41.282Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 2,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "반지갑",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:47.215Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 9,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "카드지갑",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:42:57.693Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 11,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "키링",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:07.379Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 4,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "목걸이",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:13.560Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 1,
+    "outside_bands": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "팔찌",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:20.673Z",
+   "results": 49,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "price_outlier": 11
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "손목시계",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:40.892Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 3,
+    "price_outlier": 6
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "머플러",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:47.480Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "가죽 장갑",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:53.642Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "price_outlier": 11
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "잠옷 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:43:58.707Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "디퓨저",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:03.362Z",
+   "results": 39,
+   "picked": 3,
+   "excluded": {
+    "ad": 4,
+    "irrelevant": 10,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "향초",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:08.439Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 10,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "무드등",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:21.202Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "미니 가습기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:29.098Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 5
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "전동칫솔",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:36.797Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 9,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "헤어드라이기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:44.144Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 15
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "마사지건",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:54.354Z",
+   "results": 39,
+   "picked": 3,
+   "excluded": {
+    "ad": 4,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "요가매트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:44:59.744Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "와인잔 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:45:05.651Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 9,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "핸드드립 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:45:12.006Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 2,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "원두 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:45:19.409Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 6,
+    "price_outlier": 1,
+    "not_gift_set": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "마카롱 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:45:25.572Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "쿠키 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:43:55.294Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "초콜릿 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:45:41.183Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 7,
+    "not_gift_set": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "보드게임",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:46:14.004Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 9
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "직소퍼즐",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:46:20.308Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "레고",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:46:26.554Z",
+   "results": 58,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 3,
+    "price_outlier": 7
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "다이어리",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:46:32.075Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "만년필",
+   "mode": "manual",
+   "collected_at": "2026-11-13T06:46:40.515Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "노트북 파우치",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:24:59.134Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 9
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "백팩",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:25:06.087Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "에코백",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:52:20.335Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 4,
+    "price_outlier": 8
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "장우산",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:52:27.962Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "액자",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:52:43.880Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "포토북",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:04.286Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 3,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "인형",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:11.001Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 6,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "폴라로이드 카메라",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:18.114Z",
+   "results": 49,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 6,
+    "ad": 2,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "전자책 리더기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:25.360Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 4,
+    "irrelevant": 2,
+    "price_outlier": 5,
+    "outside_bands": 5
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "캠핑 의자",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:32.716Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 4,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "birthday",
+   "keyword": "실크 스카프",
+   "mode": "manual",
+   "collected_at": "2026-11-13T07:56:40.007Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 10
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "찹쌀떡",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:18:40.887Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "합격엿",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:18:47.144Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 19
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수능 초콜릿",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:18:51.715Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수능 응원 간식세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:18:56.722Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 29
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "합격 기원 과자",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:01.792Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 1,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "홍삼스틱",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:20.238Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 8
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "종합비타민",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:27.825Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 23
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "견과류 소포장",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:35.695Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 11
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "에너지바",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:40.393Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 3,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "사탕 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:44.807Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 16,
+    "price_outlier": 1,
+    "not_gift_set": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "꿀스틱",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:49.754Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "캐모마일 차",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:54.437Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 2,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "쌍화차",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:19:58.645Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수면안대",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:03.547Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "귀마개",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:08.779Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 2
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "목베개",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:13.776Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 4
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "무릎담요",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:18.339Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 8,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "일회용 핫팩",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:23.438Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "충전식 손난로",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:28.478Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "보온 도시락",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:33.100Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "보온병",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:36.891Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "irrelevant": 9
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수능 시계",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:41.085Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "컴퓨터용 사인펜",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:45.283Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 1,
+    "price_outlier": 6
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "샤프 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:49.491Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "price_outlier": 8
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "지우개 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:53.647Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 4,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "필통",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:20:58.262Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 8
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "스터디 플래너",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:02.537Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "독서대",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:06.611Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "LED 스탠드",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:10.545Z",
+   "results": 40,
+   "picked": 3,
+   "excluded": {
+    "ad": 5,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "방석 쿠션",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:16.218Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 7
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "허리 쿠션",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:20.952Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "발받침대",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:26.251Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "블루라이트 차단 안경",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:52.376Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "백색소음기",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:21:56.644Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "공부 타이머",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:08.566Z",
+   "results": 40,
+   "picked": 3,
+   "excluded": {
+    "ad": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "포스트잇 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:13.442Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 5,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "형광펜 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:19.012Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 1,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "볼펜 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:23.926Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 10,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "실내 슬리퍼",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:28.358Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수면 양말",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:38.259Z",
+   "results": 39,
+   "picked": 3,
+   "excluded": {
+    "ad": 4,
+    "irrelevant": 1,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "후드 담요",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:45.014Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "목도리",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:49.599Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 6,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "겨울 터치장갑",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:54:32.545Z",
+   "results": 40,
+   "picked": 3,
+   "excluded": {
+    "ad": 5,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "합격 키링",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:22:59.206Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "응원 카드",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:03.300Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "핸드크림",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:07.691Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 8
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "단어 암기장",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:11.833Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "수험표 케이스",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:16.100Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 22
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "보조배터리",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:33.466Z",
+   "results": 38,
+   "picked": 3,
+   "excluded": {
+    "ad": 3
+   }
+  },
+  {
+   "occasion": "exam",
+   "keyword": "젤리 선물세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:23:38.632Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 5
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "튤립 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:24:13.633Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 1,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "프리지아 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:24:32.826Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "라넌큘러스 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:24:39.034Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {}
+  },
+  {
+   "occasion": "flower",
+   "keyword": "작약 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:04.749Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "카네이션 꽃바구니",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:12.973Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 10
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "카네이션 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:18.563Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "스위트피 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:25.432Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 3,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "미모사 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:34.441Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 4,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "데이지 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:39.389Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 10,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "수선화 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:44.464Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 2,
+    "irrelevant": 3,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "히아신스 구근",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:49.523Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "해바라기 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:25:54.940Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "수국 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:00.601Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "수국 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:10.177Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "리시안셔스 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:16.179Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 8
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "백합 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:20.834Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 2,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "델피니움 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:25.448Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 2,
+    "price_outlier": 11
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "칼라 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:31.989Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "거베라 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:36.432Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 6,
+    "price_outlier": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "국화 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:41.886Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 5,
+    "irrelevant": 3,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "소국 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:46.465Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "ad": 5,
+    "irrelevant": 1,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "다알리아 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:50.962Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 9,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "천일홍 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:26:55.476Z",
+   "results": 41,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 6,
+    "ad": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "가을 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:44:38.265Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 4,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "맨드라미 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:04.376Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "공작초 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:09.484Z",
+   "results": 20,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "구절초 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:14.516Z",
+   "results": 49,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 5,
+    "price_outlier": 4
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "포인세티아 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:20.725Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 7
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "목화 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:29.528Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 1,
+    "price_outlier": 2
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "크리스마스 리스",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:34.056Z",
+   "results": 38,
+   "picked": 3,
+   "excluded": {
+    "ad": 3,
+    "sold_out": 1,
+    "price_outlier": 7
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "아네모네 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:38.363Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "irrelevant": 3,
+    "price_outlier": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "스토크 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:27:43.086Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 3,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "동백 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:03.532Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "시클라멘 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:09.001Z",
+   "results": 50,
+   "picked": 3,
+   "excluded": {
+    "price_outlier": 10
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "아마릴리스 구근",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:12.798Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {}
+  },
+  {
+   "occasion": "flower",
+   "keyword": "장미 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:18.325Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "안개꽃 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:27.457Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "price_outlier": 5
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "꽃바구니",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:34.286Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "irrelevant": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "플라워박스",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:39.102Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 17
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "용돈 꽃다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:42.746Z",
+   "results": 42,
+   "picked": 3,
+   "excluded": {
+    "ad": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "비누꽃 다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:47.349Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "irrelevant": 12,
+    "price_outlier": 6
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "프리저브드 플라워",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:52.108Z",
+   "results": 43,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "irrelevant": 2,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "드라이플라워 다발",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:55.744Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 9,
+    "irrelevant": 7,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "호접란 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:28:59.717Z",
+   "results": 47,
+   "picked": 3,
+   "excluded": {
+    "ad": 11,
+    "irrelevant": 1,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "동양란 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:04.050Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 12,
+    "price_outlier": 7
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "금전수 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:08.867Z",
+   "results": 45,
+   "picked": 3,
+   "excluded": {
+    "ad": 7,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "스투키 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:13.378Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "price_outlier": 3
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "몬스테라 화분",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:18.241Z",
+   "results": 48,
+   "picked": 3,
+   "excluded": {
+    "ad": 10,
+    "price_outlier": 9
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "다육이 세트",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:22.918Z",
+   "results": 46,
+   "picked": 3,
+   "excluded": {
+    "ad": 8,
+    "irrelevant": 15,
+    "price_outlier": 1
+   }
+  },
+  {
+   "occasion": "flower",
+   "keyword": "꽃 정기구독",
+   "mode": "manual",
+   "collected_at": "2026-11-13T08:29:27.473Z",
+   "results": 44,
+   "picked": 3,
+   "excluded": {
+    "ad": 8
+   }
+  }
+ ],
+ "failures": {
+  "parse_errors": [],
+  "under_two_picks": [],
+  "blocked_logs": {
+   "blocked-coupang.json": [
+    {
+     "url": "https://www.coupang.com/np/search?q=%ED%95%9C%EC%9A%B0%20%EC%84%A0%EB%AC%BC%EC%84%B8%ED%8A%B8&channel=user",
+     "final_url": "https://www.coupang.com/np/search?q=%ED%95%9C%EC%9A%B0%20%EC%84%A0%EB%AC%BC%EC%84%B8%ED%8A%B8&channel=user",
+     "site": "coupang",
+     "occasion": "holiday",
+     "keyword": "한우 선물세트",
+     "season": null,
+     "seeds_version": "v1",
+     "collected_at": "2026-11-13T04:20:19.252Z",
+     "status": null,
+     "blocked": true
+    }
+   ],
+   "blocked-naver.json": [
+    {
+     "url": "https://search.shopping.naver.com/ns/search?query=%ED%95%9C%EC%9A%B0%20%EC%84%A0%EB%AC%BC%EC%84%B8%ED%8A%B8",
+     "final_url": "https://search.shopping.naver.com/ns/search?query=%ED%95%9C%EC%9A%B0%20%EC%84%A0%EB%AC%BC%EC%84%B8%ED%8A%B8",
+     "site": "naver",
+     "occasion": "holiday",
+     "keyword": "한우 선물세트",
+     "season": null,
+     "seeds_version": "v1",
+     "collected_at": "2026-11-13T04:17:06.453Z",
+     "status": 405,
+     "blocked": true
+    }
+   ]
+  }
+ }
+}

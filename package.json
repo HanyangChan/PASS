@@ -33,5 +33,8 @@
     "benchmark:feedback": "node api/benchmarks/feedback-tradeoff.mjs",
     "test:feedback": "node --test baseline/agents/full-chat-feedback/tests/*.test.mjs api/tests/feedback-agent.test.mjs",
     "demo:feedback": "node baseline/agents/full-chat-feedback/demo.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0"
   }
 }
