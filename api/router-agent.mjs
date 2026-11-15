@@ -2,7 +2,7 @@
 import { createAgent } from '../baseline/agents/a-router/index.mjs';
 import { createSession } from '../baseline/src/index.mjs';
 import { runTurn as coreTurn } from '../baseline/src/index.mjs';
-import { engineState, publicState, finishSingle } from '../lib/single-gift.mjs';
+import { engineState, publicState, finishSingle, singleGiftIssues } from '../lib/single-gift.mjs';
 import { APP_RANKING } from '../lib/engine.mjs';
 import { validateState } from '../lib/llm.mjs';
 import { createSubagentInterpreter } from '../baseline/agents/a-router/subagents/interpreter.mjs';
@@ -23,6 +23,7 @@ export class RouterInterpretationError extends Error {
   constructor(routing) {super('router_interpretation_unavailable');this.routing=routing;}
 }
 export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, llmMode='single', signal, ranking=APP_RANKING, ...providerOptions}) {
+  input={...input,issues:singleGiftIssues(input.issues)};
   const before=input.state;
   // Existing app intentionally exposes a ONE-gift state, not the multi-set core contract.
   const session={...createSession('prototype-request'),state:engineState(before)};
@@ -38,11 +39,6 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const output=await agent.runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??'',history:input.history??[],signal});
   if (output.routing.route==='llm_error') throw new RouterInterpretationError(output.routing);
-  // The prototype does not support multi-gift output or changing its budget scope.
-  if (output.session.state.quantity!==1||output.session.state.same_product!==true||output.session.state.budget.scope!=='per_set') {
-    const turn=finishSingle(before,before,['현재 앱은 선물 하나 기준입니다. 선물 하나의 예산과 조건을 알려주세요.'],products);
-    return {...turn,mode:'rules',agent:'a-router',routing:{...output.routing,route:'clarification'}};
-  }
   const state=publicState(output.session.state);
   const missing=await coreTurn({session:output.session,products:catalog,request:{kind:'view',expectedVersion:output.session.version}});
   let issues=output.kind==='question' && (missing.kind!=='question'||missing.question!==output.question)?[output.question]:[];

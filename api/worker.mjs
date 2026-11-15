@@ -4,7 +4,7 @@ import { CATALOG_IMAGE_PATH, catalogId, catalogSource, fromWebItem, mergeCatalog
 import { currentItem, itemFilterEnabled, itemVocabulary, narrowByItem } from '../lib/item-filter.mjs';
 import webCatalog from '../supabase/seed/products-kr.json' with { type: 'json' };
 import { validateRequest, validateState, geminiFailure } from '../lib/llm.mjs';
-import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, occasionReply } from '../lib/single-gift.mjs';
+import { fastRuleTurn, singleTurn, finishSingle, engineState, singleQuestion, occasionReply, singleGiftIssues } from '../lib/single-gift.mjs';
 import { apply, recommend, APP_RANKING } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { prototypeRouterTurn, RouterInterpretationError } from './router-agent.mjs';
@@ -14,7 +14,8 @@ import { resolveLlm } from '../lib/llm-provider.mjs';
 import { LANGGRAPH_AGENT, prototypeLangGraphTurn, readAdvisorContext } from './langgraph-agent.mjs';
 import { parseConditions } from '../baseline/agents/a-router/parser.mjs';
 
-const selectableAgents = ['a-router', LANGGRAPH_AGENT, 'full-chat', 'full-chat-feedback-2'];
+const selectableAgents = ['a-router', 'full-chat', 'full-chat-feedback-2'];
+const supportedAgents = [...selectableAgents, LANGGRAPH_AGENT];
 
 class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 async function readJson(request) {
@@ -43,7 +44,7 @@ function explicitGiftPatch(text, state, shoppingText) {
   if (occasion) return { occasion };
   const shopping = shoppingText?.(text);
   if (!shopping && !/(?:명절|설날|추석|한가위)(?:에)?\s*(?:(?:드릴|줄|드리는|주는)\s+)?선물/.test(text)) return null;
-  const parsed = parseConditions(shopping ?? text, engineState(state));
+  const parsed = parseConditions(shopping ?? text, engineState(state), { singleGift: true });
   const patch = parsed.patch;
   if (parsed.unresolved || parsed.questions.length || parsed.limitations?.length || patch.quantity !== undefined ||
       patch.same_product !== undefined || patch.budget?.scope !== undefined) return null;
@@ -56,12 +57,17 @@ function inputOf(raw, shoppingText) {
     const session = { ...raw.session, state: normalizeConditions(raw.session?.state).state };
     validateState(session.state);
     if (!Array.isArray(session.issues) || session.issues.length > 12 || session.issues.some(q => typeof q !== 'string' || q.length > 400)) throw Error();
-    let occasionText;
+    session.issues = singleGiftIssues(session.issues);
+    let occasionText, messageText;
     if (raw.operation === 'turn') {
       const turn = validateRequest({ ...session, text: raw.text, history: raw.history, source: raw.source });
       const patch = explicitGiftPatch(turn.text, session.state, shoppingText);
       if (!patch || (session.issues.length && patch.excluded_ingredients)) return { ...turn, operation: 'turn' };
+      messageText = turn.text;
       occasionText = patch.occasion ? turn.text : undefined;
+      if (patch.occasion) {
+        session.issues = session.issues.filter(issue => !/^(?:선물하는 날|어떤 상황|선물 상황|이번 선물은 어떤 상황)[^.!]*[?？]$/.test(issue.trim()) || /성분|알레르기/.test(issue));
+      }
       raw = { operation: 'conditions', patch, clearIssues: false };
     }
     if (raw.operation === 'conditions') {
@@ -73,7 +79,7 @@ function inputOf(raw, shoppingText) {
       raw = { ...raw, patch, routerPatch };
       if (raw.clearIssues !== undefined && typeof raw.clearIssues !== 'boolean') throw Error();
     }
-    return { ...raw, session, state: session.state, issues: session.issues, occasionText };
+    return { ...raw, session, state: session.state, issues: session.issues, occasionText, messageText };
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
@@ -131,14 +137,14 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { return json({ok:false,code:'configuration'},503); }
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(env.CHAT_AGENT);
         if(fullChat && (llm.provider!=='openai-compatible'||!llm.options.apiKey)) return json({ok:false,agent:'full-chat',code:'configuration'},503);
-        const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router', LANGGRAPH_AGENT];
+        const availableAgents=llm.provider==='openai-compatible'&&llm.options.apiKey ? selectableAgents : ['a-router'];
         return json({ agent: env.CHAT_AGENT || 'legacy', llmMode: fullChat?env.CHAT_AGENT==='full-chat'?'agent-loop':'feedback-loop':env.CHAT_AGENT === LANGGRAPH_AGENT ? 'attribution-graph' : env.A_ROUTER_LLM_MODE || 'single', ok: count !== null, provider: llm.options.apiKey ? llm.provider : 'rules', model: llm.options.model, availableAgents, catalog: catalogLabel(env), products: count ?? 0, ...(flowerAdvice ? { flowerSeasons: true } : {}) },count===null?503:200);
       }
       if (path !== '/api/chat') return json({ error: 'API 경로를 확인해주세요.', code: 'not_found' }, 404);
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
       if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.', code: 'method' }, 405);
       try {
-        if (env.CHAT_AGENT && ![...selectableAgents, 'full-chat-feedback-1', 'legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
+        if (env.CHAT_AGENT && ![...supportedAgents, 'full-chat-feedback-1', 'legacy'].includes(env.CHAT_AGENT)) throw new ApiError(503, 'configuration', '추천 에이전트 설정을 확인해주세요.');
         if (!env.IP_LIMITER || !env.USER_LIMITER || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') || new URL(env.SUPABASE_URL).protocol !== 'https:') throw new ApiError(503, 'configuration', '서버 연결 설정이 필요합니다.');
         // Never use a client-supplied owner ID or decoded-but-unverified JWT claims.
         const ip = request.headers.get('CF-Connecting-IP') ?? 'native-local';
@@ -156,7 +162,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         if (!user.id || user.role !== 'authenticated') throw new ApiError(401, 'unauthorized', '다시 로그인해주세요.');
         if (!(await env.USER_LIMITER.limit({ key: user.id })).success) throw new ApiError(429, 'rate_limit', '요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
         const raw = await readJson(request);
-        if (raw?.agentMode !== undefined && !selectableAgents.includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
+        if (raw?.agentMode !== undefined && !supportedAgents.includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
         const chatAgent = raw?.agentMode ?? env.CHAT_AGENT;
         const ranking = feedbackRanking(raw?.feedback);
         let llm;
@@ -189,7 +195,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         let item = null, itemFilter = null;
         if (itemFilterEnabled(env)) {
           // Without a carried item (older client, reloaded chat) the user's recent messages are read instead.
-          const said = input.operation === 'turn' ? [input.text] : [];
+          const said = input.operation === 'turn' ? [input.text] : input.messageText ? [input.messageText] : [];
           const texts = carriedItem === undefined ? [...(input.history ?? []).filter(m => m.role === 'user').map(m => m.text), ...said] : said;
           item = currentItem(texts, itemVocabulary(products), typeof carriedItem === 'string' ? carriedItem : null);
           ({ products, applied: itemFilter } = narrowByItem(products, item));

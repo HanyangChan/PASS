@@ -41,7 +41,7 @@ test('occasion replies and editor choices round-trip through every chat mode', a
       return verified();
     };
     const expectedHoliday = { state: { ...session.state, occasion: '명절' }, issues: session.issues };
-    for (const text of ['명절이라서요.', '설날', '추석 선물 추천해줘', '어머니께 드릴 추석 선물']) {
+    for (const text of ['명절', '상황은 명절', '명절로 설정해줘', '명절이라서요.', '설날', '추석 선물 추천해줘', '어머니께 드릴 추석 선물']) {
       const reply = await send(body({ session, agentMode, text }), settings, fetcher);
       assert.deepEqual(reply.session, expectedHoliday);
     }
@@ -103,4 +103,16 @@ test('B uses the configured OpenAI-compatible endpoint and keeps its key server-
   assert.equal(seen.model, 'gpt-5.6-luna');
   assert.ok(!text.includes('synthetic-key'));
   assert.deepEqual(JSON.parse(text).session.state.preferences, ['category:beauty']);
+});
+
+test('a typed occasion resolves the feedback mode occasion question without a model call', async () => {
+  const settings = { LLM_PROVIDER: 'openai-compatible', LLM_API_KEY: 'synthetic', LLM_BASE_URL: 'https://proxy.example/v1/' };
+  const session = { ...mother, issues: ['어떤 상황에 드릴 선물인가요?'] };
+  const reply = await send(body({ session, agentMode: 'full-chat-feedback-2', text: '명절' }), settings, async url => {
+    assert.match(String(url), /\/auth\/v1\/user$/);
+    return verified();
+  });
+  assert.equal(reply.session.state.occasion, '명절');
+  assert.deepEqual(reply.session.issues, []);
+  assert.equal(reply.routing.llmCalls, 0);
 });

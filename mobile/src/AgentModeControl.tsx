@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
 import { chatAgentModes, type ChatAgentMode } from './chatAgentModes';
 import { colors as c, fonts as f } from './theme';
 
 const lastIndex = chatAgentModes.length - 1;
+const modeLabels = chatAgentModes.map(mode => mode.id).join(' ');
 
 type Props = { value: ChatAgentMode; onChange: (value: ChatAgentMode) => void; disabled: boolean; connected: boolean };
 export function AgentModeControl({ value, onChange, disabled, connected }: Props) {
@@ -19,7 +20,6 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
     };
     return PanResponder.create({
       onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
       onPanResponderGrant: event => selectAt(event.nativeEvent.locationX),
       onPanResponderMove: event => selectAt(event.nativeEvent.locationX),
       onPanResponderTerminationRequest: () => false,
@@ -39,7 +39,7 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
         aria-valuetext={`${mode.id} ${mode.title}`}
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
-        accessibilityLabel="A B C D 응답 방식"
+        accessibilityLabel={`${modeLabels} 응답 방식`}
         accessibilityValue={{ min: 0, max: lastIndex, now: index, text: `${mode.id} ${mode.title}` }}
         accessibilityState={{ disabled }}
         accessibilityActions={[{ name: 'increment', label: '다음 응답 방식' }, { name: 'decrement', label: '이전 응답 방식' }]}
@@ -67,9 +67,7 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
       </View>
       <View style={s.labels}>
         {chatAgentModes.map(item => (
-          <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.id} ${item.title} 선택`} accessibilityState={{ selected: value === item.agent, disabled }} disabled={disabled} onPress={() => onChange(item.agent)} style={s.labelButton}>
-            <Text style={[s.label, value === item.agent && s.selectedLabel]}>{item.id}</Text>
-          </Pressable>
+          <Text key={item.id} style={[s.label, value === item.agent && s.selectedLabel]}>{item.id}</Text>
         ))}
       </View>
       {!connected && <Text style={s.hint}>에이전트 비교는 로그인 후 사용할 수 있어요.</Text>}
@@ -78,19 +76,18 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
 }
 
 const s = StyleSheet.create({
-  panel: { marginHorizontal: 24, marginTop: 4, marginBottom: 0, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: c.white, borderRadius: 12, borderWidth: 1, borderColor: c.border },
+  panel: { userSelect: 'none', marginHorizontal: 24, marginTop: 4, marginBottom: 0, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: c.white, borderRadius: 12, borderWidth: 1, borderColor: c.border },
   disabled: { opacity: 0.6 },
   header: { alignItems: 'center' },
   title: { color: c.primary, fontFamily: f.medium, fontSize: 12, lineHeight: 18, textAlign: 'center' },
-  slider: { height: 44, justifyContent: 'center', marginHorizontal: 4 },
+  slider: { height: 24, marginTop: 10, justifyContent: 'center', marginHorizontal: 4 },
   track: { height: 18, borderRadius: 12, backgroundColor: c.segment, overflow: 'hidden', justifyContent: 'center' },
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary, borderRadius: 18 },
   stop: { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: c.muted, opacity: 0.45 },
   filledStop: { backgroundColor: c.white, opacity: 0.6 },
   thumb: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: c.white, borderWidth: 1, borderColor: c.border, shadowColor: c.text, shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  labels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -12 },
-  labelButton: { minWidth: 44, minHeight: 24, alignItems: 'center', justifyContent: 'center' },
-  label: { fontFamily: f.medium, fontSize: 11, color: c.muted },
+  labels: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12 },
+  label: { width: 8, lineHeight: 20, textAlign: 'center', fontFamily: f.medium, fontSize: 11, color: c.muted },
   selectedLabel: { color: c.primary },
   hint: { color: c.muted, fontFamily: f.regular, fontSize: 11, lineHeight: 18, textAlign: 'center', marginTop: 2 },
 });

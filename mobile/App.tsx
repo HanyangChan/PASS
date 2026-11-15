@@ -54,10 +54,9 @@ import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
 import { AgentModeControl } from './src/AgentModeControl';
-import { AgentPanel, type AgentPayload } from './src/AgentPanel';
 import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
-import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
+import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
@@ -153,8 +152,6 @@ export function AppContent({
     chatError,
     sendChat,
     changeChatConditions,
-    disabledAdvisors,
-    toggleAdvisor,
     resetChat,
     cardFeedback,
     rateCard,
@@ -862,17 +859,6 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
-                  {agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                    <View style={s.advisorPanel}>
-                      <AgentPanel
-                        agents={recommendation.agents}
-                        disabled={disabledAdvisors}
-                        busy={chatPending}
-                        onToggle={toggleAdvisor}
-                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                      />
-                    </View>
-                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
@@ -1184,10 +1170,9 @@ function usePassState() {
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
-  const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
   const cardFeedbackRef = useRef<CardFeedback[]>([]);
@@ -1199,7 +1184,7 @@ function usePassState() {
     setChatError('');
   }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors, fresh?: ChatSession) => {
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => {
     if (!ready || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
@@ -1209,17 +1194,15 @@ function usePassState() {
     try {
       // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
       const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
-      const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
       const noHistory = emptyPersonalization();
-      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients, !useAdvisors).session
+      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text).session
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients).session
           : baseSession;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
-      const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
       const turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
-          : await serverChat.view(baseSession, controller.signal, agentMode, agents)
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode)
+          : await serverChat.view(baseSession, controller.signal, agentMode)
         : operation === 'turn' ? await chatService.send(requestSession, text, baseMessages) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
@@ -1235,7 +1218,7 @@ function usePassState() {
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
-      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode });
       return true;
     } catch (error) {
       if (chatFlight.current.revision !== revision) return null;
@@ -1401,15 +1384,8 @@ function usePassState() {
     changeAgentMode,
     agentConnected: Boolean(serverChat),
     chatError,
-    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => runChat('turn', text, undefined, true, source, undefined, fresh),
+    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => runChat('turn', text, undefined, true, source, fresh),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
-    disabledAdvisors,
-    toggleAdvisor: (advisor: string, enabled: boolean) => {
-      const next = enabled ? disabledAdvisors.filter(name => name !== advisor) : [...new Set([...disabledAdvisors, advisor])];
-      void runChat('view', '', undefined, true, 'typed', next).then(applied => {
-        if (applied) setDisabledAdvisors(next);
-      });
-    },
     resetChat,
     cardFeedback,
     rateCard,
@@ -1790,7 +1766,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: c.border,
   },
-  chips: { paddingHorizontal: 16, gap: 8 },
+  chips: { paddingHorizontal: 16, gap: 8, userSelect: 'none' },
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1824,7 +1800,6 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  advisorPanel: { marginHorizontal: 16, marginVertical: 4 },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
