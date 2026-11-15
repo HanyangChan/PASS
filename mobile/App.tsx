@@ -59,7 +59,7 @@ import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
-import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository, feedbackRepository, feedbackPreference, historyRepository } from './src/services/localServices';
 import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
 import { PastChats } from './src/PastChats';
@@ -157,6 +157,9 @@ export function AppContent({
     rateCard,
     pastChats,
     rankingSignal,
+    feedbackEnabled,
+    feedbackToggleDisabled,
+    changeFeedbackEnabled,
     openPastChat,
     deletePastChat,
     heroFailed,
@@ -1035,7 +1038,7 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
-                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
+                  <PastChats chats={pastChats} signal={rankingSignal} feedbackEnabled={feedbackEnabled} feedbackToggleDisabled={feedbackToggleDisabled} onFeedbackChange={changeFeedbackEnabled} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
                 </View>
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
@@ -1132,11 +1135,14 @@ function usePassState() {
   // Feedback the ranking uses: past chats plus this chat's taps, snapshotted per request so cards don't jump mid-tap.
   const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
   const rankingSignalRef = useRef<FeedbackSignal[]>([]);
+  const [feedbackEnabled, setFeedbackEnabled] = useState(true);
+  const feedbackEnabledRef = useRef(true);
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
   const pastFeedback = useRef<CardFeedback[]>([]);
   const [pastChats, setPastChats] = useState<PastChat[]>([]);
   const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
   const deletedPastChats = useRef(new Set<string>());
-  const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products, feedbackEnabled ? rankingSignal : []), [catalog.products, feedbackEnabled, rankingSignal]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
@@ -1169,7 +1175,7 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : []) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
@@ -1226,6 +1232,21 @@ function usePassState() {
       return false;
     } finally {
       if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+    }
+  };
+  const changeFeedbackEnabled = async (enabled: boolean) => {
+    if (chatFlight.current.controller || feedbackSaving || feedbackEnabledRef.current === enabled) return;
+    feedbackEnabledRef.current = enabled;
+    setFeedbackEnabled(enabled);
+    setFeedbackSaving(true);
+    setRecommendation(null);
+    if (serverChat) void runChat('view', '');
+    try {
+      await feedbackPreference.save(owner, enabled);
+    } catch {
+      setNotice('피드백 반영 설정을 기기에 저장하지 못했어요.');
+    } finally {
+      setFeedbackSaving(false);
     }
   };
   useEffect(() => {
@@ -1294,8 +1315,9 @@ function usePassState() {
     setLoadError('');
     const emptySession = chatService.createSession();
     const restore = repository ? repository.load(emptySession) : giftRepository.load().then(records => ({ ...records, session: emptySession, messages: [] as ChatMessage[] }));
-    restore.then(records => {
+    Promise.all([restore, feedbackPreference.load(owner).catch(() => true)]).then(([records, enabled]) => {
       if (!mounted) return;
+      feedbackEnabledRef.current = enabled; setFeedbackEnabled(enabled);
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
@@ -1391,6 +1413,9 @@ function usePassState() {
     rateCard,
     pastChats,
     rankingSignal,
+    feedbackEnabled,
+    feedbackToggleDisabled: chatPending || feedbackSaving,
+    changeFeedbackEnabled,
     openPastChat: async (chat: PastChat) => chat.messages
       ? { messages: chat.messages, recommendations: chat.recommendations ?? [] }
       : cloud.current ? cloud.current.loadConversation(chat.id) : { messages: [], recommendations: [] },
