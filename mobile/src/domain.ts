@@ -50,8 +50,6 @@ export type ConditionPatch = Partial<Omit<Conditions, 'budget'>> & {
 };
 export type ChatSession = { state: Conditions; issues: string[] };
 export type ChatMessage = { role: 'user' | 'assistant'; text: string };
-export type ConversationSummary = { id: string; title: string; updatedAt: string; recipient: string | null };
-export type SavedConversation = ConversationSummary & { messages: ChatMessage[]; products: Gift[] };
 export type GiftRecords = { saved: Gift[]; recent: Gift[] };
 
 export const calendarEventKinds = ['birthday', 'anniversary', 'etc'] as const;

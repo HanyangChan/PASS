@@ -60,8 +60,10 @@ import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
-import { giftRepository, productRepository, calendarRepository, feedbackRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
+import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
+import { PastChats } from './src/PastChats';
 import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
 import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
@@ -70,7 +72,7 @@ import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
 import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
-import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind, ConversationSummary, SavedConversation } from './src/domain';
+import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
 import { calendarEventKinds } from './src/domain';
 import {
   Chip,
@@ -85,7 +87,7 @@ const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
-type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage' | 'history';
+type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
 const conditionComparisonEnabled = false;
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
@@ -156,6 +158,10 @@ export function AppContent({
     resetChat,
     cardFeedback,
     rateCard,
+    pastChats,
+    rankingSignal,
+    openPastChat,
+    deletePastChat,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -187,10 +193,6 @@ export function AppContent({
     popularGifts,
     catalogError,
     retryCatalog,
-    conversations,
-    openConversation,
-    deleteConversation,
-    selectedConversation,
   } = state;
   const router = useRouter();
   const { user } = useAuth();
@@ -248,7 +250,7 @@ export function AppContent({
             ? '/ranking'
             : next === 'calendar'
               ? '/calendar'
-              : next === 'history' ? '/history' : '/mypage',
+              : '/mypage',
     );
     setSearch('');
     setShowSearch(false);
@@ -1000,22 +1002,6 @@ export function AppContent({
                   )}
                 </View>
               </ScrollView>
-            ) : screen === 'history' ? (
-              <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
-                <View style={s.header}><Pressable accessibilityRole="button" onPress={() => navigate('mypage')}><ArrowLeft color={c.primary}/></Pressable><Text style={[s.title,s.flex]}>대화 기록</Text></View>
-                {selectedConversation ? <>
-                  <Text style={s.small}>{selectedConversation.recipient ?? '대상 미지정'} · {new Date(selectedConversation.updatedAt).toLocaleString()}</Text>
-                  {selectedConversation.messages.map((message, index) => <Text key={`${selectedConversation.id}-${index}`} style={message.role === 'user' ? s.user : s.assistant}>{message.text}</Text>)}
-                  <View style={s.homeSection}>
-                    <SectionHeader title="그때 추천한 상품" />
-                    {selectedConversation.products.length ? cards(selectedConversation.products) : <Text style={s.empty}>이 대화에는 추천 상품 기록이 없어요. 새로 저장되는 대화부터 상품이 함께 표시됩니다.</Text>}
-                  </View>
-                  <Button label="목록으로" onPress={() => void openConversation(null)}/>
-                </> : conversations.length ? conversations.map(item => <View key={item.id} style={s.eventRow}>
-                  <Pressable style={s.flex} onPress={() => void openConversation(item.id)}><Text style={s.sectionTitle}>{item.title || '새 대화'}</Text><Text style={s.small}>{item.recipient ?? '대상 미지정'} · {new Date(item.updatedAt).toLocaleString()}</Text></Pressable>
-                  <Pressable accessibilityRole="button" accessibilityLabel="대화 삭제" onPress={() => void deleteConversation(item.id)}><X size={18} color={c.muted}/></Pressable>
-                </View>) : <Text style={s.empty}>저장된 대화가 아직 없어요.</Text>}
-              </ScrollView>
             ) : (
               <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
                 <View style={s.header}>
@@ -1030,7 +1016,6 @@ export function AppContent({
                     {loggedIn ? '찜·최근 본 선물과 대화는 계정에 저장돼요.' : '찜과 최근 본 선물은 이 기기에 저장돼요.'}
                   </Text>
                 </View>
-                <View style={s.historyButtonSection}><Button label={`지난 대화 ${conversations.length}개 보기`} onPress={() => navigate('history')}/></View>
                 <View style={s.homeSection}>
                   <SectionHeader
                     title={`찜한 선물 ${saved.length}개`}
@@ -1064,11 +1049,14 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
+                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
+                </View>
+                <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
                     랭킹과 대화 추천은 같은 상품 목록(Kaggle Amazon Products
                     Dataset, CC BY-NC 4.0)을 사용해요. 실제 결제·배송 기능은 준비
-                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 마지막 대화와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은 기기에 남아요.'}
+                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 대화(최근 30개)와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 새 대화를 시작하면 이 기기의 지난 대화에 남고(최대 30개), 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
               </ScrollView>
@@ -1155,14 +1143,19 @@ function usePassState() {
     );
     return () => { live = false; };
   }, [catalogAttempt]);
-  const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
+  // Feedback the ranking uses: past chats plus this chat's taps, snapshotted per request so cards don't jump mid-tap.
+  const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
+  const rankingSignalRef = useRef<FeedbackSignal[]>([]);
+  const pastFeedback = useRef<CardFeedback[]>([]);
+  const [pastChats, setPastChats] = useState<PastChat[]>([]);
+  const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
+  const deletedPastChats = useRef(new Set<string>());
+  const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<SavedConversation | null>(null);
   const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
   const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
@@ -1190,7 +1183,7 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
@@ -1212,42 +1205,35 @@ function usePassState() {
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
+    refreshSignal();
     try {
       // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
       const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
       const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
       const noHistory = emptyPersonalization();
-      let requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
+      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
         : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients, !useAdvisors).session
           : baseSession;
-      let historyApplied = false;
-      if (operation === 'turn' && baseMessages.length === 0 && requestSession.state.recipients.length === 1 && cloud.current) {
-        const prior = await cloud.current.getRecipientHistory(requestSession.state.recipients[0]).catch(() => null);
-        if (prior) {
-          const state = { ...requestSession.state,
-            preferences: requestSession.state.preferences.length ? requestSession.state.preferences : prior.preferences,
-            excluded_categories: [...new Set([...requestSession.state.excluded_categories, ...prior.excluded_categories])],
-            excluded_ingredients: [...new Set([...requestSession.state.excluded_ingredients, ...prior.excluded_ingredients])],
-          };
-          historyApplied = state.preferences.length !== requestSession.state.preferences.length || state.excluded_categories.length !== requestSession.state.excluded_categories.length || state.excluded_ingredients.length !== requestSession.state.excluded_ingredients.length;
-          requestSession = { ...requestSession, state };
-        }
-      }
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
       const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
       const turn = serverChat
         ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
           : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
           : await serverChat.view(baseSession, controller.signal, agentMode, agents)
-        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
+        : operation === 'turn' ? await chatService.send(requestSession, text, baseMessages) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(baseSession)) setSession(turn.session);
       if (operation !== 'view') {
+        const result = 'view' in turn ? turn.view.result : chatService.view(turn.session).result;
+        if (result.items.length) {
+          setChatRecommendations(result.items.slice(0, HISTORY_RECOMMENDATION_LIMIT)
+            .map(product => chatService.toGift(product, turn.session.state)));
+        }
         setSession(turn.session);
-        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: `${turn.message}${historyApplied ? '\n\n이전 대화에서 같은 분에게 적용했던 선호와 제외 조건을 반영했어요.' : ''}` }]);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
       if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
@@ -1294,12 +1280,26 @@ function usePassState() {
     cloud.current?.setFeedback(next);
     feedbackScheduler.current?.schedule();
   };
+  const refreshSignal = (past = pastFeedback.current) => {
+    const next = rankingFeedback(past, cardFeedbackRef.current);
+    if (JSON.stringify(next) === JSON.stringify(rankingSignalRef.current)) return;
+    rankingSignalRef.current = next; setRankingSignal(next);
+  };
   const resetChat = () => {
     // Save the ending conversation's feedback first; the save is queued before anything for the new chat.
     void feedbackScheduler.current?.flushNow();
+    // The ending chat becomes history: its feedback now counts as past, and guests archive it on the device.
+    if (messages.length) {
+      const id = cloud.current?.currentId() ?? guestSession.current;
+      const feedback = stampConversation(cardFeedbackRef.current, id);
+      pastFeedback.current = [...pastFeedback.current, ...feedback];
+      const ended: PastChat = { id, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback, recommendations: chatRecommendations };
+      setPastChats(old => [ended, ...old.filter(c => c.id !== ended.id)].slice(0, 30));
+      if (!cloud.current) historyRepository.archive(ended).catch(() => setNotice('기기에 지난 대화를 저장하지 못했어요.'));
+    }
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
-    setChatPending(false); setChatError(''); setRecommendation(null);
+    setChatPending(false); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
     const next = chatService.createSession();
     setSession(next); setMessages([]);
     return next;
@@ -1313,32 +1313,40 @@ function usePassState() {
     const restore = repository ? repository.load(emptySession) : giftRepository.load().then(records => ({ ...records, session: emptySession, messages: [] as ChatMessage[] }));
     restore.then(records => {
       if (!mounted) return;
-      if (repository) void repository.listConversations().then(list => { if (mounted) setConversations(list); }).catch(() => { if (mounted) setNotice('대화 기록을 불러오지 못했어요.'); });
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
       const restored = 'feedback' in records && Array.isArray(records.feedback) ? stampConversation(records.feedback as CardFeedback[], '') : [];
       cardFeedbackRef.current = restored; setCardFeedback(restored); guestSession.current = randomUUID();
+      // History never blocks the chat: a failed load only hides mypage history and past-feedback weights.
+      const currentId = repository?.currentId();
+      const history = repository ? repository.listConversations().then(list => ({ list: list.filter(c => c.id !== currentId), logged: [] as CardFeedback[] }))
+        : Promise.all([historyRepository.load(), feedbackRepository.load()]).then(([list, logged]) => ({ list, logged: logged.filter(f => !list.some(c => c.id === f.conversationId)) }));
+      history.then(({ list, logged }) => {
+        if (!mounted) return;
+        const remaining = list.filter(chat => !deletedPastChats.current.has(chat.id));
+        setPastChats(current => [...current, ...remaining.filter(chat => !current.some(shown => shown.id === chat.id))].slice(0, 30));
+        const localIds = new Set(pastFeedback.current.map(item => item.conversationId));
+        pastFeedback.current = [...remaining.filter(chat => !localIds.has(chat.id)).flatMap(chat => chat.feedback), ...logged, ...pastFeedback.current];
+        refreshSignal();
+      }).catch(() => { if (mounted) setNotice('지난 대화를 불러오지 못했어요.'); });
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
     }).catch(() => { if (mounted) setLoadError('계정 기록을 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.'); });
-    return () => { mounted = false; repository?.close(); };
+    return () => { mounted = false; repository?.close(); if (cloud.current === repository) cloud.current = null; };
   }, [owner, loadAttempt]);
   useEffect(() => {
     if (!ready) return;
     let mounted = true;
     const revision = ++saveRevision.current;
     const gifts = JSON.stringify({ saved, recent });
-    const recommendations: Gift[] | undefined = recommendation?.key === JSON.stringify(session)
-      ? recommendation.view.result.items.slice(0, 12).map(product => chatService.toGift(product, session.state))
-      : undefined;
-    const chat = JSON.stringify({ session, messages, recommendations });
+    const chat = JSON.stringify({ session, messages, recommendations: chatRecommendations });
     const tasks: Promise<void>[] = [];
     const giftWrite = persistence.current.write('gifts', gifts, () => cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent }));
     if (giftWrite) tasks.push(giftWrite);
     if (cloud.current) {
-      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages, recommendations));
+      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages, chatRecommendations));
       if (chatWrite) tasks.push(chatWrite);
     }
     if (tasks.length) Promise.all(tasks).then(() => {
@@ -1347,7 +1355,7 @@ function usePassState() {
       if (mounted && revision === saveRevision.current) { setSyncFailed(true); setNotice(user ? '계정에 기록을 저장하지 못했어요. 다시 시도해주세요.' : '기기에 기록을 저장하지 못했어요.'); }
     });
     return () => { mounted = false; };
-  }, [saved, recent, session, messages, recommendation, chatService, ready, saveAttempt, user]);
+  }, [saved, recent, session, messages, chatRecommendations, ready, saveAttempt, user]);
   useEffect(() => {
     // Calendar events are device-local only (not part of the account sync above),
     // so they load and save independently of login state.
@@ -1405,6 +1413,21 @@ function usePassState() {
     resetChat,
     cardFeedback,
     rateCard,
+    pastChats,
+    rankingSignal,
+    openPastChat: async (chat: PastChat) => chat.messages
+      ? { messages: chat.messages, recommendations: chat.recommendations ?? [] }
+      : cloud.current ? cloud.current.loadConversation(chat.id) : { messages: [], recommendations: [] },
+    deletePastChat: async (id: string) => {
+      const repository = cloud.current;
+      if (!repository) return;
+      await repository.deleteConversation(id);
+      if (cloud.current !== repository) return;
+      deletedPastChats.current.add(id);
+      setPastChats(current => current.filter(chat => chat.id !== id));
+      pastFeedback.current = pastFeedback.current.filter(item => item.conversationId !== id);
+      refreshSignal();
+    },
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,
@@ -1413,22 +1436,6 @@ function usePassState() {
     popularGifts: rankingByRecipient['전체'].slice(0, 10),
     catalogError: catalog.error,
     retryCatalog: () => setCatalogAttempt(value => value + 1),
-    conversations,
-    selectedConversation,
-    openConversation: async (id: string | null) => {
-      if (!id) { setSelectedConversation(null); return; }
-      if (!cloud.current) { setNotice('게스트 대화 기록은 저장하지 않아요.'); return; }
-      try { setSelectedConversation(await cloud.current.getConversation(id)); }
-      catch { setNotice('대화 기록을 불러오지 못했어요.'); }
-    },
-    deleteConversation: async (id: string) => {
-      if (!cloud.current) return;
-      try {
-        await cloud.current.deleteConversation(id);
-        setConversations(current => current.filter(item => item.id !== id));
-        setSelectedConversation(current => current?.id === id ? null : current);
-      } catch { setNotice('대화 기록을 삭제하지 못했어요.'); }
-    },
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1612,12 +1619,6 @@ const s = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
     marginTop: 8,
-  },
-  historyButtonSection: {
-    backgroundColor: c.white,
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 16,
   },
   eventBanner: {
     marginHorizontal: 20,
@@ -1895,8 +1896,7 @@ const s = StyleSheet.create({
   },
   myIntro: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 12,
+    paddingVertical: 24,
     gap: 12,
     alignItems: 'center',
   },

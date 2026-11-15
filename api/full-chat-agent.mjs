@@ -11,13 +11,13 @@ const conversation={
   help:'받는 분·예산·취향·제외 조건을 알려주세요. 상품 추천, 추천 이유 설명, 가상 예산 비교를 도와드릴 수 있어요.',
   acknowledge:'네, 이어서 궁금한 점이나 바꾸고 싶은 선물 조건을 알려주세요.',
 };
-export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,decide,agentFactory=createAgent,...limits}={}) {
+export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,decide,agentFactory=createAgent,ranking=APP_RANKING,...limits}={}) {
   const before=input.state;
   const catalog=products.map(p=>({...p,rating_count:p.rating_count??0}));
   const session={...createSession('prototype-request'),state:engineState(before)};
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const pending=singleQuestion({state:before,issues:input.issues});
-  const output=await agentFactory({env,fetcher,decide,ranking:APP_RANKING,...limits}).runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??(pending.key?pending.text:''),history:input.history??[],signal});
+  const output=await agentFactory({env,fetcher,decide,ranking,...limits}).runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??(pending.key?pending.text:''),history:input.history??[],signal});
   const state=publicState(output.session.state);
   let issues=[];
   if(output.kind==='question') {

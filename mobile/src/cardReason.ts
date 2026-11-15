@@ -7,7 +7,7 @@ import type { Conditions } from './domain';
 export type ReasonItem = {
   category?: string; sweetness?: string; packaging?: string; arrival_date?: string;
   rating_count?: number; popularity?: number;
-  name?: string; name_en?: string; gift_set?: boolean;
+  name?: string; name_en?: string; gift_set?: boolean; feedback_score?: number;
 };
 const names = CATEGORY_NAMES as Record<string, string>;
 const money = (amount: number) => amount % 10000 === 0 ? `${amount / 10000}만 원` : `${amount.toLocaleString('ko-KR')}원`;
@@ -17,11 +17,13 @@ const money = (amount: number) => amount % 10000 === 0 ? `${amount / 10000}만 �
 export function cardReason(item: ReasonItem, conditions: Conditions): string {
   const category = item.category ? names[item.category] ?? item.category : '';
   const picks: (string | null)[] = [
+    // Past 👍/👎 moved this item; show the exact score change so the effect is visible.
+    item.feedback_score ? `지난 피드백 반영 (${item.feedback_score > 0 ? '+' : ''}${item.feedback_score}점)` : null,
     conditions.occasion === '명절' && isGiftSet(item) ? '명절 선물세트' : null,
     item.category && conditions.preferences.includes(`category:${item.category}`) ? `${category} 선호 반영` : null,
     conditions.preferences.includes('unsweetened') && item.sweetness === 'unsweetened' ? '단맛 없는 상품'
       : conditions.preferences.includes('less_sweet') && ['unsweetened', 'naturally_sweet'].includes(item.sweetness ?? '') ? '덜 단 상품' : null,
-    item.category && conditions.recipients.length && recipientCategories(conditions.recipients).has(item.category)
+    item.category && conditions.recipients.length && recipientCategories(conditions.recipients, { profiles: true }).has(item.category)
       ? `${conditions.recipients.join('·')}에게 어울리는 ${category}` : null,
     conditions.budget.amount_krw ? `예산 ${money(conditions.budget.amount_krw)} 이하` : null,
     // Allergen data is estimated from product names, so say "reflected", never "safe".

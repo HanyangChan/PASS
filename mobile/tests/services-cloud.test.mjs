@@ -11,7 +11,7 @@ function fixture() {
   const client = {
     auth: { getSession: async () => ({ data: { session: { user: { id: owner } } }, error: null }) },
     from(table) {
-      let operation = 'select', payload, options, filters = [], sorting, maximum = 1000, start = 0;
+      let operation = 'select', payload, options, filters = [], sorting, maximum = 1000, start = 0, single = false;
       const query = {
         select() { return query; },
         eq(key, value) { filters.push(row => key === 'conditions->_pass->>committed' ? String(row.conditions._pass.committed) === value : row[key] === value); return query; },
@@ -19,6 +19,7 @@ function fixture() {
         order(key, { ascending }) { sorting = [key, ascending]; return query; },
         range(from, to) { start = from; maximum = to - from + 1; return query; },
         limit(value) { maximum = value; return query; },
+        single() { single = true; return query; },
         upsert(value, opt) { operation = 'upsert'; payload = structuredClone(value); options = opt; return query; },
         update(value) { operation = 'update'; payload = structuredClone(value); return query; },
         delete() { operation = 'delete'; return query; },
@@ -35,16 +36,13 @@ function fixture() {
               if (previous) Object.assign(previous, value); else rows[table].push(value);
             }
           } else if (operation === 'update') { for (const row of selected) Object.assign(row, payload, { updated_at: ++stamp }); }
-          else if (operation === 'delete') {
-            rows[table] = rows[table].filter(row => !selected.includes(row));
-            if (table === 'conversations') rows.messages = rows.messages.filter(message => !selected.some(conversation => conversation.id === message.conversation_id));
-          }
+          else if (operation === 'delete') rows[table] = rows[table].filter(row => !selected.includes(row));
           else {
             if (sorting) selected.sort((a, b) => (a[sorting[0]] > b[sorting[0]] ? 1 : -1) * (sorting[1] ? 1 : -1));
             selected = selected.slice(start, start + maximum);
           }
           if (failAfter === `${table}:${operation}`) { failAfter = ''; return resolve({ error: { message: 'lost acknowledgement' }, data: null }); }
-          resolve({ data: structuredClone(selected), error: null });
+          resolve({ data: structuredClone(single ? selected[0] ?? null : selected), error: null });
         },
       };
       return query;
@@ -61,23 +59,6 @@ test('cloud gifts round trip preserves order, removal and unseen records on othe
   const restored = await f.repo().load(empty());
   assert.deepEqual(restored.recent.map(g => g.id), ['a', 'b']);
   assert.deepEqual(new Set(restored.saved.map(g => g.id)), new Set(['b', 'other-device']));
-});
-
-test('conversation history lists committed chats, loads ordered messages, recalls conditions and deletes only the owned chat', async () => {
-  const f = fixture(), repo = f.repo(); await repo.load(empty());
-  const session = { ...empty(), state: { ...empty().state, recipients: ['친구'], preferences: ['category:food'], excluded_ingredients: ['peanut'] } };
-  const recommended = gift('recommended-1');
-  await repo.saveChat(session, [message('친구에게 과일 선물'), { role: 'assistant', text: '추천 결과' }], [recommended]);
-  const list = await f.repo().listConversations();
-  assert.equal(list.length, 1);
-  assert.equal(list[0].recipient, '친구');
-  assert.deepEqual(await f.repo().getRecipientHistory('친구'), { preferences: ['category:food'], excluded_categories: [], excluded_ingredients: ['peanut'] });
-  const detail = await f.repo().getConversation(list[0].id);
-  assert.deepEqual(detail.messages, [message('친구에게 과일 선물'), { role: 'assistant', text: '추천 결과' }]);
-  assert.deepEqual(detail.products, [recommended]);
-  await repo.deleteConversation(list[0].id);
-  assert.deepEqual(await f.repo().listConversations(), []);
-  assert.equal(f.rows.messages.length, 0, 'conversation foreign key cascade removes its messages');
 });
 
 test('failed saves capture snapshots and can retry without duplicate records', async () => {
@@ -238,4 +219,39 @@ test('old conversations without a feedback field still load', async () => {
   await repo.saveChat(empty(), [message('first')]);
   delete f.rows.conversations[0].conditions._pass.feedback;
   assert.deepEqual((await f.repo().load(empty())).feedback, []);
+});
+
+test('queued chat saves and feedback keep the historical recommendations', async () => {
+  const f = fixture(), repo = f.repo();
+  await repo.load(empty());
+  const recommended = gift('recommended');
+  const messages = [message('친구에게 과일 선물')];
+  const first = repo.saveChat(empty(), messages, [recommended]);
+  const next = repo.saveChat(empty(), [...messages, { role: 'assistant', text: '답변' }]);
+  await Promise.all([first, next]);
+  repo.setFeedback([fb()]);
+  await repo.saveFeedback();
+  const [chat] = await repo.listConversations();
+  assert.deepEqual(await repo.loadConversation(chat.id), {
+    messages: [...messages, { role: 'assistant', text: '답변' }],
+    recommendations: [recommended],
+  });
+  assert.equal(chat.feedback.length, 1);
+  await repo.saveChat(empty(), []);
+  assert.deepEqual((await repo.loadConversation(repo.currentId())).recommendations, []);
+});
+
+test('history deletion is scoped to the account and cannot recreate the active conversation', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveChat(empty(), [message('지난 대화')]);
+  const previous = repo.currentId();
+  await repo.saveChat(empty(), []);
+  const active = repo.currentId();
+  await assert.rejects(repo.deleteConversation(active), /현재 대화/);
+  f.rows.conversations.push({ ...structuredClone(f.rows.conversations[0]), user_id: 'other' });
+  await repo.deleteConversation(previous);
+  assert.deepEqual((await repo.listConversations()).map(chat => chat.id), [active]);
+  assert.equal(f.rows.conversations.find(row => row.user_id === 'other').id, previous);
+  f.switchOwner();
+  await assert.rejects(repo.loadConversation(active), /로그인/);
 });

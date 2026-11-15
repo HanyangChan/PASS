@@ -96,9 +96,15 @@ function defaultCatalog(fetcher) {
   };
 }
 const catalogLabel = env => { try { return catalogId(env.CATALOG_SOURCE); } catch { return 'invalid'; } };
-export function recommendationView(session, products) {
+// Card feedback from the app: ids only, capped, never trusted beyond ranking weights.
+export function feedbackRanking(feedback) {
+  if (feedback === undefined || feedback === null) return APP_RANKING;
+  if (!Array.isArray(feedback) || feedback.length > 200 || feedback.some(f => !f || typeof f.giftId !== 'string' || !f.giftId || f.giftId.length > 200 || typeof f.helpful !== 'boolean')) throw new ApiError(400, 'invalid_request', '피드백 기록을 확인해주세요.');
+  return { ...APP_RANKING, feedback: { liked: feedback.filter(f => f.helpful).map(f => f.giftId), disliked: feedback.filter(f => !f.helpful).map(f => f.giftId) } };
+}
+export function recommendationView(session, products, ranking = APP_RANKING) {
   const state = engineState(session.state);
-  return { question: singleQuestion(session), result: recommend(products, state, APP_RANKING), comparison: budgetAlternatives(products, state, APP_RANKING) };
+  return { question: singleQuestion(session), result: recommend(products, state, ranking), comparison: budgetAlternatives(products, state, ranking) };
 }
 export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(fetcher), flowerAdvice, shoppingText, onDiagnostic } = {}) {
   return {
@@ -152,6 +158,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const raw = await readJson(request);
         if (raw?.agentMode !== undefined && !selectableAgents.includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
         const chatAgent = raw?.agentMode ?? env.CHAT_AGENT;
+        const ranking = feedbackRanking(raw?.feedback);
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { throw new ApiError(503,'configuration','LLM 연결 설정을 확인해주세요.'); }
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(chatAgent);
@@ -189,14 +196,14 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         }
         let turn, mode = 'rules';
         if (advisorContext) {
-          turn = await prototypeLangGraphTurn(input, products, { env, fetcher, signal: request.signal, advisorContext });
+          turn = await prototypeLangGraphTurn(input, products, { env, fetcher, signal: request.signal, advisorContext, ranking });
           mode = turn.mode;
         } else if (fullChat) {
           const feedback=chatAgent!=='full-chat';
-          turn = await prototypeFullChatTurn(input,products,{env,fetcher,signal:request.signal,...(feedback?{agentFactory:createFeedbackAgent,maxReviews:Number(chatAgent.slice(-1))}:{})});
+          turn = await prototypeFullChatTurn(input,products,{env,fetcher,signal:request.signal,ranking,...(feedback?{agentFactory:createFeedbackAgent,maxReviews:Number(chatAgent.slice(-1))}:{})});
           mode = turn.mode;
         } else if (chatAgent === 'a-router') {
-          turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options, llmMode: env.A_ROUTER_LLM_MODE || 'single', signal: request.signal });
+          turn = await prototypeRouterTurn(input, products, { extract: llm.extract, ...llm.options, llmMode: env.A_ROUTER_LLM_MODE || 'single', signal: request.signal, ranking });
           mode = turn.mode;
         } else if (input.operation === 'view') turn = finishSingle(input.state, input.state, input.issues, products);
         else if (input.operation === 'conditions') turn = finishSingle(input.state, apply(input.state, input.patch), input.clearIssues === false ? input.issues : [], products);
@@ -213,7 +220,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         }
         const usedModel = mode === 'llm' || mode === 'agents' && turn.routing.llmCalls > 0;
         const itemFields = itemFilterEnabled(env) ? { session: { ...turn.session, item_filter: item }, itemFilter } : {};
-        return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products), ...itemFields, mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: catalogLabel(env) });
+        return json({ ...turn, view: turn.view ?? recommendationView(turn.session, products, ranking), ...itemFields, mode, llmProvider: usedModel ? llm.provider : null, llmModel: usedModel ? llm.options.model : null, catalog: catalogLabel(env) });
       } catch (error) {
         if (error instanceof FullChatError) { const code=error.code==='configuration'?'configuration':'agent_unavailable';diagnose(code,503,error.routing);return json({error:'전체 채팅 Agent가 요청을 완료하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code,routing:error.routing},503); }
         if (error instanceof RouterInterpretationError) { diagnose('interpretation_unavailable',503,error.routing); return json({error:'조건 해석 서비스에 연결하지 못했어요. 조건은 바뀌지 않았어요. 다시 시도해주세요.',code:'interpretation_unavailable',routing:error.routing},503); }
