@@ -1217,7 +1217,7 @@ function usePassState() {
         ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
           : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
           : await serverChat.view(baseSession, controller.signal, agentMode, agents)
-        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
+        : operation === 'turn' ? await chatService.send(requestSession, text, baseMessages) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.

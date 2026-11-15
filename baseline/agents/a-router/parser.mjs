@@ -2,20 +2,24 @@ import { initial } from '../../src/vendor/engine.mjs';
 import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 
 const categories = [
-  ['coffee_tea','커피|홍차|녹차|전통차|차'], ['snack','과자|간식|초콜릿|쿠키|한과'],
-  ['food','과일|식품|기름|오일'], ['beauty','향수|화장품|스킨케어|로션'],
-  ['makeup','메이크업|립스틱|섀도'], ['fitness','운동|헬스|요가|피트니스'],
-  ['audio','이어폰|헤드폰|스피커|음악'], ['jewelry','주얼리|목걸이|팔찌|귀걸이|반지'],
-  ['watch','시계'], ['bag','가방|백팩'], ['accessory','지갑|선글라스'],
-  ['toy','장난감|완구|인형|레고'], ['health','건강식품|영양제|홍삼'],
-  ['kitchen','주방용품|요리'], ['decor','인테리어|장식|향초|무드등'],
-  ['personal_care','면도기|드라이기'],
+  ['coffee_tea','커피|홍차|녹차|전통차|(?<![가-힣])차(?=[를을는은도가이로와랑나]|[\\s,.!?]|$)'], ['snack','과자|간식|초콜릿|쿠키|한과|디저트|사탕|젤리'],
+  ['health','건강식품|영양제|비타민|유산균|홍삼|(?<![가-힣])건강(?!\\s*식품)'],
+  ['food','과일|(?<!건강)식품|음식|기름|오일|고기|한우'], ['beauty','향수|화장품|스킨케어|로션|뷰티|피부\\s*관리'],
+  ['makeup','메이크업|립스틱|섀도|틴트'], ['fitness','운동|헬스|요가|피트니스|등산|골프|러닝'],
+  ['audio','이어폰|헤드폰|헤드셋|스피커|음악|음향기기'], ['jewelry','주얼리|목걸이|팔찌|귀걸이|반지|보석'],
+  ['watch','시계'], ['bag','가방|백팩|핸드백|크로스백'], ['accessory','지갑|선글라스|벨트|모자|넥타이|스카프|패션\\s*소품'],
+  ['toy','장난감|완구|인형|레고|보드게임'],
+  ['kitchen','주방용품|주방|요리|그릇|텀블러'], ['decor','인테리어|장식|향초|무드등|홈데코'],
+  ['personal_care','면도기|드라이기|전동칫솔|생활가전'],
   ['flower','꽃다발|꽃바구니|생화|화분|(?<![가-힣])꽃'], ['stationery','문구|필기구|볼펜|만년필|(?<![가-힣])펜'],
   ['digital','전자기기|디지털기기|카메라|보조배터리'], ['liquor','전통주|와인|주류|막걸리|(?<![가-힣])술'],
 ];
 const question = text => ({ patch:{}, questions:[text], unresolved:true, route:'clarification' });
-const RECIPIENTS='직장 상사|직장동료|부모님|어머니|아버지|할머니|할아버지|교수님|선생님|엄마|아빠|친구|동료|연인|애인|손주|손녀|자녀';
+const RECIPIENTS='직장\\s*상사|직장\\s*동료|회사\\s*동료|여자\\s*친구|남자\\s*친구|여친|남친|시어머니|시아버지|장모님|장인어른|부모님|어머니|아버지|할머니|할아버지|교수님|선생님|선배|후배|팀장님|부장님|상사|엄마|아빠|친구|동료|연인|애인|남편|아내|와이프|언니|누나|오빠|남동생|여동생|동생|조카|아들|딸|손주|손녀|자녀|이모|삼촌|고모|(?<![가-힣])형(?![가-힣])';
+const recipientName = r => { const k=r.replace(/\s+/g,''); return ({엄마:'어머니',아빠:'아버지',여친:'여자친구',남친:'남자친구',와이프:'아내',회사동료:'직장동료',직장상사:'직장 상사'})[k] ?? k; };
 const GIVER='저는|나는|난|전|제가|내가';
+// Ways to say the recipient likes or wants something.
+const LIKE='좋아(?:하세요|하셔요|하셔|하십니다|하시고|하시는데|하시며|하심|해요|해|함|하고|하는데|하며)|즐겨\\s*(?:드세요|드셔|드시고|마셔요|마셔|마시고|하세요|하셔|해요|해)|관심(?:이)?\\s*(?:많|있)(?:어요|어|으세요|으셔|으시고|고)|선호(?:하세요|하셔|해요|해)?|추천해\\s*(?:줘|주세요)|추천|골라\\s*(?:줘|주세요)|위주로|필요(?:해요|해|하세요|하셔)';
 const FRAGRANCE_SCOPE='향수만 제외할까요, 화장품·뷰티 전체를 제외할까요?';
 const unknown = () => ({ patch:{}, questions:['받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.'], unresolved:true, route:'unresolved' });
 const unique = values => [...new Set(values)];
@@ -35,6 +39,9 @@ export function normalizeMoney(text) {
     return total+part+digit;
   };
   return text.replace(/(?<![\d,])\d{1,3}(?:,\d{3})+(?![\d,])/g,m=>m.replaceAll(',',''))
+    // "3만5천원", "3만 5천", "3만5000원" are one amount.
+    .replace(/(\d+)\s*만\s*(\d+)\s*천\s*(?:원)?/g,(_,a,b)=>`${Number(a)*10000+Number(b)*1000}원`)
+    .replace(/(\d+)\s*만\s*(\d{1,4})\s*원/g,(_,a,b)=>`${Number(a)*10000+Number(b)}원`)
     .replace(/([영일이삼사오육칠팔구십백천만]+)\s*원/g,(match,n,offset,whole)=>/[\d.,]\s*$/.test(whole.slice(0,offset))?match:`${number(n)}원`)
     .replace(/(\d+(?:\.\d+)?)\s*(만|천)(?!\s*원)/g,'$1$2 원');
 }
@@ -85,12 +92,13 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   }
   const take=(re,fn)=>{rest=rest.replace(re,(...args)=>{fn?.(...args);return ' ';});};
   const occasions=[];
-  const occasionOf=o=>/설날|추석|한가위/.test(o)?'명절':o==='생신'?'생일':/기념일/.test(o)?'기념일':/수능|수험/.test(o)?'수험':o;
-  take(/(명절|설날|추석|한가위|생일|생신|합격|결혼\s*기념일|기념일|수능|수험)(?:\s*축하)?(?:에)?(?=\s*(?:(?:드릴|줄|드리는|주는)\s+)?선물|\s*$)/g,(_,occasion)=>occasions.push(occasionOf(occasion)));
+  const occasionOf=o=>{o=o.replace(/\s+/g,'');return /설날|추석|한가위/.test(o)?'명절':o==='생신'?'생일':/기념일/.test(o)?'기념일':/수능|수험/.test(o)?'수험':o==='스승의날'?'스승의 날':o;};
+  // The occasion may come before the recipient: "설날 부모님 선물", "졸업 축하 친구 선물".
+  take(new RegExp(`(명절|설날|추석|한가위|생일|생신|합격|결혼\\s*기념일|기념일|수능|수험|졸업|입학|취업|승진|이직|퇴직|은퇴|집들이|결혼|출산|어버이날|스승의\\s*날|크리스마스|발렌타인\\s*데이|화이트\\s*데이|빼빼로\\s*데이)(?:\\s*축하)?(?:\\s*기념)?(?:에|때|날에)?(?=\\s*(?:(?:${RECIPIENTS})(?:께|에게|한테|의)?\\s*)?(?:(?:드릴|줄|드리는|주는)\\s+)?선물|\\s*$|\\s+(?:${RECIPIENTS}))`,'g'),(_,occasion)=>occasions.push(occasionOf(occasion)));
   if (unique(occasions).length>1) return question('이번 선물은 명절용인가요, 생일용인가요?');
   if (occasions.length) patch.occasion=occasions[0];
   const recipients=[];
-  take(new RegExp(`(${RECIPIENTS})(?:는|은|에게|한테|께|가|이)?`,'g'),(_,r)=>recipients.push(({엄마:'어머니',아빠:'아버지'})[r]||r));
+  take(new RegExp(`(${RECIPIENTS})(?:는|은|에게|한테|께|가|이)?`,'g'),(_,r)=>recipients.push(recipientName(r)));
   if (unique(recipients).length>1) return question('이번에 선물할 수령인 한 명을 지정해 주세요.');
   if (recipients.length) {
     patch.recipients=unique(recipients);
@@ -117,6 +125,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/같은\s*상품|동일한\s*상품/g,()=>{patch.same_product=true;});
   take(/단맛\s*(?:상관없어|상관없음|조건\s*취소)/g,()=>{patch.preferences=state.preferences.filter(v=>!['less_sweet','unsweetened'].includes(v));});
   take(/단맛\s*없는|무가당|안\s*단|달지\s*않은/g,()=>{patch.preferences=unique([...(patch.preferences??state.preferences),'unsweetened']);});
+  take(/(?:너무\s*)?단\s*(?:것|거|건|걸|음식|간식)(?:은|는|을)?\s*(?:싫어(?:하세요|하셔요|하셔|해요|해)?|별로(?:예요|에요|야)?|안\s*좋아(?:하세요|하셔|해요|해)?|피해\s*(?:줘|주세요)|빼\s*(?:줘|주세요))/g,()=>{patch.preferences=unique([...(patch.preferences??state.preferences),'less_sweet']);});
   take(/덜\s*단|덜\s*달게/g,()=>{patch.preferences=unique([...(patch.preferences??state.preferences),'less_sweet']);});
   const allergens=unique([...ALLERGEN_NAMES,'견과']).sort((a,b)=>b.length-a.length).join('|');
   const tagOf=name=>name==='견과'?'견과류':name;
@@ -140,7 +149,15 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
       patch.excluded_categories=unique([...(patch.excluded_categories??state.excluded_categories),category]);
       patch.preferences=(patch.preferences??state.preferences).filter(x=>x!==`category:${category}`&&!(category==='coffee_tea'&&['type:tea','type:coffee'].includes(x)));
     });
-    take(new RegExp(`(${words})(?:는|은|를|을|가|로)?\\s*(?:좋아하세요|좋아하셔요|좋아하셔|좋아하십니다|좋아해요|좋아해|좋아함|즐겨\\s*(?:드세요|드셔|마셔요|마셔)|선호해|선호|추천해줘|추천|골라줘)`,'g'),(_,word)=>{
+    take(new RegExp(`(${words})(?:는|은|를|을|가|이|로|으로)?(?:\\s*(?:하는|하시는|마시는|드시는|듣는|쓰는|모으는|받는)\\s*(?:것|거|걸|건)?(?:을|를)?)?\\s*(?:${LIKE})`,'g'),(_,word)=>{
+      const typed=category==='coffee_tea'?[word==='커피'?'type:coffee':'type:tea']:[];
+      patch.preferences=unique([...(patch.preferences??state.preferences),`category:${category}`,...typed]);
+    });
+  }
+  // A bare product word is what they want: "이어폰 같은 거", "장난감", "목걸이 같은 액세서리" (first word wins).
+  for (const [category,words] of categories) {
+    take(new RegExp(`(?<![가-힣])(${words})(?:(?:\\s*(?:같은|종류(?:의)?|쪽(?:으로)?|류(?:의)?|계열(?:의)?)(?:\\s*(?:거|것|걸|건|제품|상품|선물|[가-힣]{1,6}))?)|(?:\\s*(?:이나|나|이면|면)\\s*(?:좋겠어(?:요)?|좋아(?:요)?|괜찮아(?:요)?))|(?:\\s*(?:제품|상품|세트))(?:으로|로)?|(?:으로|로))?(?=$|[\\s,.!?])`,'g'),(_,word)=>{
+      if ((patch.excluded_categories??state.excluded_categories).includes(category)) return;
       const typed=category==='coffee_tea'?[word==='커피'?'type:coffee':'type:tea']:[];
       patch.preferences=unique([...(patch.preferences??state.preferences),`category:${category}`,...typed]);
     });
@@ -153,7 +170,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/(\d{4})[-년]\s*(\d{1,2})[-월]\s*(\d{1,2})(?:일)?(?:까지)?/g,(_,y,m,d)=>{patch.delivery_by=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;});
   take(/배송일\s*조건\s*취소/g,()=>{patch.delivery_by=null;});
   // Only recognized filler may disappear. Unconsumed text triggers the LLM/clarification route.
-  rest=rest.replace(/(?:줄|드릴|할)\s*(?:거야|거예요|거에요|건데|게요)|안쪽(?:으로)?|안으로|내로|미만|정도|해\s*주세요|(?:(?:드릴|줄|드리는|주는)\s+)?선물(?:로)?|추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|예산(?:은|이)?|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|해주세요|변경|바꿔줘|수정|까지|요/g,'').replace(/[\s,.!?~]/g,'');
+  rest=rest.replace(/(?:줄|드릴|할)\s*(?:거야|거예요|거에요|건데|게요)|안쪽(?:으로)?|안으로|내로|미만|정도|해\s*주세요|(?:(?:드릴|줄|드리는|주는)\s+)?선물(?:로)?|추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|예산(?:은|이)?|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|해주세요|변경(?:해\s*(?:줘|주세요))?|(?:바꿔|줄여|낮춰|올려|늘려|맞춰)\s*(?:줘|주세요)|수정|까지|부탁(?:해요|해|드려요|드립니다)|(?:사려|하려|드리려|주려)(?:고|는데)|찾고\s*있어|찾는\s*중|고민\s*중|뭐가\s*좋을까|뭐\s*사지|어떤\s*게\s*좋을까|해\s*줘|요/g,'').replace(/[\s,.!?~]/g,'');
   if (rest) return unknown();
   if (!Object.keys(patch).length&&!limitations.length) return unknown();
   if (patch.delivery_by!==undefined && patch.delivery_by!==null) {

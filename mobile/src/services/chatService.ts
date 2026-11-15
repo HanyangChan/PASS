@@ -1,7 +1,8 @@
-import { singleInitial, singleQuestion, singleTurn, engineState, finishSingle } from '../../../lib/single-gift.mjs';
+import { singleInitial, singleQuestion, engineState, finishSingle } from '../../../lib/single-gift.mjs';
+import { prototypeRouterTurn } from '../../../api/router-agent.mjs';
 import { recommend, apply, APP_RANKING } from '../../../lib/engine.mjs';
 import { budgetAlternatives } from '../../../lib/counterfactual.mjs';
-import type { ChatSession, Conditions, ConditionPatch, Gift, EngineProduct } from '../domain';
+import type { ChatSession, ChatMessage, Conditions, ConditionPatch, Gift, EngineProduct } from '../domain';
 import { giftFromProduct } from '../catalog.ts';
 import type { FeedbackSignal } from '../chatHistory.ts';
 
@@ -15,10 +16,12 @@ export function createLocalChatService(products: Product[], feedback: FeedbackSi
   const ranking = feedback.length ? { ...APP_RANKING, feedback: { liked: feedback.filter(f => f.helpful).map(f => f.giftId), disliked: feedback.filter(f => !f.helpful).map(f => f.giftId) } } : APP_RANKING;
   return {
     createSession(): ChatSession { return { state: singleInitial(), issues: [] }; },
-    send(session: ChatSession, text: string) {
+    // Same rules-first router as the server's mode A, without a model: guests get the same understanding.
+    async send(session: ChatSession, text: string, history: ChatMessage[] = []) {
       const input = text.trim();
       if (!input) throw new Error('추천할 내용을 입력해주세요.');
-      return singleTurn(session, input, products);
+      const turn = await (prototypeRouterTurn as (...args: unknown[]) => Promise<{ session: ChatSession; message: string }>)({ operation: 'turn', state: session.state, issues: session.issues, text: input, history: history.slice(-6), source: 'typed' }, products, { ranking });
+      return { session: turn.session, message: turn.message, question: singleQuestion(turn.session) };
     },
     updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true) {
       return finishSingle(session.state, apply(session.state, patch), clearIssues ? [] : session.issues, products);

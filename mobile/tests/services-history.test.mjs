@@ -24,9 +24,9 @@ test('guest history archives newest first and survives bad data', async () => {
   assert.deepEqual(decodeHistory([{ id: 1 }, null, 'x']), []);
 });
 
-test('feedback changes the guest ranking and the card says so; conditions stay', () => {
+test('feedback changes the guest ranking and the card says so; conditions stay', async () => {
   const plain = createLocalChatService(products);
-  const session = plain.send(plain.createSession(), '부모님 5만 원 배송비 포함').session;
+  const session = (await plain.send(plain.createSession(), '부모님 5만 원 배송비 포함')).session;
   const before = plain.view(session).result.items;
   assert.ok(before.length > 1);
   const service = createLocalChatService(products, [{ giftId: before[0].id, helpful: false }, { giftId: before.at(-1).id, helpful: true }]);
