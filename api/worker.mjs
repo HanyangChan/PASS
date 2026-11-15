@@ -87,7 +87,9 @@ function defaultCatalog(fetcher) {
     const lists = [];
     if (source !== 'web') {
       rows ??= cachedCatalog(() => fetchCatalog({ url: env.SUPABASE_URL, key: env.SUPABASE_PUBLISHABLE_KEY, fetcher }));
-      lists.push((await rows()).map(row => toEngineProduct(row, today)));
+      const amazon = (await rows()).map(row => toEngineProduct(row, today));
+      if (source === 'amazon') return amazon;
+      lists.push(amazon);
     }
     if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today, { apiBase })));
     return mergeCatalogs(...lists);

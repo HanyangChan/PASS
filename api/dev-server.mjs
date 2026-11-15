@@ -32,9 +32,10 @@ try {
     const source = catalogSource(config.env.CATALOG_SOURCE);
     const build = today => {
       const rows = readShoppingCatalog(shoppingDbPath, today);
+      if (source === 'amazon') return rows;
       const observations = rows.filter(product => product.id.startsWith('searchapi-'));
       const amazon = source === 'web' ? [] : rows.filter(product => !product.id.startsWith('searchapi-'));
-      const web = source === 'amazon' ? [] : webCatalog.map(item => fromWebItem(item, today, { apiBase }));
+      const web = webCatalog.map(item => fromWebItem(item, today, { apiBase }));
       return mergeCatalogs(amazon, web, observations);
     };
     let day = todayKst();
