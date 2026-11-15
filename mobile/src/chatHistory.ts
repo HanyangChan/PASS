@@ -46,4 +46,3 @@ export function createHistoryRepository(storage: Storage) {
     archive: (chat: PastChat) => write(list => [chat, ...list.filter(c => c.id !== chat.id)]),
   };
 }
-
