@@ -23,7 +23,7 @@ export function cardReason(item: ReasonItem, conditions: Conditions): string {
     item.category && conditions.preferences.includes(`category:${item.category}`) ? `${category} 선호 반영` : null,
     conditions.preferences.includes('unsweetened') && item.sweetness === 'unsweetened' ? '단맛 없는 상품'
       : conditions.preferences.includes('less_sweet') && ['unsweetened', 'naturally_sweet'].includes(item.sweetness ?? '') ? '덜 단 상품' : null,
-    item.category && conditions.recipients.length && recipientCategories(conditions.recipients).has(item.category)
+    item.category && conditions.recipients.length && recipientCategories(conditions.recipients, { profiles: true }).has(item.category)
       ? `${conditions.recipients.join('·')}에게 어울리는 ${category}` : null,
     conditions.budget.amount_krw ? `예산 ${money(conditions.budget.amount_krw)} 이하` : null,
     // Allergen data is estimated from product names, so say "reflected", never "safe".

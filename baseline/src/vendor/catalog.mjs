@@ -4,8 +4,22 @@ export const PREFERENCE_TAGS=['less_sweet','unsweetened','type:tea','type:coffee
 export const CATEGORY_NAMES={food:'식품',snack:'과자·간식',coffee_tea:'커피·차',health:'건강식품',beauty:'뷰티',makeup:'메이크업',personal_care:'생활가전',kitchen:'주방용품',decor:'홈데코',jewelry:'주얼리',watch:'시계',bag:'가방',accessory:'패션소품',audio:'음향기기',toy:'장난감',fitness:'운동용품',flower:'꽃·식물',stationery:'문구',digital:'디지털기기',liquor:'주류'};
 // Recipient groups → categories that usually suit them (ranking tabs and a +1 recommendation boost).
 export const RECIPIENT_CATEGORIES={부모님:['health','food','coffee_tea','kitchen','decor'],친구:['beauty','makeup','jewelry','audio','snack'],직장동료:['coffee_tea','snack','decor','accessory','kitchen']};
-const RECIPIENT_GROUPS=[['부모님',/부모|어머니|아버지|엄마|아빠|처가|시댁|장인|장모|할머니|할아버지/],['친구',/친구|동창|연인|애인/],['직장동료',/동료|상사|팀장|직장|교수|선생/]];
-export const recipientCategories=recipients=>new Set(recipients.flatMap(r=>RECIPIENT_GROUPS.filter(([,re])=>re.test(r)).flatMap(([group])=>RECIPIENT_CATEGORIES[group])));
+// Partner and child profiles boost recommendations only; they are not ranking tabs.
+const GROUP_CATEGORIES={...RECIPIENT_CATEGORIES,연인:['jewelry','watch','bag','accessory','beauty','audio'],아이:['toy','stationery','snack']};
+const RECIPIENT_GROUPS=[['부모님',/부모|어머니|아버지|엄마|아빠|처가|시댁|장인|장모|할머니|할아버지|이모|삼촌|고모/],['연인',/연인|애인|남편|아내|와이프|여자\s*친구|남자\s*친구|여친|남친/],['친구',/(?<!여자\s*|남자\s*)친구|동창|선배|후배|언니|누나|오빠|^형$|동생/],['직장동료',/동료|상사|팀장|부장|직장|교수|선생/],['아이',/조카|아이|어린이|손주|손녀|아들|딸/]];
+// Recipients whose gender the word itself tells; mixed or unknown gives null.
+const FEMALE=/어머니|엄마|할머니|여자|여친|아내|와이프|언니|누나|여동생|이모|고모|장모|딸|손녀/, MALE=/아버지|아빠|할아버지|남자|남친|남편|오빠|^형$|남동생|삼촌|장인|아들|손주/;
+export function recipientGender(recipients){
+ const genders=new Set(recipients.map(r=>FEMALE.test(r)?'female':MALE.test(r)?'male':null));
+ return genders.size===1?[...genders][0]:null;
+}
+const BASIC_GROUPS=[['부모님',/부모|어머니|아버지|엄마|아빠|처가|시댁|장인|장모|할머니|할아버지/],['친구',/친구|동창|연인|애인/],['직장동료',/동료|상사|팀장|직장|교수|선생/]];
+// `profiles` adds the partner/child/relative profiles and drops makeup for men (app ranking only).
+export const recipientCategories=(recipients,{profiles=false}={})=>{
+ const suited=new Set(recipients.flatMap(r=>(profiles?RECIPIENT_GROUPS:BASIC_GROUPS).filter(([,re])=>re.test(r)).flatMap(([group])=>GROUP_CATEGORIES[group])));
+ if(profiles&&recipientGender(recipients)==='male')suited.delete('makeup');
+ return suited;
+};
 const COLUMNS='id,name,name_en,category,description,price_krw,shipping_fee_krw,stock,arrival_days,packaging,sweetness,brand,allergens,rating,rating_count,image_url,source_url,demo_fields';
 export const todayKst=(now=Date.now())=>new Date(now+9*3600e3).toISOString().slice(0,10);
 const addDays=(day,n)=>{const d=new Date(`${day}T00:00:00Z`);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};

@@ -2,7 +2,8 @@
 // the guest on-device engine and the server's rules-first mode A (no model key, so rules only).
 // Run: node --experimental-strip-types tests/scenarios/recommend-eval.mjs [--verbose]
 import { readFileSync } from 'node:fs';
-import { toEngineProduct, recipientCategories, todayKst } from '../../lib/catalog.mjs';
+import { toEngineProduct, recipientCategories, recipientGender, todayKst } from '../../lib/catalog.mjs';
+import { genderMismatch, giftFit } from '../../lib/ranking.mjs';
 import { tagAllergens } from '../../lib/allergens.mjs';
 import { isFragranceProduct } from '../../lib/fragrance.mjs';
 import { singleInitial } from '../../lib/single-gift.mjs';
@@ -65,15 +66,19 @@ export function check(run, expect) {
     const tagged = tagAllergens(`${p.name} ${p.name_en ?? ''}`).concat(p.allergens_declared ?? []);
     if (tagged.some(a => s.excluded_ingredients.includes(a))) errors.push(`allergen ${label(p)}`);
     if (s.preferences.includes('avoid_fragrance') && isFragranceProduct(p)) errors.push(`fragrance ${label(p)}`);
+    if (genderMismatch(p, recipientGender(s.recipients))) errors.push(`wrong gender ${label(p)}`);
+    if (giftFit(p) < 0) errors.push(`not gift-like ${label(p)}`);
   }
-  const wanted = s.preferences.filter(x => x.startsWith('category:')).map(x => x.slice(9));
+  // A preference only binds the top pick when the catalog has an affordable product of that kind.
+  const affordable = c => products.some(p => p.category === c && (s.budget.amount_krw === null || p.price_krw <= s.budget.amount_krw));
+  const wanted = s.preferences.filter(x => x.startsWith('category:')).map(x => x.slice(9)).filter(affordable);
   const top = items[0];
   if (top && e.top) {
     if (e.top.category && ![e.top.category].flat().includes(top.category)) errors.push(`top category ${label(top)} ≠ ${e.top.category}`);
     if (e.top.name && !e.top.name.test(`${top.name} ${top.name_en ?? ''}`)) errors.push(`top name ${label(top)} !~ ${e.top.name}`);
     if (e.top.all && items.some(p => !e.top.all.test(`${p.name} ${p.name_en ?? ''}`))) errors.push(`top3 ${items.map(label).join(' | ')} !~ ${e.top.all}`);
   } else if (top && wanted.length && !wanted.includes(top.category)) errors.push(`top ${label(top)} ignores preference ${wanted}`);
-  else if (top && !wanted.length && s.recipients.length && recipientCategories(s.recipients).size && !recipientCategories(s.recipients).has(top.category)) errors.push(`top ${label(top)} not suited to ${s.recipients}`);
+  else if (top && !wanted.length && s.recipients.length && recipientCategories(s.recipients, { profiles: true }).size && !recipientCategories(s.recipients, { profiles: true }).has(top.category)) errors.push(`top ${label(top)} not suited to ${s.recipients}`);
   return errors;
 }
 
