@@ -35,7 +35,10 @@ function fixture() {
               if (previous) Object.assign(previous, value); else rows[table].push(value);
             }
           } else if (operation === 'update') { for (const row of selected) Object.assign(row, payload, { updated_at: ++stamp }); }
-          else if (operation === 'delete') rows[table] = rows[table].filter(row => !selected.includes(row));
+          else if (operation === 'delete') {
+            rows[table] = rows[table].filter(row => !selected.includes(row));
+            if (table === 'conversations') rows.messages = rows.messages.filter(message => !selected.some(conversation => conversation.id === message.conversation_id));
+          }
           else {
             if (sorting) selected.sort((a, b) => (a[sorting[0]] > b[sorting[0]] ? 1 : -1) * (sorting[1] ? 1 : -1));
             selected = selected.slice(start, start + maximum);
@@ -58,6 +61,23 @@ test('cloud gifts round trip preserves order, removal and unseen records on othe
   const restored = await f.repo().load(empty());
   assert.deepEqual(restored.recent.map(g => g.id), ['a', 'b']);
   assert.deepEqual(new Set(restored.saved.map(g => g.id)), new Set(['b', 'other-device']));
+});
+
+test('conversation history lists committed chats, loads ordered messages, recalls conditions and deletes only the owned chat', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  const session = { ...empty(), state: { ...empty().state, recipients: ['친구'], preferences: ['category:food'], excluded_ingredients: ['peanut'] } };
+  const recommended = gift('recommended-1');
+  await repo.saveChat(session, [message('친구에게 과일 선물'), { role: 'assistant', text: '추천 결과' }], [recommended]);
+  const list = await f.repo().listConversations();
+  assert.equal(list.length, 1);
+  assert.equal(list[0].recipient, '친구');
+  assert.deepEqual(await f.repo().getRecipientHistory('친구'), { preferences: ['category:food'], excluded_categories: [], excluded_ingredients: ['peanut'] });
+  const detail = await f.repo().getConversation(list[0].id);
+  assert.deepEqual(detail.messages, [message('친구에게 과일 선물'), { role: 'assistant', text: '추천 결과' }]);
+  assert.deepEqual(detail.products, [recommended]);
+  await repo.deleteConversation(list[0].id);
+  assert.deepEqual(await f.repo().listConversations(), []);
+  assert.equal(f.rows.messages.length, 0, 'conversation foreign key cascade removes its messages');
 });
 
 test('failed saves capture snapshots and can retry without duplicate records', async () => {

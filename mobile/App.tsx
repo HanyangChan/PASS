@@ -70,7 +70,7 @@ import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
 import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
-import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
+import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind, ConversationSummary, SavedConversation } from './src/domain';
 import { calendarEventKinds } from './src/domain';
 import {
   Chip,
@@ -85,7 +85,7 @@ const chatEndpoint = (() => {
   try { return resolveChatUrl(process.env.EXPO_PUBLIC_CHAT_API_URL); }
   catch (error) { chatConfigurationError = (error as Error).message; return null; }
 })();
-type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage';
+type Screen = 'home' | 'chat' | 'ranking' | 'calendar' | 'mypage' | 'history';
 const conditionComparisonEnabled = false;
 const nav = [
   { key: 'home', label: '홈', Icon: Home },
@@ -187,6 +187,10 @@ export function AppContent({
     popularGifts,
     catalogError,
     retryCatalog,
+    conversations,
+    openConversation,
+    deleteConversation,
+    selectedConversation,
   } = state;
   const router = useRouter();
   const { user } = useAuth();
@@ -244,7 +248,7 @@ export function AppContent({
             ? '/ranking'
             : next === 'calendar'
               ? '/calendar'
-              : '/mypage',
+              : next === 'history' ? '/history' : '/mypage',
     );
     setSearch('');
     setShowSearch(false);
@@ -996,6 +1000,22 @@ export function AppContent({
                   )}
                 </View>
               </ScrollView>
+            ) : screen === 'history' ? (
+              <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
+                <View style={s.header}><Pressable accessibilityRole="button" onPress={() => navigate('mypage')}><ArrowLeft color={c.primary}/></Pressable><Text style={[s.title,s.flex]}>대화 기록</Text></View>
+                {selectedConversation ? <>
+                  <Text style={s.small}>{selectedConversation.recipient ?? '대상 미지정'} · {new Date(selectedConversation.updatedAt).toLocaleString()}</Text>
+                  {selectedConversation.messages.map((message, index) => <Text key={`${selectedConversation.id}-${index}`} style={message.role === 'user' ? s.user : s.assistant}>{message.text}</Text>)}
+                  <View style={s.homeSection}>
+                    <SectionHeader title="그때 추천한 상품" />
+                    {selectedConversation.products.length ? cards(selectedConversation.products) : <Text style={s.empty}>이 대화에는 추천 상품 기록이 없어요. 새로 저장되는 대화부터 상품이 함께 표시됩니다.</Text>}
+                  </View>
+                  <Button label="목록으로" onPress={() => void openConversation(null)}/>
+                </> : conversations.length ? conversations.map(item => <View key={item.id} style={s.eventRow}>
+                  <Pressable style={s.flex} onPress={() => void openConversation(item.id)}><Text style={s.sectionTitle}>{item.title || '새 대화'}</Text><Text style={s.small}>{item.recipient ?? '대상 미지정'} · {new Date(item.updatedAt).toLocaleString()}</Text></Pressable>
+                  <Pressable accessibilityRole="button" accessibilityLabel="대화 삭제" onPress={() => void deleteConversation(item.id)}><X size={18} color={c.muted}/></Pressable>
+                </View>) : <Text style={s.empty}>저장된 대화가 아직 없어요.</Text>}
+              </ScrollView>
             ) : (
               <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
                 <View style={s.header}>
@@ -1010,6 +1030,7 @@ export function AppContent({
                     {loggedIn ? '찜·최근 본 선물과 대화는 계정에 저장돼요.' : '찜과 최근 본 선물은 이 기기에 저장돼요.'}
                   </Text>
                 </View>
+                <View style={s.historyButtonSection}><Button label={`지난 대화 ${conversations.length}개 보기`} onPress={() => navigate('history')}/></View>
                 <View style={s.homeSection}>
                   <SectionHeader
                     title={`찜한 선물 ${saved.length}개`}
@@ -1140,6 +1161,8 @@ function usePassState() {
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<SavedConversation | null>(null);
   const [calendarLoadAttempt, setCalendarLoadAttempt] = useState(0);
   const [calendarLoadError, setCalendarLoadError] = useState('');
   const [loadError, setLoadError] = useState('');
@@ -1194,9 +1217,22 @@ function usePassState() {
       const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
       const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
       const noHistory = emptyPersonalization();
-      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
+      let requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
         : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients, !useAdvisors).session
           : baseSession;
+      let historyApplied = false;
+      if (operation === 'turn' && baseMessages.length === 0 && requestSession.state.recipients.length === 1 && cloud.current) {
+        const prior = await cloud.current.getRecipientHistory(requestSession.state.recipients[0]).catch(() => null);
+        if (prior) {
+          const state = { ...requestSession.state,
+            preferences: requestSession.state.preferences.length ? requestSession.state.preferences : prior.preferences,
+            excluded_categories: [...new Set([...requestSession.state.excluded_categories, ...prior.excluded_categories])],
+            excluded_ingredients: [...new Set([...requestSession.state.excluded_ingredients, ...prior.excluded_ingredients])],
+          };
+          historyApplied = state.preferences.length !== requestSession.state.preferences.length || state.excluded_categories.length !== requestSession.state.excluded_categories.length || state.excluded_ingredients.length !== requestSession.state.excluded_ingredients.length;
+          requestSession = { ...requestSession, state };
+        }
+      }
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
       const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
       const turn = serverChat
@@ -1211,7 +1247,7 @@ function usePassState() {
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(baseSession)) setSession(turn.session);
       if (operation !== 'view') {
         setSession(turn.session);
-        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
+        setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: `${turn.message}${historyApplied ? '\n\n이전 대화에서 같은 분에게 적용했던 선호와 제외 조건을 반영했어요.' : ''}` }]);
       }
       if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
       return true;
@@ -1277,6 +1313,7 @@ function usePassState() {
     const restore = repository ? repository.load(emptySession) : giftRepository.load().then(records => ({ ...records, session: emptySession, messages: [] as ChatMessage[] }));
     restore.then(records => {
       if (!mounted) return;
+      if (repository) void repository.listConversations().then(list => { if (mounted) setConversations(list); }).catch(() => { if (mounted) setNotice('대화 기록을 불러오지 못했어요.'); });
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
@@ -1293,12 +1330,15 @@ function usePassState() {
     let mounted = true;
     const revision = ++saveRevision.current;
     const gifts = JSON.stringify({ saved, recent });
-    const chat = JSON.stringify({ session, messages });
+    const recommendations: Gift[] | undefined = recommendation?.key === JSON.stringify(session)
+      ? recommendation.view.result.items.slice(0, 12).map(product => chatService.toGift(product, session.state))
+      : undefined;
+    const chat = JSON.stringify({ session, messages, recommendations });
     const tasks: Promise<void>[] = [];
     const giftWrite = persistence.current.write('gifts', gifts, () => cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent }));
     if (giftWrite) tasks.push(giftWrite);
     if (cloud.current) {
-      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages));
+      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages, recommendations));
       if (chatWrite) tasks.push(chatWrite);
     }
     if (tasks.length) Promise.all(tasks).then(() => {
@@ -1307,7 +1347,7 @@ function usePassState() {
       if (mounted && revision === saveRevision.current) { setSyncFailed(true); setNotice(user ? '계정에 기록을 저장하지 못했어요. 다시 시도해주세요.' : '기기에 기록을 저장하지 못했어요.'); }
     });
     return () => { mounted = false; };
-  }, [saved, recent, session, messages, ready, saveAttempt, user]);
+  }, [saved, recent, session, messages, recommendation, chatService, ready, saveAttempt, user]);
   useEffect(() => {
     // Calendar events are device-local only (not part of the account sync above),
     // so they load and save independently of login state.
@@ -1373,6 +1413,22 @@ function usePassState() {
     popularGifts: rankingByRecipient['전체'].slice(0, 10),
     catalogError: catalog.error,
     retryCatalog: () => setCatalogAttempt(value => value + 1),
+    conversations,
+    selectedConversation,
+    openConversation: async (id: string | null) => {
+      if (!id) { setSelectedConversation(null); return; }
+      if (!cloud.current) { setNotice('게스트 대화 기록은 저장하지 않아요.'); return; }
+      try { setSelectedConversation(await cloud.current.getConversation(id)); }
+      catch { setNotice('대화 기록을 불러오지 못했어요.'); }
+    },
+    deleteConversation: async (id: string) => {
+      if (!cloud.current) return;
+      try {
+        await cloud.current.deleteConversation(id);
+        setConversations(current => current.filter(item => item.id !== id));
+        setSelectedConversation(current => current?.id === id ? null : current);
+      } catch { setNotice('대화 기록을 삭제하지 못했어요.'); }
+    },
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1556,6 +1612,12 @@ const s = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
     marginTop: 8,
+  },
+  historyButtonSection: {
+    backgroundColor: c.white,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 16,
   },
   eventBanner: {
     marginHorizontal: 20,
@@ -1833,7 +1895,8 @@ const s = StyleSheet.create({
   },
   myIntro: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingTop: 24,
+    paddingBottom: 12,
     gap: 12,
     alignItems: 'center',
   },
