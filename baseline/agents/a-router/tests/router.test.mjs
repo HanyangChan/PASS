@@ -140,3 +140,81 @@ test('explicit preferences for a new recipient never merge prior recipient array
  const out=await send(createAgent({singleGift:true}),session,'친구 커피 좋아해 우유 알레르기 있어');
  assert.deepEqual(out.session.state.preferences,['category:coffee_tea','type:coffee']);assert.deepEqual(out.session.state.excluded_ingredients,['우유']);assert.deepEqual(out.session.state.excluded_categories,[]);
 });
+
+test('explicit budget targets and increments are read-only while self-correction applies', async()=>{
+ const session=await ready(), agent=createAgent();
+ for (const [text,amount] of [['7만원으로 올리면?',70000],['3만원 더 올리면?',80000],['7만원으로 더 올리면?',70000],['4만원으로 줄이면?',40000]]) {
+  const out=await send(agent,session,text);
+  assert.equal(out.kind,'comparison',text);
+  assert.equal(out.evaluatedState.budget.amount_krw,amount);
+  assert.deepEqual(out.session,session);
+ }
+ const correction=await send(agent,session,'예산 5만원. 아니, 7만원으로');
+ assert.equal(correction.session.state.budget.amount_krw,70000);
+ const conflict=await send(agent,session,'배송비까지 해서 5만원, 배송비 별도');
+ assert.match(conflict.question,/배송비/);
+ assert.deepEqual(conflict.session,session);
+});
+
+test('ingredient lists preserve other exclusions and conflicting instructions ask for clarification', async()=>{
+ const session=await ready(), agent=createAgent();
+ session.state.excluded_ingredients=['새우'];
+ for (const text of ['땅콩이랑 우유 알레르기 있어요','우유는 빼고 땅콩도 제외해 주세요']) {
+  const out=await send(agent,session,text);
+  assert.deepEqual([...out.session.state.excluded_ingredients].sort(),['땅콩','새우','우유']);
+  assert.equal(out.routing.llmCalls,0);
+  const removed=await send(agent,out.session,'땅콩 알레르기 없어요');
+  assert.deepEqual(removed.session.state.excluded_ingredients,['새우','우유']);
+ }
+ const conflict=await send(agent,session,'땅콩 알레르기 없어요, 땅콩 알레르기 있어요');
+ assert.equal(conflict.kind,'question');
+ assert.deepEqual(conflict.session,session);
+
+ const noAllergy=await send(agent,session,'없어요',{pendingQuestion:'알레르기가 있나요?'});
+ assert.deepEqual(noAllergy.session.state.excluded_ingredients,[]);
+ const missingIngredient=await send(agent,session,'없어요',{pendingQuestion:'피해야 할 알레르기 성분을 알려주세요.'});
+ assert.equal(missingIngredient.kind,'question');
+ assert.deepEqual(missingIngredient.session,session);
+});
+
+test('common phrasing maps to the existing gift conditions without model calls',async()=>{
+ const session=await ready();
+ session.state.budget.shipping_included=false;
+ const agent=createAgent({interpret:async()=>{throw Error('must use rules');}});
+ for (const [text,expected] of [
+  ['배송비까지 해서 5만원',{budget:{...session.state.budget,shipping_included:true}}],
+  ['4만원 안쪽으로',{budget:{...session.state.budget,amount_krw:40000}}],
+  ['엄마 생신 선물 추천',{occasion:'생일',recipients:['어머니']}],
+  ['합격 축하 선물',{occasion:'합격'}],
+  ['결혼기념일 선물',{occasion:'기념일'}],
+  ['엄마는 커피를 좋아하세요',{preferences:['category:coffee_tea','type:coffee']}],
+  ['저는 커피 좋아하는데 엄마는 차 좋아해요',{preferences:['category:coffee_tea','type:tea']}],
+  ['먹는 건 빼주세요',{excluded_categories:['food','snack','coffee_tea','health']}],
+  ['뷰티 상품 전체를 제외해 주세요',{excluded_categories:['beauty']}],
+  ['향이 센 건 싫어하세요',{preferences:['avoid_fragrance']}],
+  ['견과류는 빼주세요',{excluded_ingredients:['견과류']}],
+ ]) {
+  const out=await send(agent,session,text);
+  assert.equal(out.routing.route,'rules',text);
+  for (const [field,value] of Object.entries(expected)) assert.deepEqual(out.session.state[field],value,text);
+ }
+ const perfume=await send(agent,session,'향수 말고 커피로 추천해줘');
+ // Requirement table: apply the coffee taste and ask whether to drop only perfume or all beauty.
+ assert.match(perfume.question,/향수만/);
+ assert.deepEqual(perfume.session.state.preferences,['category:coffee_tea','type:coffee']);
+ assert.deepEqual(perfume.session.state.excluded_categories,[]);
+ const explanation=await send(agent,session,'왜 이게 1위야?');
+ assert.equal(explanation.routing.intent,'explain');
+ assert.deepEqual(explanation.session,session);
+});
+
+test('explicit recipient replacement does not carry prior preferences or exclusions',async()=>{
+ const session=await ready();
+ session.state.recipients=['친구'];
+ session.state.preferences=['type:coffee'];
+ session.state.excluded_ingredients=['우유'];
+ const out=await send(createAgent(),session,'친구 말고 엄마한테 줄 거야');
+ assert.deepEqual(out.session.state.recipients,['어머니']);
+ assert.deepEqual(out.session.state.preferences,[]);
+ assert.deepEqual(out.session.state.excluded_ingredients,[]);
+});

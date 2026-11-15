@@ -4,7 +4,7 @@ import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 const categories = [
   ['coffee_tea','커피|홍차|녹차|전통차|(?<![가-힣])차(?=[를을는은도가이로와랑나]|[\\s,.!?]|$)'], ['snack','과자|간식|초콜릿|쿠키|한과|디저트|사탕|젤리|(?<![가-힣])단\\s*(?:것|거|걸)(?=\\s*좋아)'],
   ['health','건강식품|영양제|비타민|유산균|홍삼|(?<![가-힣])건강(?!\\s*식품)'],
-  ['food','과일|(?<!건강)식품|음식|기름|오일|고기|한우'], ['beauty','향수|화장품|스킨케어|로션|뷰티|피부\\s*관리'],
+  ['food','과일|(?<!건강)식품|음식|기름|오일|고기|한우'], ['beauty','뷰티(?:\\s*상품)?(?:\\s*전체)?|향수|화장품|스킨케어|로션|피부\\s*관리'],
   ['makeup','메이크업|립스틱|섀도|틴트'], ['fitness','운동|헬스|요가|피트니스|등산|골프|러닝'],
   ['audio','이어폰|헤드폰|헤드셋|스피커|음악|음향기기'], ['jewelry','주얼리|목걸이|팔찌|귀걸이|반지|보석'],
   ['watch','시계'], ['bag','가방|백팩|핸드백|크로스백'], ['accessory','지갑|선글라스|벨트|모자|넥타이|스카프|패션\\s*소품'],
@@ -175,15 +175,19 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   const listOf=group=>[...group.matchAll(new RegExp(allergens,'g'))].map(m=>tagOf(m[0]));
   const allergenList=`(?:${allergens})(?:\\s*(?:이랑|랑|하고|와|과|및|그리고|,)\\s*(?:${allergens}))*`;
   // "땅콩 알레르기 없어요" removes only that ingredient; a bare "알레르기 없어요" clears all.
-  take(new RegExp(`(${allergenList})(?:는|은)?\\s*알레르기(?:는|가|도)?\\s*(?:없어요|없어|없음|없습니다|없으세요|없으셔|없고|없으시고|없는데|아니에요)`,'g'),(_,group)=>{const drop=listOf(group);patch.excluded_ingredients=(patch.excluded_ingredients??state.excluded_ingredients).filter(x=>!drop.includes(x));});
-  take(/알레르기\s*(?:없음|없어|없어요|없습니다|해제|취소)/g,()=>{patch.excluded_ingredients=[];});
+  // One message that both removes and adds the same ingredient (or clears all and adds one) is asked back.
+  const removedIngredients=new Set(); let clearedAll=false;
+  take(new RegExp(`(${allergenList})(?:는|은)?\\s*알레르기(?:는|가|도)?\\s*(?:없어요|없어|없음|없습니다|없으세요|없으셔|없고|없으시고|없는데|아니에요)`,'g'),(_,group)=>{const drop=listOf(group);drop.forEach(x=>removedIngredients.add(x));patch.excluded_ingredients=(patch.excluded_ingredients??state.excluded_ingredients).filter(x=>!drop.includes(x));});
+  take(/알레르기\s*(?:없음|없어|없어요|없습니다|해제|취소)/g,()=>{clearedAll=true;patch.excluded_ingredients=[];});
   take(new RegExp(`(${allergens})(?:는|은|를|을|가|에)?\\s*(?:제외\\s*취소|포함해도\\s*돼)`, 'g'),(_,name)=>{
     const tag=name==='견과'?'견과류':name;
     patch.excluded_ingredients=(patch.excluded_ingredients??state.excluded_ingredients).filter(x=>x!==tag);
   });
   const hasAllergen=/알레르기/.test(rest);
   const allergenRe=new RegExp(`(${allergenList})(?:는|은|를|을|가|에|도|이)?(?:\\s*(?:들어간|들어있는|들어\\s*있는|든|함유된)\\s*(?:것|거|건|걸|제품|상품|음식)(?:은|는|도|을)?)?\\s*(?:알레르기(?:가|도)?\\s*(?:있어요|있어|있음|있으세요|있으셔|있습니다|있고|있으시고|있는데|있으신데)?|피해야\\s*해|피해줘|빼(?:줘|고|주세요)|빼\\s*주세요|제외(?:해줘|하고|해)?|싫어(?:하세요|해요)?|안\\s*좋아해)`, 'g');
-  take(allergenRe,(_,group)=>{patch.excluded_ingredients=unique([...(patch.excluded_ingredients??state.excluded_ingredients),...listOf(group)]);});
+  let conflictingIngredients=false;
+  take(allergenRe,(_,group)=>{const add=listOf(group);if(clearedAll||add.some(x=>removedIngredients.has(x)))conflictingIngredients=true;patch.excluded_ingredients=unique([...(patch.excluded_ingredients??state.excluded_ingredients),...add]);});
+  if (conflictingIngredients) return question('어떤 알레르기 성분을 제외할지 확인해 주세요.');
   if (/성분/.test(pendingQuestion)) take(new RegExp(`^\\s*(${allergens})(?:요|이요)?[.!]?\\s*$`),(_,name)=>{patch.excluded_ingredients=unique([...state.excluded_ingredients,name==='견과'?'견과류':name]);});
   if (hasAllergen && !patch.excluded_ingredients) return question('피해야 할 알레르기 성분을 알려주세요.');
   const like=(cat,word)=>{
@@ -250,7 +254,8 @@ export function classifyIntent(text, state) {
     const rest=normalized.replace(/\d+(?:\.\d+)?\s*(만\s*원|천\s*원|원)/g,'').replace(/예산|상한|을|를|으로|로|에서|더|이면|올리면|늘리면|줄이면|낮추면|바꾸면|가정|비교|해줘|하면|어때|어떻게|달라져|돼|요|[\s,.!?]/g,'');
     if (!rest&&values.length===1) {
       // "7만원으로 올리면" names the new amount; "3만원 (더) 올리면" names the change.
-      const delta=/올리면|늘리면|줄이면|낮추면/.test(normalized)&&!/(?:만\s*원|천\s*원|원)\s*으로\s*(?:올리면|늘리면|줄이면|낮추면)/.test(normalized);
+      // "N(으)로 (더) 올리면" names the new amount (from #20); "N (더) 올리면" names the change.
+      const delta=/올리면|늘리면|줄이면|낮추면/.test(normalized)&&!/(?:만\s*원|천\s*원|원)\s*(?:으로|로)\s*(?:더\s*)?(?:올리면|늘리면|줄이면|낮추면)/.test(normalized);
       if (delta&&state.budget.amount_krw===null) return {kind:'clarify',question:'먼저 현재 예산 상한을 알려주세요.'};
       const amount=delta?state.budget.amount_krw+(/줄이면|낮추면/.test(normalized)?-values[0]:values[0]):values[0];
       if (!Number.isSafeInteger(amount)||amount<=0||amount>1e9) return {kind:'clarify',question:'비교할 예산을 양의 정수 금액으로 알려주세요.'};
