@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createLocalChatService } from '../src/services/chatService.ts';
 import { createServerChatService } from '../src/services/serverChatService.ts';
-import { createHistoryRepository, decodeHistory, demoHistory, rankingFeedback, historyKey } from '../src/chatHistory.ts';
+import { createHistoryRepository, decodeHistory, rankingFeedback, historyKey } from '../src/chatHistory.ts';
 import { cardReason } from '../src/cardReason.ts';
 const products = JSON.parse(readFileSync(new URL('../../tests/fixtures/food-demo.json', import.meta.url)));
 const memory = () => { const m = new Map(); return { getItem: async k => m.get(k) ?? null, setItem: async (k, v) => { m.set(k, v); }, m }; };
@@ -15,14 +15,11 @@ test('ranking feedback keeps the latest answer per product and caps the list', (
   assert.equal(rankingFeedback(Array.from({ length: 250 }, (_, i) => fb(`g${i}`, true, `2026-01-01T00:00:${String(i).padStart(3, '0')}`))).length, 200);
 });
 
-test('guest history archives newest first, survives bad data and demo records replace only demo records', async () => {
+test('guest history archives newest first and survives bad data', async () => {
   const storage = memory(), repo = createHistoryRepository(storage);
   const chat = id => ({ id, at: '2026-11-01T00:00:00.000Z', title: id, recipients: ['어머니'], messages: [{ role: 'user', text: id }], feedback: [fb('a', true, '2026-11-01', id)] });
   await repo.archive(chat('one')); await repo.archive(chat('two'));
   assert.deepEqual((await repo.load()).map(c => c.id), ['two', 'one']);
-  await repo.addDemo(demoHistory(products)); await repo.addDemo(demoHistory(products));
-  const all = await repo.load();
-  assert.deepEqual(all.map(c => c.id), ['demo-1', 'demo-2', 'demo-3', 'two', 'one']);
   storage.m.set(historyKey, '{broken'); assert.deepEqual(await repo.load(), []);
   assert.deepEqual(decodeHistory([{ id: 1 }, null, 'x']), []);
 });
@@ -39,13 +36,6 @@ test('feedback changes the guest ranking and the card says so; conditions stay',
   assert.ok(liked, 'a liked item (or its category) is boosted');
   assert.match(cardReason(liked, session.state), /지난 피드백 반영 \(\+\d+점\)/);
   assert.deepEqual(service.view(session).question, plain.view(session).question);
-});
-
-test('demo history uses real catalog ids so it matches ranking candidates', () => {
-  const ids = new Set(products.map(p => p.id));
-  const demo = demoHistory(products);
-  assert.equal(demo.length, 3);
-  assert.ok(demo.flatMap(c => c.feedback).every(f => ids.has(f.giftId)));
 });
 
 test('the server request carries feedback only when there is some', async () => {

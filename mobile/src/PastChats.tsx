@@ -11,9 +11,9 @@ const date = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.g
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
 // Mypage: the score weights the ranking currently applies, then past chats (read only).
-export function PastChats({ chats, signal, products, open, demo }: {
+export function PastChats({ chats, signal, products, open }: {
   chats: PastChat[]; signal: FeedbackSignal[]; products: EngineProduct[];
-  open: (chat: PastChat) => Promise<ChatMessage[]>; demo?: () => Promise<void>;
+  open: (chat: PastChat) => Promise<ChatMessage[]>
 }) {
   const [opened, setOpened] = useState<{ id: string; messages: ChatMessage[] | null; error?: string } | null>(null);
   const weights = feedbackWeights(products, { liked: signal.filter(f => f.helpful).map(f => f.giftId), disliked: signal.filter(f => !f.helpful).map(f => f.giftId) });
@@ -36,7 +36,6 @@ export function PastChats({ chats, signal, products, open, demo }: {
         </View>
       ) : <Text style={st.muted}>추천 카드의 👍/👎가 다음 추천 점수에 반영돼요.</Text>}
       <Text style={st.title}>지난 대화 {chats.length}개</Text>
-      {demo && <Pressable accessibilityRole="button" onPress={() => void demo()} style={st.demo}><Text style={st.demoText}>시연용 과거 기록 만들기</Text></Pressable>}
       {chats.length === 0 && <Text style={st.muted}>새 대화를 시작하면 지금 대화가 여기에 남아요.</Text>}
       {chats.map(chat => {
         const up = chat.feedback.filter(f => f.helpful).length, down = chat.feedback.length - up;
@@ -44,7 +43,7 @@ export function PastChats({ chats, signal, products, open, demo }: {
         return (
           <View key={chat.id} style={st.box}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => toggle(chat)}>
-              <Text style={st.line} numberOfLines={1}>{chat.demo ? '[시연] ' : ''}{chat.title}</Text>
+              <Text style={st.line} numberOfLines={1}>{chat.title}</Text>
               <Text style={st.muted}>{[date(chat.at), chat.recipients.join('·'), `👍 ${up} · 👎 ${down}`].filter(Boolean).join(' · ')}</Text>
             </Pressable>
             {isOpen && (
@@ -69,6 +68,4 @@ const st = StyleSheet.create({
   body: { marginTop: 8, gap: 6 },
   user: { alignSelf: 'flex-end', backgroundColor: c.tint, color: c.text, padding: 8, borderRadius: 10, fontFamily: fonts.regular, fontSize: 13 },
   assistant: { alignSelf: 'flex-start', backgroundColor: c.segment, color: c.text, padding: 8, borderRadius: 10, fontFamily: fonts.regular, fontSize: 13 },
-  demo: { alignSelf: 'flex-start', borderColor: c.primary, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  demoText: { fontFamily: fonts.medium, fontSize: 13, color: c.primary },
 });

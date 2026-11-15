@@ -61,7 +61,7 @@ import { personalizeSession, emptyPersonalization, assertSameRecipient, recipien
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
-import { chatTitle, demoHistory, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
+import { chatTitle, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
 import { PastChats } from './src/PastChats';
 import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
@@ -161,7 +161,6 @@ export function AppContent({
     pastChats,
     rankingSignal,
     openPastChat,
-    createDemoHistory,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1049,8 +1048,7 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
-                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat}
-                    demo={process.env.EXPO_PUBLIC_DEMO_TOOLS === 'on' && !loggedIn ? createDemoHistory : undefined}/>
+                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat}/>
                 </View>
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
@@ -1406,16 +1404,6 @@ function usePassState() {
     pastChats,
     rankingSignal,
     openPastChat: async (chat: PastChat) => chat.messages ?? (cloud.current ? cloud.current.loadConversation(chat.id) : []),
-    // Demo only (EXPO_PUBLIC_DEMO_TOOLS=on): guest device storage, never the account database.
-    createDemoHistory: async () => {
-      if (cloud.current) return;
-      const demo = demoHistory(catalog.products);
-      await historyRepository.addDemo(demo);
-      const list = await historyRepository.load();
-      setPastChats(list);
-      pastFeedback.current = [...pastFeedback.current.filter(f => !f.conversationId.startsWith('demo-')), ...demo.flatMap(c => c.feedback)];
-      refreshSignal();
-    },
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,
