@@ -66,7 +66,7 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
 }
 export function recommend(products,s,ranking){const result=rankProducts(products,s,ranking);return {...result,items:result.items.slice(0,3)}}
 const nums={'한':1,'두':2,'세':3,'네':4,'다섯':5,'네 집':4};
-const CATEGORY_WORDS=[['food',/과일|식품|기름|오일/],['coffee_tea',/커피|홍차|녹차|전통차|차로|차를|차\s*(?:좋아|선호)/],['snack',/과자|간식|초콜릿|쿠키|한과/],['beauty',/향수|화장품|스킨케어|로션/],['makeup',/메이크업|립스틱|섀도/],['fitness',/운동|헬스|요가|피트니스/],['audio',/이어폰|헤드폰|스피커|음악/],['jewelry',/주얼리|목걸이|팔찌|귀걸이|반지/],['watch',/시계/],['bag',/가방|백팩/],['accessory',/지갑|선글라스/],['toy',/장난감|완구|인형|레고/],['health',/건강|영양제|홍삼/],['kitchen',/주방|요리/],['decor',/인테리어|장식|향초|무드등/],['personal_care',/면도기|드라이기/]];
+const CATEGORY_WORDS=[['food',/과일|식품|기름|오일/],['coffee_tea',/커피|홍차|녹차|전통차|차로|차를|차\s*(?:좋아|선호)/],['snack',/과자|간식|초콜릿|쿠키|한과/],['beauty',/향수|화장품|스킨케어|로션/],['makeup',/메이크업|립스틱|섀도/],['fitness',/운동|헬스|요가|피트니스/],['audio',/이어폰|헤드폰|스피커|음악/],['jewelry',/주얼리|목걸이|팔찌|귀걸이|반지/],['watch',/시계/],['bag',/가방|백팩/],['accessory',/지갑|선글라스/],['toy',/장난감|완구|인형|레고/],['health',/건강|영양제|홍삼/],['kitchen',/주방|요리/],['decor',/인테리어|장식|향초|무드등/],['personal_care',/면도기|드라이기/],['flower',/꽃다발|꽃바구니|생화|화분|(?<![가-힣])꽃(?=$|\s|[을이은는도과으,.!?])/],['stationery',/문구|필기구|볼펜|만년필|(?<![가-힣])펜(?=$|\s|[을이은는도과으,.!?])/],['digital',/전자기기|디지털기기|카메라|보조배터리/],['liquor',/전통주|와인(?!잔|글라스)|주류|막걸리|(?<![가-힣])술(?=$|\s|[을이은는도과,.!?]|선물|세트)/]];
 export function extract(text,state){const p={},questions=[];let recognized=false;const set=(k,v)=>{p[k]=v;recognized=true};
  if(/추석|설(?:날|\s|$)/.test(text))set('occasion',text.includes('추석')?'추석':'설');
  else {

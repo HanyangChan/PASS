@@ -1,7 +1,7 @@
 export const CATALOG_ID='amazon-kaggle-v1';
-export const CATEGORIES=['food','snack','coffee_tea','health','beauty','makeup','personal_care','kitchen','decor','jewelry','watch','bag','accessory','audio','toy','fitness'];
+export const CATEGORIES=['food','snack','coffee_tea','health','beauty','makeup','personal_care','kitchen','decor','jewelry','watch','bag','accessory','audio','toy','fitness','flower','stationery','digital','liquor'];
 export const PREFERENCE_TAGS=['less_sweet','unsweetened','type:tea','type:coffee','avoid_fragrance',...CATEGORIES.map(c=>`category:${c}`)];
-export const CATEGORY_NAMES={food:'식품',snack:'과자·간식',coffee_tea:'커피·차',health:'건강식품',beauty:'뷰티',makeup:'메이크업',personal_care:'생활가전',kitchen:'주방용품',decor:'홈데코',jewelry:'주얼리',watch:'시계',bag:'가방',accessory:'패션소품',audio:'음향기기',toy:'장난감',fitness:'운동용품'};
+export const CATEGORY_NAMES={food:'식품',snack:'과자·간식',coffee_tea:'커피·차',health:'건강식품',beauty:'뷰티',makeup:'메이크업',personal_care:'생활가전',kitchen:'주방용품',decor:'홈데코',jewelry:'주얼리',watch:'시계',bag:'가방',accessory:'패션소품',audio:'음향기기',toy:'장난감',fitness:'운동용품',flower:'꽃·식물',stationery:'문구',digital:'디지털기기',liquor:'주류'};
 // Recipient groups → categories that usually suit them (ranking tabs and a +1 recommendation boost).
 export const RECIPIENT_CATEGORIES={부모님:['health','food','coffee_tea','kitchen','decor'],친구:['beauty','makeup','jewelry','audio','snack'],직장동료:['coffee_tea','snack','decor','accessory','kitchen']};
 const RECIPIENT_GROUPS=[['부모님',/부모|어머니|아버지|엄마|아빠|처가|시댁|장인|장모|할머니|할아버지/],['친구',/친구|동창|연인|애인/],['직장동료',/동료|상사|팀장|직장|교수|선생/]];

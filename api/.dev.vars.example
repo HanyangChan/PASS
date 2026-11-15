@@ -24,3 +24,6 @@ LLM_API_KEY=
 A_ROUTER_LLM_MODE=single
 
 # langgraph-advisors: B, rule attribution with optional Luna plus four advisors.
+
+# Product catalog for every chat mode: amazon (default), web (Korean Naver catalog, supabase/seed/products-kr.json) or both
+# CATALOG_SOURCE=web

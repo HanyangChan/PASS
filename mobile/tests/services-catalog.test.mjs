@@ -21,7 +21,7 @@ test('catalog gifts carry image, link, rating count and demo fields; rankings fo
   const products = await repo.load();
   const gift = giftFromProduct(products[0]);
   assert.equal(gift.category, '과자·간식'); assert.equal(gift.image, 'https://m.media-amazon.com/i.jpg'); assert.equal(gift.link, 'https://www.amazon.in/dp/A');
-  assert.equal(gift.ratingCount, 5); assert.deepEqual(gift.demoFields, ['stock']); assert.deepEqual(gift.allergensDeclared, ['우유']); assert.equal(gift.icon, 'gift');
+  assert.equal(gift.ratingCount, 5); assert.deepEqual(gift.demoFields, ['stock']); assert.deepEqual(gift.allergensDeclared, ['우유']); assert.equal(gift.icon, 'snack');
   const ranks = rankGifts(products);
   assert.deepEqual(Object.keys(ranks), ['전체', '부모님', '친구', '직장동료']);
   assert.deepEqual(ranks['전체'].map(g => g.id), ['B', 'C', 'A']);
@@ -44,4 +44,38 @@ test('search and filters find items outside the first 100 ranking positions', ()
   assert.deepEqual(selectGifts(products,{priceLimit:1000}).map(g=>g.id),['P129']);
   assert.equal(selectGifts(products,{sort:'낮은 가격순'})[0].id,'P129');
   assert.equal(selectGifts(products).length,100);
+});
+
+test('the app catalog follows the chat server CATALOG_SOURCE, then the app setting', async () => {
+  const { resolveCatalogSource } = await import('../src/services/catalogSource.ts');
+  const health = catalog => async () => Response.json({ ok: true, catalog });
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('naver-web-v1') }), 'web');
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('amazon-kaggle-v1+naver-web-v1'), fallback: 'amazon' }), 'both');
+  const offline = async () => { throw new TypeError('offline'); };
+  assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), 'web');
+  assert.equal(await resolveCatalogSource({ fallback: 'naver' }), 'amazon');
+  assert.equal(await resolveCatalogSource({}), 'amazon');
+  const { resolveCatalog } = await import('../src/services/catalogSource.ts');
+  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788/', fetcher: health('naver-web-v1') }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });
+  assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });
+  assert.deepEqual(await resolveCatalog({ fallback: 'web' }), { source: 'web' });
+});
+
+test('web and both sources load the Korean catalog for the ranking screen and guest chat', async () => {
+  const web = [{ id: 'naver_1', name: '한우 선물세트', category: 'food', price: 99000, shipping_fee: 0, shipping_source: 'naver_listing',
+    arrival_days: 2, packaging: 'formal', packaging_source: 'inferred_gift_set', brand: null, allergens: ['쇠고기'], rating: 4.9, review_count: 120,
+    product_url: 'https://smartstore.naver.com/x/products/1', gift_set: true, occasions: ['holiday'], source: 'naver_shopping_web', mall: '한우맘',
+    image_file: 'naver_1.webp' }];
+  let supabaseCalls = 0;
+  const fetcher = async () => { supabaseCalls++; return Response.json([row('A', 'snack', 5)]); };
+  const make = source => createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher, source: async () => source, webItems: async () => web });
+  const onlyWeb = await make('web').load();
+  assert.deepEqual(onlyWeb.map(p => p.id), ['naver_1']);
+  assert.equal(supabaseCalls, 0);
+  assert.equal(giftFromProduct(onlyWeb[0]).image, undefined); // no chat server known: no photo address
+  const local = createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher,
+    source: async () => ({ source: 'web', apiBase: 'http://127.0.0.1:8788' }), webItems: async () => web });
+  assert.equal((await local.load())[0].image, 'http://127.0.0.1:8788/catalog-images/naver_1.webp');
+  assert.deepEqual((await make('both').load()).map(p => p.id), ['A', 'naver_1']);
+  assert.deepEqual((await make('amazon').load()).map(p => p.id), ['A']);
 });

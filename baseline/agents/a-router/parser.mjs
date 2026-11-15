@@ -10,6 +10,8 @@ const categories = [
   ['toy','장난감|완구|인형|레고'], ['health','건강식품|영양제|홍삼'],
   ['kitchen','주방용품|요리'], ['decor','인테리어|장식|향초|무드등'],
   ['personal_care','면도기|드라이기'],
+  ['flower','꽃다발|꽃바구니|생화|화분|(?<![가-힣])꽃'], ['stationery','문구|필기구|볼펜|만년필|(?<![가-힣])펜'],
+  ['digital','전자기기|디지털기기|카메라|보조배터리'], ['liquor','전통주|와인|주류|막걸리|(?<![가-힣])술'],
 ];
 const question = text => ({ patch:{}, questions:[text], unresolved:true, route:'clarification' });
 const unknown = () => ({ patch:{}, questions:['받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.'], unresolved:true, route:'unresolved' });

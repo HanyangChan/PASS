@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="734" height="296" viewBox="0 0 734 296" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif" role="img" aria-label="상황 × 카테고리 상품 수 히트맵">
+<title>상황 × 카테고리 상품 수 히트맵</title>
+<rect width="734" height="296" fill="#fcfcfb"/>
+<text x="16" y="24" font-size="15" font-weight="600" fill="#0b0b0b">상황 × 카테고리 상품 수</text>
+<text x="16" y="42" font-size="12" fill="#52514e">색이 진할수록 상품이 많음(제곱근 눈금, 최대 144개). 빈 칸은 0개</text>
+<text transform="translate(85,132) rotate(-55)" font-size="11" fill="#52514e">꽃·식물</text>
+<text transform="translate(119,132) rotate(-55)" font-size="11" fill="#52514e">식품</text>
+<text transform="translate(153,132) rotate(-55)" font-size="11" fill="#52514e">과자·간식</text>
+<text transform="translate(187,132) rotate(-55)" font-size="11" fill="#52514e">문구</text>
+<text transform="translate(221,132) rotate(-55)" font-size="11" fill="#52514e">패션소품</text>
+<text transform="translate(255,132) rotate(-55)" font-size="11" fill="#52514e">홈데코</text>
+<text transform="translate(289,132) rotate(-55)" font-size="11" fill="#52514e">건강식품</text>
+<text transform="translate(323,132) rotate(-55)" font-size="11" fill="#52514e">생활가전</text>
+<text transform="translate(357,132) rotate(-55)" font-size="11" fill="#52514e">뷰티</text>
+<text transform="translate(391,132) rotate(-55)" font-size="11" fill="#52514e">커피·차</text>
+<text transform="translate(425,132) rotate(-55)" font-size="11" fill="#52514e">주방용품</text>
+<text transform="translate(459,132) rotate(-55)" font-size="11" fill="#52514e">가방</text>
+<text transform="translate(493,132) rotate(-55)" font-size="11" fill="#52514e">장난감</text>
+<text transform="translate(527,132) rotate(-55)" font-size="11" fill="#52514e">음향기기</text>
+<text transform="translate(561,132) rotate(-55)" font-size="11" fill="#52514e">시계</text>
+<text transform="translate(595,132) rotate(-55)" font-size="11" fill="#52514e">디지털기기</text>
+<text transform="translate(629,132) rotate(-55)" font-size="11" fill="#52514e">주류</text>
+<text transform="translate(663,132) rotate(-55)" font-size="11" fill="#52514e">주얼리</text>
+<text transform="translate(697,132) rotate(-55)" font-size="11" fill="#52514e">운동용품</text>
+<text x="54" y="161" font-size="13" fill="#0b0b0b" text-anchor="end">명절</text>
+<g><title>명절 · 꽃·식물: 0개</title><rect x="65" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 식품: 85개</title><rect x="99" y="141" width="32" height="32" rx="4" fill="#1c5cab"/><text x="115" y="161" font-size="11" text-anchor="middle" fill="#ffffff">85</text></g>
+<g><title>명절 · 과자·간식: 15개</title><rect x="133" y="141" width="32" height="32" rx="4" fill="#86b6ef"/><text x="149" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">15</text></g>
+<g><title>명절 · 문구: 0개</title><rect x="167" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 패션소품: 3개</title><rect x="201" y="141" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="217" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>명절 · 홈데코: 0개</title><rect x="235" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 건강식품: 18개</title><rect x="269" y="141" width="32" height="32" rx="4" fill="#6da7ec"/><text x="285" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">18</text></g>
+<g><title>명절 · 생활가전: 9개</title><rect x="303" y="141" width="32" height="32" rx="4" fill="#86b6ef"/><text x="319" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">9</text></g>
+<g><title>명절 · 뷰티: 3개</title><rect x="337" y="141" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="353" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>명절 · 커피·차: 9개</title><rect x="371" y="141" width="32" height="32" rx="4" fill="#86b6ef"/><text x="387" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">9</text></g>
+<g><title>명절 · 주방용품: 0개</title><rect x="405" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 가방: 0개</title><rect x="439" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 장난감: 0개</title><rect x="473" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 음향기기: 0개</title><rect x="507" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 시계: 0개</title><rect x="541" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 디지털기기: 0개</title><rect x="575" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 주류: 6개</title><rect x="609" y="141" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="625" y="161" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>명절 · 주얼리: 0개</title><rect x="643" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>명절 · 운동용품: 0개</title><rect x="677" y="141" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<text x="54" y="195" font-size="13" fill="#0b0b0b" text-anchor="end">생일</text>
+<g><title>생일 · 꽃·식물: 0개</title><rect x="65" y="175" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>생일 · 식품: 0개</title><rect x="99" y="175" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>생일 · 과자·간식: 12개</title><rect x="133" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="149" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">12</text></g>
+<g><title>생일 · 문구: 6개</title><rect x="167" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="183" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>생일 · 패션소품: 18개</title><rect x="201" y="175" width="32" height="32" rx="4" fill="#6da7ec"/><text x="217" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">18</text></g>
+<g><title>생일 · 홈데코: 15개</title><rect x="235" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="251" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">15</text></g>
+<g><title>생일 · 건강식품: 3개</title><rect x="269" y="175" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="285" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>생일 · 생활가전: 9개</title><rect x="303" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="319" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">9</text></g>
+<g><title>생일 · 뷰티: 15개</title><rect x="337" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="353" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">15</text></g>
+<g><title>생일 · 커피·차: 3개</title><rect x="371" y="175" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="387" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>생일 · 주방용품: 12개</title><rect x="405" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="421" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">12</text></g>
+<g><title>생일 · 가방: 15개</title><rect x="439" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="455" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">15</text></g>
+<g><title>생일 · 장난감: 12개</title><rect x="473" y="175" width="32" height="32" rx="4" fill="#86b6ef"/><text x="489" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">12</text></g>
+<g><title>생일 · 음향기기: 6개</title><rect x="507" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="523" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>생일 · 시계: 6개</title><rect x="541" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="557" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>생일 · 디지털기기: 6개</title><rect x="575" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="591" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>생일 · 주류: 0개</title><rect x="609" y="175" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>생일 · 주얼리: 6개</title><rect x="643" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="659" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>생일 · 운동용품: 6개</title><rect x="677" y="175" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="693" y="195" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<text x="54" y="229" font-size="13" fill="#0b0b0b" text-anchor="end">수험</text>
+<g><title>수험 · 꽃·식물: 0개</title><rect x="65" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>수험 · 식품: 6개</title><rect x="99" y="209" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="115" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>수험 · 과자·간식: 23개</title><rect x="133" y="209" width="32" height="32" rx="4" fill="#6da7ec"/><text x="149" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">23</text></g>
+<g><title>수험 · 문구: 39개</title><rect x="167" y="209" width="32" height="32" rx="4" fill="#3987e5"/><text x="183" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">39</text></g>
+<g><title>수험 · 패션소품: 24개</title><rect x="201" y="209" width="32" height="32" rx="4" fill="#6da7ec"/><text x="217" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">24</text></g>
+<g><title>수험 · 홈데코: 21개</title><rect x="235" y="209" width="32" height="32" rx="4" fill="#6da7ec"/><text x="251" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">21</text></g>
+<g><title>수험 · 건강식품: 6개</title><rect x="269" y="209" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="285" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>수험 · 생활가전: 6개</title><rect x="303" y="209" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="319" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>수험 · 뷰티: 3개</title><rect x="337" y="209" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="353" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>수험 · 커피·차: 6개</title><rect x="371" y="209" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="387" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>수험 · 주방용품: 6개</title><rect x="405" y="209" width="32" height="32" rx="4" fill="#9ec5f4"/><text x="421" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">6</text></g>
+<g><title>수험 · 가방: 0개</title><rect x="439" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>수험 · 장난감: 0개</title><rect x="473" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>수험 · 음향기기: 3개</title><rect x="507" y="209" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="523" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>수험 · 시계: 3개</title><rect x="541" y="209" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="557" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>수험 · 디지털기기: 3개</title><rect x="575" y="209" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="591" y="229" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>수험 · 주류: 0개</title><rect x="609" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>수험 · 주얼리: 0개</title><rect x="643" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>수험 · 운동용품: 0개</title><rect x="677" y="209" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<text x="54" y="263" font-size="13" fill="#0b0b0b" text-anchor="end">꽃</text>
+<g><title>꽃 · 꽃·식물: 144개</title><rect x="65" y="243" width="32" height="32" rx="4" fill="#0d366b"/><text x="81" y="263" font-size="11" text-anchor="middle" fill="#ffffff">144</text></g>
+<g><title>꽃 · 식품: 0개</title><rect x="99" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 과자·간식: 0개</title><rect x="133" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 문구: 0개</title><rect x="167" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 패션소품: 0개</title><rect x="201" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 홈데코: 3개</title><rect x="235" y="243" width="32" height="32" rx="4" fill="#b7d3f6"/><text x="251" y="263" font-size="11" text-anchor="middle" fill="#0b0b0b">3</text></g>
+<g><title>꽃 · 건강식품: 0개</title><rect x="269" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 생활가전: 0개</title><rect x="303" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 뷰티: 0개</title><rect x="337" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 커피·차: 0개</title><rect x="371" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 주방용품: 0개</title><rect x="405" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 가방: 0개</title><rect x="439" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 장난감: 0개</title><rect x="473" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 음향기기: 0개</title><rect x="507" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 시계: 0개</title><rect x="541" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 디지털기기: 0개</title><rect x="575" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 주류: 0개</title><rect x="609" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 주얼리: 0개</title><rect x="643" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+<g><title>꽃 · 운동용품: 0개</title><rect x="677" y="243" width="32" height="32" rx="4" fill="#f0efec"/></g>
+
+</svg>

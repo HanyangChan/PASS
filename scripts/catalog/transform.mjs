@@ -1,5 +1,6 @@
 import {tagAllergens} from '../../lib/allergens.mjs';
 import {CATEGORY_NAMES} from '../../lib/catalog.mjs';
+import {arrivalDays,packagingFor,sweetnessFor} from './demo-rules.mjs';
 export const RUPEE_TO_KRW=16;
 // Korean gift price-level correction (design 2026-10-14). Deliberately not shown in the app.
 export const PRICE_LEVEL=2;
@@ -42,13 +43,12 @@ export function candidates(rows,perGroup=200){
  for(const c of [...best.values()].sort((a,b)=>a.asin.localeCompare(b.asin))){const key=`${c.name.split(/\s+/)[0].toLowerCase()}|${c.rating}|${c.count}`;if(!variants.has(key))variants.set(key,c);}
  return [...Map.groupBy(variants.values(),c=>c.sub_category).values()].flatMap(group=>group.sort((a,b)=>b.count-a.count||a.asin.localeCompare(b.asin)).slice(0,perGroup));
 }
-const hash=text=>[...text].reduce((h,ch)=>(h*31+ch.charCodeAt(0))>>>0,7);
 export function toRow(c,{name_ko,category}){
  const price_krw=priceKrw(c.inr);
  return {id:`amz-${c.asin}`,name:name_ko,name_en:c.name,category,description:CATEGORY_NAMES[category],price_krw,
-  shipping_fee_krw:price_krw>=30000?0:3000,stock:99,arrival_days:2+hash(c.asin)%3,
-  packaging:/\b(gift|hamper|combo|set|box)\b/i.test(c.name)?'formal':'basic',
-  sweetness:/sugar[- ]?free|no added sugar|unsweetened|zero sugar/i.test(c.name)||/무가당|무설탕/.test(name_ko)?'unsweetened':'unknown',
+  shipping_fee_krw:price_krw>=30000?0:3000,stock:99,arrival_days:arrivalDays(c.asin),
+  packaging:packagingFor(c.name),
+  sweetness:sweetnessFor(c.name,name_ko),
   brand:c.name.split(/\s+/)[0].replace(/[^\p{L}\p{N}&'-]/gu,'')||null,allergens:tagAllergens(`${c.name} ${name_ko}`),
   rating:c.rating,rating_count:c.count,image_url:c.image,source:'amazon-kaggle',source_url:c.link,
   demo_fields:['shipping_fee_krw','arrival_days','stock','packaging'],is_active:true};

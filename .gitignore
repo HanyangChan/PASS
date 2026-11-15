@@ -56,3 +56,6 @@ next-env.d.ts
 
 # Catalog build inputs/outputs (CC BY-NC data is handed over, not committed)
 /data/
+
+# Korean catalog crawl: browser profile (raw pages stay under /data/)
+/.cache/
