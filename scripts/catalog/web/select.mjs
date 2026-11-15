@@ -3,7 +3,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { photoChecker } from './images.mjs';
-import { BLOCKED_TITLE_WORDS, CORE_TERMS, GENERIC_WORDS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
+import { coreTerms as sharedCoreTerms } from '../../../lib/item-terms.mjs';
+import { BLOCKED_TITLE_WORDS, CORE_TERMS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
 
 // Gift-set titles (seed keywords ending in 선물세트). Matches PR #17's gift_set flag on engine products.
 export const GIFT_SET_TITLE = /선물|세트|기프트|박스|set/i;
@@ -12,11 +13,7 @@ export const MIN_GIFT_PICKS = 2;
 const squash = text => text.replace(/\s+/g, '').toLowerCase();
 export const normalizeTitle = title => squash(title.replace(/\[[^\]]*\]|\([^)]*\)|[^\p{L}\p{N}\s]/gu, ' '));
 
-export function coreTerms(keyword) {
-  if (CORE_TERMS[keyword]) return CORE_TERMS[keyword];
-  const words = keyword.split(/\s+/).filter(word => !GENERIC_WORDS.includes(word));
-  return words.length ? words : [keyword];
-}
+export const coreTerms = keyword => sharedCoreTerms(keyword, CORE_TERMS);
 
 export const isRelevant = (title, keyword) => {
   const text = squash(title);

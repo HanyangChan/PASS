@@ -136,4 +136,9 @@ A~D 네 모드는 모두 API가 한 번 불러온 같은 상품 목록을 쓴다
 
 배포한 Worker에서는 `npx wrangler deploy --var CATALOG_SOURCE:web`(api 폴더)로 켠다.
 
-앱의 선물 랭킹 화면과 게스트 채팅도 같은 카탈로그를 쓴다. 앱은 시작할 때 채팅 서버(`EXPO_PUBLIC_CHAT_API_URL`)의 `/health`에서 `catalog` 값을 읽어 따라가므로 서버 쪽 설정 하나만 바꾸면 된다. 서버에 닿지 않으면 `mobile/.env.local`의 `EXPO_PUBLIC_CATALOG_SOURCE`(기본 `amazon`)를 쓴다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그 카드는 실제 상품 사진을 보여준다. 사진은 팀 공유용으로 `supabase/seed/images-kr/`에 커밋되어 있어 pull만 하면 뜨고, 채팅 서버가 `/catalog-images/<파일>`로 내려준다(로컬 API와 배포 Worker static assets 모두, 논문 캡처에는 사용하지 않음). 사진을 다시 준비할 때는 `node scripts/catalog/web/images.mjs`. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 아마존 카탈로그와 같은 규칙으로 만든 데모 값이다. 카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.
+앱의 선물 랭킹 화면과 게스트 채팅도 같은 카탈로그를 쓴다. 앱은 시작할 때 채팅 서버(`EXPO_PUBLIC_CHAT_API_URL`)의 `/health`에서 `catalog` 값을 읽어 따라가므로 서버 쪽 설정 하나만 바꾸면 된다. 서버에 닿지 않으면 `mobile/.env.local`의 `EXPO_PUBLIC_CATALOG_SOURCE`(기본 `amazon`)를 쓴다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그 카드는 실제 상품 사진을 보여준다. 사진은 팀 공유용으로 `supabase/seed/images-kr/`에 커밋되어 있어 pull만 하면 뜨고, 채팅 서버가 `/catalog-images/<파일>`로 내려준다(로컬 API와 배포 Worker static assets 모두, 논문 캡처에는 사용하지 않음). 사진을 다시 준비할 때는 `node scripts/catalog/web/images.mjs`. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 아마존 카탈로그와 같은 규칙으로 만든 데모 값이다. 품목 필터(`ITEM_FILTER=on`, 기본 `off`)를 켜면, 사용자가 말한 품목(예: "카네이션", "한우")의 상품이 3개 이상일 때 그 상품만 남긴 목록으로 A~D 모든 모드가 추천한다. 점수 계산과 LLM 호출은 그대로다.
+- 대화 중 품목이 바뀌면 가장 최근에 말한 품목을 따른다. "카네이션 말고 장미"처럼 말고·빼고·제외가 붙은 품목은 쓰지 않는다.
+- 한 글자 품목(배·김·꿀·떡·쌀)은 띄어 쓴 단어로만 인정한다. 그래서 배송·김치·떡볶이는 품목으로 읽지 않는다.
+- 현재 품목은 응답의 `session.item_filter`에, 적용 결과는 `itemFilter`에 담긴다. 켜는 방법은 `CATALOG_SOURCE`와 같다(`api/.dev.vars` 또는 `ITEM_FILTER=on npm run dev:api`).
+
+카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.
