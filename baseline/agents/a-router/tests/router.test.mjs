@@ -175,6 +175,11 @@ test('ingredient lists preserve other exclusions and conflicting instructions as
  const missingIngredient=await send(agent,session,'없어요',{pendingQuestion:'피해야 할 알레르기 성분을 알려주세요.'});
  assert.equal(missingIngredient.kind,'question');
  assert.deepEqual(missingIngredient.session,session);
+ const listReply=await send(agent,session,'땅콩이랑 우유요',{pendingQuestion:'피해야 할 알레르기 성분을 알려주세요.'});
+ assert.deepEqual(listReply.session.state.excluded_ingredients,['새우','땅콩','우유']);
+ const ambiguousReply=await send(agent,session,'없어요',{pendingQuestion:'알레르기 조건을 확인해 주세요.'});
+ assert.equal(ambiguousReply.kind,'question');
+ assert.deepEqual(ambiguousReply.session,session);
 });
 
 test('common phrasing maps to the existing gift conditions without model calls',async()=>{
@@ -186,6 +191,7 @@ test('common phrasing maps to the existing gift conditions without model calls',
   ['4만원 안쪽으로',{budget:{...session.state.budget,amount_krw:40000}}],
   ['엄마 생신 선물 추천',{occasion:'생일',recipients:['어머니']}],
   ['합격 축하 선물',{occasion:'합격'}],
+  ['수능 응원 선물',{occasion:'수험'}],
   ['결혼기념일 선물',{occasion:'기념일'}],
   ['엄마는 커피를 좋아하세요',{preferences:['category:coffee_tea','type:coffee']}],
   ['저는 커피 좋아하는데 엄마는 차 좋아해요',{preferences:['category:coffee_tea','type:tea']}],
@@ -199,8 +205,10 @@ test('common phrasing maps to the existing gift conditions without model calls',
   for (const [field,value] of Object.entries(expected)) assert.deepEqual(out.session.state[field],value,text);
  }
  const perfume=await send(agent,session,'향수 말고 커피로 추천해줘');
+ // Requirement table: apply the coffee taste and ask whether to drop only perfume or all beauty.
  assert.match(perfume.question,/향수만/);
- assert.deepEqual(perfume.session,session);
+ assert.deepEqual(perfume.session.state.preferences,['category:coffee_tea','type:coffee']);
+ assert.deepEqual(perfume.session.state.excluded_categories,[]);
  const explanation=await send(agent,session,'왜 이게 1위야?');
  assert.equal(explanation.routing.intent,'explain');
  assert.deepEqual(explanation.session,session);

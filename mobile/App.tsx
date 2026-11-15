@@ -60,8 +60,10 @@ import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
-import { giftRepository, productRepository, calendarRepository, feedbackRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
+import { chatTitle, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
+import { PastChats } from './src/PastChats';
 import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
 import { createLocalChatService } from './src/services/chatService';
 import { createCloudRecords } from './src/services/cloudRecords';
@@ -156,6 +158,9 @@ export function AppContent({
     resetChat,
     cardFeedback,
     rateCard,
+    pastChats,
+    rankingSignal,
+    openPastChat,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1043,11 +1048,14 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
+                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat}/>
+                </View>
+                <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
                     랭킹과 대화 추천은 같은 상품 목록(Kaggle Amazon Products
                     Dataset, CC BY-NC 4.0)을 사용해요. 실제 결제·배송 기능은 준비
-                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 마지막 대화와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 앱을 종료하면 사라지고, 찜과 최근 본 선물은 기기에 남아요.'}
+                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 대화(최근 30개)와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 새 대화를 시작하면 이 기기의 지난 대화에 남고(최대 30개), 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
               </ScrollView>
@@ -1134,7 +1142,12 @@ function usePassState() {
     );
     return () => { live = false; };
   }, [catalogAttempt]);
-  const chatService = useMemo(() => createLocalChatService(catalog.products), [catalog.products]);
+  // Feedback the ranking uses: past chats plus this chat's taps, snapshotted per request so cards don't jump mid-tap.
+  const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
+  const rankingSignalRef = useRef<FeedbackSignal[]>([]);
+  const pastFeedback = useRef<CardFeedback[]>([]);
+  const [pastChats, setPastChats] = useState<PastChat[]>([]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
@@ -1167,7 +1180,7 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner) : null, [owner]);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
@@ -1189,6 +1202,7 @@ function usePassState() {
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
+    refreshSignal();
     try {
       // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
       const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
@@ -1203,7 +1217,7 @@ function usePassState() {
         ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
           : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
           : await serverChat.view(baseSession, controller.signal, agentMode, agents)
-        : operation === 'turn' ? chatService.send(requestSession, text) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
+        : operation === 'turn' ? await chatService.send(requestSession, text, baseMessages) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
@@ -1258,9 +1272,21 @@ function usePassState() {
     cloud.current?.setFeedback(next);
     feedbackScheduler.current?.schedule();
   };
+  const refreshSignal = (past = pastFeedback.current) => {
+    const next = rankingFeedback(past, cardFeedbackRef.current);
+    if (JSON.stringify(next) === JSON.stringify(rankingSignalRef.current)) return;
+    rankingSignalRef.current = next; setRankingSignal(next);
+  };
   const resetChat = () => {
     // Save the ending conversation's feedback first; the save is queued before anything for the new chat.
     void feedbackScheduler.current?.flushNow();
+    // The ending chat becomes history: its feedback now counts as past, and guests archive it on the device.
+    pastFeedback.current = [...pastFeedback.current, ...cardFeedbackRef.current];
+    if (messages.length) {
+      const ended: PastChat = { id: cloud.current?.currentId() ?? guestSession.current, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback: cardFeedbackRef.current };
+      setPastChats(old => [ended, ...old.filter(c => c.id !== ended.id)].slice(0, 30));
+      if (!cloud.current) historyRepository.archive(ended).catch(() => setNotice('기기에 지난 대화를 저장하지 못했어요.'));
+    }
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null);
@@ -1282,6 +1308,16 @@ function usePassState() {
       setSession(records.session); setMessages(records.messages);
       const restored = 'feedback' in records && Array.isArray(records.feedback) ? stampConversation(records.feedback as CardFeedback[], '') : [];
       cardFeedbackRef.current = restored; setCardFeedback(restored); guestSession.current = randomUUID();
+      // History never blocks the chat: a failed load only hides mypage history and past-feedback weights.
+      const currentId = repository?.currentId();
+      const history = repository ? repository.listConversations().then(list => ({ list: list.filter(c => c.id !== currentId), logged: [] as CardFeedback[] }))
+        : Promise.all([historyRepository.load(), feedbackRepository.load()]).then(([list, logged]) => ({ list, logged: logged.filter(f => !list.some(c => c.id === f.conversationId)) }));
+      history.then(({ list, logged }) => {
+        if (!mounted) return;
+        setPastChats(list);
+        pastFeedback.current = [...list.flatMap(c => c.feedback), ...logged];
+        refreshSignal();
+      }).catch(() => { if (mounted) setNotice('지난 대화를 불러오지 못했어요.'); });
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
@@ -1365,6 +1401,9 @@ function usePassState() {
     resetChat,
     cardFeedback,
     rateCard,
+    pastChats,
+    rankingSignal,
+    openPastChat: async (chat: PastChat) => chat.messages ?? (cloud.current ? cloud.current.loadConversation(chat.id) : []),
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,

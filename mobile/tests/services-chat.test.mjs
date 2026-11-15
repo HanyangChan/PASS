@@ -5,10 +5,10 @@ import { createLocalChatService } from '../src/services/chatService.ts';
 const products = JSON.parse(readFileSync(new URL('../../tests/fixtures/food-demo.json', import.meta.url)));
 const service = createLocalChatService(products);
 
-test('guest dialogue produces recommendations without exposing engine-only state', () => {
+test('guest dialogue produces recommendations without exposing engine-only state', async () => {
   const initial = service.createSession();
   assert.equal(service.view(initial).question.key, 'recipient');
-  const turn = service.send(initial, '부모님 5만 원 배송비 포함');
+  const turn = await service.send(initial, '부모님 5만 원 배송비 포함');
   assert.equal(turn.session.state.budget.amount_krw, 50000);
   const { question, result } = service.view(turn.session);
   assert.equal(question.key, null);
@@ -24,8 +24,8 @@ test('guest dialogue produces recommendations without exposing engine-only state
   assert.equal(initial.state.budget.amount_krw, null);
 });
 
-test('partial budget updates keep shipping and ingredient exclusions intact', () => {
-  const turn = service.send(service.createSession(), '친구 5만 원 배송비 포함 땅콩 알레르기');
+test('partial budget updates keep shipping and ingredient exclusions intact', async () => {
+  const turn = await service.send(service.createSession(), '친구 5만 원 배송비 포함 땅콩 알레르기');
   const before = structuredClone(turn.session);
   const updated = service.updateConditions(turn.session, { budget: { amount_krw: 60000 } });
   assert.equal(updated.session.state.budget.amount_krw, 60000);
@@ -35,9 +35,9 @@ test('partial budget updates keep shipping and ingredient exclusions intact', ()
   assert.deepEqual(turn.session, before);
 });
 
-test('budget comparison preserves unresolved issues while explicit edits clear them', () => {
+test('budget comparison preserves unresolved issues while explicit edits clear them', async () => {
   const session = { ...service.createSession(), issues: ['피해야 할 성분을 알려주세요.'] };
   assert.deepEqual(service.updateConditions(session, { budget: { amount_krw: 50000 } }, false).session.issues, session.issues);
   assert.deepEqual(service.updateConditions(session, { recipients: ['친구'] }).session.issues, []);
-  assert.throws(() => service.send(session, '  '), /입력/);
+  await assert.rejects(service.send(session, '  '), /입력/);
 });

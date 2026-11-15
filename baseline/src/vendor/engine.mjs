@@ -1,7 +1,7 @@
 import {mentionedAllergens} from './allergens.mjs';
 import {FRAGRANCE_TAG,FRAGRANCE_NOTICE,isFragranceProduct} from './fragrance.mjs';
-import {recipientCategories} from './catalog.mjs';
-import {isGiftSet,typeScore} from './ranking.mjs';
+import {recipientCategories,recipientGender,recipientAge} from './catalog.mjs';
+import {isGiftSet,typeScore,giftFit,genderMismatch,looksSweet,ageMismatch,occasionFit,occasionClash} from './ranking.mjs';
 export const initial=()=>({occasion:null,recipients:[],quantity:null,same_product:null,budget:{amount_krw:null,scope:null,shipping_included:null},preferences:[],excluded_categories:[],excluded_ingredients:[],brand:null,delivery_by:null,packaging:null});
 export function apply(state,patch){const next=structuredClone(state); for(const [k,v] of Object.entries(patch))next[k]=k==='budget'?{...next[k],...v}:v;return next}
 export function differences(a,b,path=''){return Object.keys(b).flatMap(k=>{const p=path?`${path}.${k}`:k;return b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])?differences(a[k],b[k],p):JSON.stringify(a[k])!==JSON.stringify(b[k])?[{field:p,before:a[k],after:b[k]}]:[]})}
@@ -13,9 +13,24 @@ export function budgetCost(product, state) {
 export const ALLERGY_NOTICE='상품명 기준으로 알레르기 성분을 추정했어요. 구매 전 성분표를 꼭 확인해 주세요.';
 // Category-relative popularity, then absolute review count (so leaders of small categories do not tie on price).
 export const morePopular=(a,b)=>a.popularity-b.popularity||(a.rating_count||0)-(b.rating_count||0);
-export const APP_RANKING = Object.freeze({ preferBudgetRange: true, preferHolidaySets: true });
-export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false } = {}) {
- const suited=recipientCategories(s.recipients);
+// giftAware: recipient profiles, gender-labelled items filtered, gift sets up and pantry/device parts down.
+export const APP_RANKING = Object.freeze({ preferBudgetRange: true, preferHolidaySets: true, giftAware: true });
+// Card feedback (👍/👎 on recommended products): each category moves by likes − dislikes, capped at ±2,
+// and a product marked unhelpful sinks by 5 so it is not offered again. Filters and budget still apply first.
+export function feedbackWeights(products, feedback) {
+ const categoryOf=new Map(products.map(p=>[p.id,p.category]));
+ const categories={};
+ const tally=(ids,step)=>{for(const id of ids??[]){const c=categoryOf.get(id);if(c)categories[c]=(categories[c]??0)+step;}};
+ tally(feedback?.liked,1);tally(feedback?.disliked,-1);
+ for(const c of Object.keys(categories)){categories[c]=Math.max(-2,Math.min(2,categories[c]));if(!categories[c])delete categories[c];}
+ return {categories,disliked:new Set(feedback?.disliked??[])};
+}
+export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false, feedback = null, giftAware = false } = {}) {
+ const suited=recipientCategories(s.recipients,{profiles:giftAware});
+ const gender=giftAware?recipientGender(s.recipients):null;
+ const age=giftAware?recipientAge(s.recipients):null;
+ const learned=feedbackWeights(products,feedback);
+ const useFeedback=Object.keys(learned.categories).length>0||learned.disliked.size>0;
  const leader=new Map();
  for (const product of products) {
   leader.set(product.category, Math.max(leader.get(product.category) ?? 0, product.rating_count ?? 0));
@@ -35,24 +50,32 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
    || (s.delivery_by && !(product.arrival_date<=s.delivery_by))
    || !(product.stock_sets>=quantity)
    || (product.allergens_declared??[]).some(allergen=>s.excluded_ingredients.includes(allergen))
-   || (s.preferences.includes(FRAGRANCE_TAG) && isFragranceProduct(product))) continue;
+   || (s.preferences.includes(FRAGRANCE_TAG) && isFragranceProduct(product))
+   || genderMismatch(product,gender)
+   || ageMismatch(product,age)
+   // App ranking: parts, pantry staples and appliances are not offered as gifts at all.
+   || (giftAware && giftFit(product)<0)) continue;
 
   const cost=budgetCost(product,s);
   if (cap!==null && cost>cap) continue;
-  const explicitScore=typeScore(product,s)+s.preferences.reduce((score,preference)=>{
+  const feedbackScore=useFeedback?(learned.categories[product.category]??0)+(learned.disliked.has(product.id)?-5:0):0;
+  const explicitScore=feedbackScore+typeScore(product,s)+s.preferences.reduce((score,preference)=>{
    if (preference===`category:${product.category}`) return score+3;
+   // "단 거 싫어하셔" means avoid sweets, not "give groceries": the app ranking only sinks sweet items.
+   if (giftAware && ['unsweetened','less_sweet'].includes(preference)) return score-(looksSweet(product)?2:0);
    if (preference==='unsweetened' && product.sweetness==='unsweetened') return score+2;
    if (preference==='less_sweet') return score+({unsweetened:2,naturally_sweet:1}[product.sweetness]??0);
    return score;
   },0);
   const budgetTier=preferredMinimum!==null&&cost>=preferredMinimum?1:0;
-  const score=explicitScore+(suited.has(product.category)?1:0);
+  const score=explicitScore+(suited.has(product.category)?1:0)+(giftAware?giftFit(product)+(occasionFit(product,s.occasion)?1:0)-(occasionClash(product,s.occasion)?2:0):0);
   const holidaySet=holiday&&isGiftSet(product)?1:0;
   ranked.push({explicitScore,holidaySet,budgetTier,item:{
    ...product,
    popularity:(product.rating_count??0)/(leader.get(product.category)||1),
    total:quantity*(product.price_krw+(s.budget.shipping_included?product.shipping_fee_per_set_krw:0)),
    score,
+   ...(feedbackScore?{feedback_score:feedbackScore}:{}),
   }});
  }
  // Explicit tastes remain meaningful even when matching products cost less than the preferred range.

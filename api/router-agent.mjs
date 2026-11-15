@@ -22,7 +22,7 @@ function changedPatch(before, after) {
 export class RouterInterpretationError extends Error {
   constructor(routing) {super('router_interpretation_unavailable');this.routing=routing;}
 }
-export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, llmMode='single', signal, ...providerOptions}) {
+export async function prototypeRouterTurn(input, products, {extract, apiKey, model, fetcher, llmMode='single', signal, ranking=APP_RANKING, ...providerOptions}) {
   const before=input.state;
   // Existing app intentionally exposes a ONE-gift state, not the multi-set core contract.
   const session={...createSession('prototype-request'),state:engineState(before)};
@@ -34,7 +34,7 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
     if (!Array.isArray(turn.session.issues)||turn.session.issues.some(q=>typeof q!=='string'||q.length>400)) throw Error('invalid_extraction');
     return {patch:changedPatch(stateBefore,turn.session.state),questions:turn.session.issues,unresolved:turn.session.issues.length>0};
   } : undefined;
-  const agent=createAgent({interpret,singleGift:true,ranking:APP_RANKING});
+  const agent=createAgent({interpret,singleGift:true,ranking});
   const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const output=await agent.runTurn({session,request,products:catalog,pendingQuestion:input.issues[0]??'',history:input.history??[],signal});
   if (output.routing.route==='llm_error') throw new RouterInterpretationError(output.routing);

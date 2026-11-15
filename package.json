@@ -15,7 +15,7 @@
     "build": "npm --prefix mobile run build:web",
     "lint": "npm --prefix mobile run lint",
     "typecheck": "npm --prefix mobile run typecheck",
-    "test:core": "node --test tests/*.test.mjs",
+    "test:core": "node --experimental-strip-types --test tests/*.test.mjs",
     "test": "npm run test:core && npm --prefix mobile test && npm --prefix mobile run test:db && node --test api/tests/*.test.mjs && npm --prefix baseline test",
     "setup:local": "node api/setup-local.mjs",
     "dev:api": "npm --prefix api run dev",

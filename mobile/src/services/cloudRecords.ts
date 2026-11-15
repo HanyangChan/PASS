@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { decodeGifts } from '../storage.ts';
 import type { ChatMessage, ChatSession, Gift, GiftRecords } from '../domain';
 import { decodeFeedback, stampConversation, type CardFeedback } from '../cardFeedback.ts';
+import { HISTORY_LIMIT, type PastChat } from '../chatHistory.ts';
 
 const keyOf = (gift: Gift) => `${gift.source ?? 'prototype'}:${gift.id}`;
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -55,6 +56,33 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
   }
   return {
     close() { active = false; },
+    currentId: () => conversationId,
+    // Recent committed conversations for mypage and ranking feedback. Messages load on demand.
+    async listConversations(): Promise<PastChat[]> {
+      await assertOwner();
+      const result = await client.from('conversations').select('id,title,updated_at,conditions').eq('user_id', owner)
+        .eq('conditions->_pass->>committed', 'true').order('updated_at', { ascending: false }).limit(HISTORY_LIMIT);
+      check(result.error);
+      return (result.data ?? []).filter(row => row.conditions?._pass?.version === 1).map(row => ({
+        id: row.id, at: row.updated_at ?? '', title: row.title || '대화', messages: null,
+        recipients: Array.isArray(row.conditions.recipients) ? row.conditions.recipients.filter((r: unknown) => typeof r === 'string') : [],
+        feedback: decodeFeedback(row.conditions._pass.feedback),
+      }));
+    },
+    async loadConversation(id: string): Promise<ChatMessage[]> {
+      await assertOwner();
+      const chat = await client.from('conversations').select('conditions').eq('user_id', owner).eq('id', id).single();
+      check(chat.error);
+      const ids: unknown = chat.data?.conditions?._pass?.message_ids;
+      if (!Array.isArray(ids) || !ids.every(v => typeof v === 'string')) throw new Error('대화 기록 형식을 확인할 수 없어요.');
+      const found = new Map<string, { role: ChatMessage['role']; content: string }>();
+      for (let offset = 0; offset < ids.length; offset += 100) {
+        const result = await client.from('messages').select('id,role,content').eq('user_id', owner).eq('conversation_id', id).in('id', ids.slice(offset, offset + 100));
+        check(result.error);
+        for (const row of result.data ?? []) found.set(row.id, row);
+      }
+      return ids.flatMap(mid => { const row = found.get(mid); return row && ['user', 'assistant'].includes(row.role) ? [{ role: row.role, text: row.content }] : []; });
+    },
     async load(emptySession: ChatSession) {
       await assertOwner();
       const [gifts, chats] = await Promise.all([
