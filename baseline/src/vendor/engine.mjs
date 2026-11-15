@@ -1,7 +1,7 @@
 import {mentionedAllergens} from './allergens.mjs';
 import {FRAGRANCE_TAG,FRAGRANCE_NOTICE,isFragranceProduct} from './fragrance.mjs';
-import {recipientCategories,recipientGender} from './catalog.mjs';
-import {isGiftSet,typeScore,giftFit,genderMismatch,looksSweet} from './ranking.mjs';
+import {recipientCategories,recipientGender,recipientAge} from './catalog.mjs';
+import {isGiftSet,typeScore,giftFit,genderMismatch,looksSweet,ageMismatch,occasionFit,occasionClash} from './ranking.mjs';
 export const initial=()=>({occasion:null,recipients:[],quantity:null,same_product:null,budget:{amount_krw:null,scope:null,shipping_included:null},preferences:[],excluded_categories:[],excluded_ingredients:[],brand:null,delivery_by:null,packaging:null});
 export function apply(state,patch){const next=structuredClone(state); for(const [k,v] of Object.entries(patch))next[k]=k==='budget'?{...next[k],...v}:v;return next}
 export function differences(a,b,path=''){return Object.keys(b).flatMap(k=>{const p=path?`${path}.${k}`:k;return b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])?differences(a[k],b[k],p):JSON.stringify(a[k])!==JSON.stringify(b[k])?[{field:p,before:a[k],after:b[k]}]:[]})}
@@ -28,6 +28,7 @@ export function feedbackWeights(products, feedback) {
 export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false, feedback = null, giftAware = false } = {}) {
  const suited=recipientCategories(s.recipients,{profiles:giftAware});
  const gender=giftAware?recipientGender(s.recipients):null;
+ const age=giftAware?recipientAge(s.recipients):null;
  const learned=feedbackWeights(products,feedback);
  const useFeedback=Object.keys(learned.categories).length>0||learned.disliked.size>0;
  const leader=new Map();
@@ -50,7 +51,10 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
    || !(product.stock_sets>=quantity)
    || (product.allergens_declared??[]).some(allergen=>s.excluded_ingredients.includes(allergen))
    || (s.preferences.includes(FRAGRANCE_TAG) && isFragranceProduct(product))
-   || genderMismatch(product,gender)) continue;
+   || genderMismatch(product,gender)
+   || ageMismatch(product,age)
+   // App ranking: parts, pantry staples and appliances are not offered as gifts at all.
+   || (giftAware && giftFit(product)<0)) continue;
 
   const cost=budgetCost(product,s);
   if (cap!==null && cost>cap) continue;
@@ -64,7 +68,7 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
    return score;
   },0);
   const budgetTier=preferredMinimum!==null&&cost>=preferredMinimum?1:0;
-  const score=explicitScore+(suited.has(product.category)?1:0)+(giftAware?giftFit(product):0);
+  const score=explicitScore+(suited.has(product.category)?1:0)+(giftAware?giftFit(product)+(occasionFit(product,s.occasion)?1:0)-(occasionClash(product,s.occasion)?2:0):0);
   const holidaySet=holiday&&isGiftSet(product)?1:0;
   ranked.push({explicitScore,holidaySet,budgetTier,item:{
    ...product,

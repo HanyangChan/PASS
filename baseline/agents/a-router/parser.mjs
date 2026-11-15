@@ -17,9 +17,33 @@ const categories = [
 // "안 좋아하셔", "못 드세요", "안 써요": they do not use or like it.
 const NOT_USE = '(?:안|못)\\s*(?:좋아(?:하세요|하셔요|하셔|해요|해)?|드세요|드셔(?:요)?|드시고|마셔(?:요)?|마시세요|마시고|써(?:요)?|쓰세요|쓰셔(?:요)?|쓰시고|하세요|하셔(?:요)?|해(?:요)?)';
 const ALL_WORDS =categories.map(([,words])=>words).join('|');
+// Gift items named in the Korean catalog. They only express a wish ("핸드크림 좋아해" → 뷰티); excluding
+// one item ("양말 말고") must not drop its whole category, so they are never used for exclusions.
+const ITEM_WORDS = {
+  food:'한돈|갈비|굴비|전복|갈치|명란|장어|사과|한라봉|샤인머스캣|곶감|참기름|들기름|올리브유|스팸|참치|멸치',
+  health:'배도라지|도라지즙|안마기|마사지기|마사지건|찜질기',
+  snack:'약과|양갱|마카롱|육포|찹쌀떡|에너지바|케이크',
+  coffee_tea:'수제청|원두|드립백|쌍화차|캐모마일',
+  liquor:'막걸리',
+  personal_care:'수건|칫솔|가습기|손난로|핫팩|샴푸',
+  beauty:'핸드크림|바디워시|바디로션|립밤|(?<![가-힣])비누|기초\\s*화장품',
+  accessory:'양말|키링|머플러|목도리|장갑|잠옷|우산|스카프|안대|슬리퍼',
+  kitchen:'텀블러|머그컵|머그|와인잔|보온병|도시락|핸드드립',
+  watch:'손목시계|스마트워치',
+  bag:'반지갑|카드지갑|에코백',
+  decor:'디퓨저|액자|포토북|무릎담요|담요|쿠션|스탠드',
+  fitness:'요가매트|캠핑\\s*의자',
+  toy:'보드게임|퍼즐',
+  stationery:'다이어리|만년필|샤프|필통|플래너|독서대|포스트잇|형광펜|볼펜',
+  digital:'폴라로이드|전자책',
+  flower:'꽃바구니|튤립|프리지아|장미|카네이션|수국|백합|해바라기|작약|안개꽃',
+};
+const wishWords = (category,words) => ITEM_WORDS[category] ? `${ITEM_WORDS[category]}|${words}` : words;
+const WISH_WORDS = categories.map(([category,words])=>wishWords(category,words)).join('|');
 // "X나 Y", "X랑 Y", "X, Y": the leading items of a list, each followed by a joining word.
-const LIST = `(?:(?:${ALL_WORDS})\\s*(?:이나|나|이랑|랑|하고|와|과|및|,|또는)\\s*)+`;
-const wordsIn = text => text ? categories.flatMap(([category,words])=>[...text.matchAll(new RegExp(words,'g'))].map(m=>[category,m[0]])) : [];
+const listOf = all => `(?:(?:${all})\\s*(?:이나|나|이랑|랑|하고|와|과|및|,|또는)\\s*)+`;
+const LIST = listOf(ALL_WORDS), WISH_LIST = listOf(WISH_WORDS);
+const wordsIn = (text, wish=false) => text ? categories.flatMap(([category,words])=>[...text.matchAll(new RegExp(wish?wishWords(category,words):words,'g'))].map(m=>[category,m[0]])) : [];
 const question = text => ({ patch:{}, questions:[text], unresolved:true, route:'clarification' });
 const RECIPIENTS='직장\\s*상사|직장\\s*동료|회사\\s*동료|여자\\s*친구|남자\\s*친구|여친|남친|시어머니|시아버지|장모님|장인어른|부모님|어머니|아버지|할머니|할아버지|교수님|선생님|선배|후배|팀장님|부장님|상사|엄마|아빠|친구|동료|연인|애인|남편|아내|와이프|언니|누나|오빠|남동생|여동생|동생|조카|아들|딸|손주|손녀|자녀|이모|삼촌|고모|(?<![가-힣])형(?![가-힣])';
 const recipientName = r => { const k=r.replace(/\s+/g,''); return ({엄마:'어머니',아빠:'아버지',여친:'여자친구',남친:'남자친구',와이프:'아내',회사동료:'직장동료',직장상사:'직장 상사'})[k] ?? k; };
@@ -108,9 +132,10 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   }
   const take=(re,fn)=>{rest=rest.replace(re,(...args)=>{fn?.(...args);return ' ';});};
   const occasions=[];
-  const occasionOf=o=>{o=o.replace(/\s+/g,'');return /설날|추석|한가위/.test(o)?'명절':o==='생신'?'생일':/기념일/.test(o)?'기념일':/수능|수험/.test(o)?'수험':o==='스승의날'?'스승의 날':o;};
-  // The occasion may come before the recipient: "설날 부모님 선물", "졸업 축하 친구 선물".
-  take(new RegExp(`(명절|설날|추석|한가위|생일|생신|합격|결혼\\s*기념일|기념일|수능|수험|졸업|입학|취업|승진|이직|퇴직|은퇴|집들이|결혼|출산|환갑|칠순|팔순|고희|돌잔치|어버이날|스승의\\s*날|크리스마스|발렌타인\\s*데이|화이트\\s*데이|빼빼로\\s*데이)(?:\\s*축하)?(?:\\s*기념)?(?:에|때|날에)?(?=\\s*(?:(?:${RECIPIENTS})(?:께|에게|한테|의)?\\s*)?(?:(?:드릴|줄|드리는|주는)\\s+)?선물|\\s*$|\\s+(?:${RECIPIENTS}))`,'g'),(_,occasion)=>occasions.push(occasionOf(occasion)));
+  const occasionOf=o=>{o=o.replace(/\s+/g,'');return /설날|추석|한가위/.test(o)?'명절':o==='생신'?'생일':/기념일/.test(o)?'기념일':/수능|수험/.test(o)?'수험':o==='개원'?'개업':o==='스승의날'?'스승의 날':o;};
+  // The occasion may come before the recipient or the product: "설날 부모님 선물", "수능 보는 조카",
+  // "생신 꽃다발", "개업 축하 화분".
+  take(new RegExp(`(명절|설날|추석|한가위|생일|생신|합격|결혼\\s*기념일|기념일|수능|수험생|수험|개업|개원|졸업|입학|취업|승진|이직|퇴직|은퇴|집들이|결혼|출산|환갑|칠순|팔순|고희|돌잔치|어버이날|스승의\\s*날|크리스마스|발렌타인\\s*데이|화이트\\s*데이|빼빼로\\s*데이)(?:\\s*축하)?(?:\\s*기념)?(?:에|때|날에)?(?:\\s*(?:보는|치는|준비하는|앞둔|준비\\s*중인))?(?=\\s*(?:(?:${RECIPIENTS})(?:께|에게|한테|의)?\\s*)?(?:(?:드릴|줄|드리는|주는)\\s+)?선물|\\s*$|\\s+(?:${RECIPIENTS})|\\s*(?:${ALL_WORDS}))`,'g'),(_,occasion)=>occasions.push(occasionOf(occasion)));
   if (unique(occasions).length>1) return question('이번 선물은 명절용인가요, 생일용인가요?');
   if (occasions.length) patch.occasion=occasions[0];
   const recipients=[];
@@ -180,14 +205,14 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
         patch.preferences=(patch.preferences??state.preferences).filter(x=>x!==`category:${cat}`&&!(cat==='coffee_tea'&&['type:tea','type:coffee'].includes(x)));
       }
     });
-    take(new RegExp(`(${LIST})?(${words})(?:\\s*(?:세트|제품|상품|종류|류))?(?:는|은|를|을|가|이|에|도|로|으로)?(?:\\s*(?:하는|하시는|마시는|드시는|듣는|쓰는|모으는|받는)\\s*(?:것|거|걸|건)?(?:을|를)?)?\\s*(?:${LIKE})`,'g'),(_,list,word)=>{
-      for (const [cat,w] of [...wordsIn(list),[category,word]]) like(cat,w);
+    take(new RegExp(`(${WISH_LIST})?(${wishWords(category,words)})(?:\\s*(?:선물\\s*세트|세트|제품|상품|종류|류))?(?:는|은|를|을|가|이|에|도|로|으로)?(?:\\s*(?:하는|하시는|마시는|드시는|듣는|쓰는|모으는|받는)\\s*(?:것|거|걸|건)?(?:을|를)?)?\\s*(?:${LIKE})`,'g'),(_,list,word)=>{
+      for (const [cat,w] of [...wordsIn(list,true),[category,word]]) like(cat,w);
     });
   }
   // A bare product word is what they want: "이어폰 같은 거", "장난감", "목걸이 같은 액세서리" (first word wins).
   for (const [category,words] of categories) {
-    take(new RegExp(`(${LIST})?(?<![가-힣])(${words})(?:(?:\\s*(?:같은|종류(?:의)?|쪽(?:으로)?|류(?:의)?|계열(?:의)?)(?:\\s*(?:거|것|걸|건|제품|상품|선물|[가-힣]{1,6}))?)|(?:\\s*(?:이나|나|이면|면)\\s*(?:좋겠어(?:요)?|좋아(?:요)?|괜찮아(?:요)?))|(?:\\s*(?:제품|상품|세트))(?:으로|로)?|(?:으로|로))?(?=$|[\\s,.!?])`,'g'),(_,list,word)=>{
-      for (const [cat,w] of [...wordsIn(list),[category,word]]) if (!(patch.excluded_categories??state.excluded_categories).includes(cat)) like(cat,w);
+    take(new RegExp(`(${WISH_LIST})?(?<![가-힣])(${wishWords(category,words)})(?:(?:\\s*(?:같은|종류(?:의)?|쪽(?:으로)?|류(?:의)?|계열(?:의)?)(?:\\s*(?:거|것|걸|건|제품|상품|선물|[가-힣]{1,6}))?)|(?:\\s*(?:이나|나|이면|면)\\s*(?:좋겠어(?:요)?|좋아(?:요)?|괜찮아(?:요)?))|(?:\\s*(?:선물\\s*세트|선물|제품|상품|세트))(?:으로|로)?|(?:으로|로))?(?=$|[\\s,.!?])`,'g'),(_,list,word)=>{
+      for (const [cat,w] of [...wordsIn(list,true),[category,word]]) if (!(patch.excluded_categories??state.excluded_categories).includes(cat)) like(cat,w);
     });
   }
   take(/브랜드\s*상관없어|브랜드\s*조건\s*취소/g,()=>{patch.brand=null;});

@@ -4,20 +4,37 @@ export function isGiftSet(product) {
  return product.gift_set === true || /선물\s*(?:세트|박스)|\bgift[\s-]*set\b/i.test(`${product.name??''} ${product.name_en??''}`);
 }
 const nameOf=product=>`${product.name??''} ${product.name_en??''}`;
-// Items labelled for the other gender are not offered to a recipient whose gender is known.
+// Items labelled for one gender. Korean listing titles also stuff recipient words ("남자친구 부모님
+// 선물"), so "남자친구/여자친구" are not labels, and a title naming both genders is unisex.
+const FOR_WOMEN=/여성|여자(?!\s*친구)|우먼|레이디|숙녀|걸스|\bwom[ae]n'?s?\b|\bladies\b|\bgirls?\b|\bher\b/i;
+const FOR_MEN=/남성|남자(?!\s*친구)|맨즈|\bmen'?s?\b|\bboys?\b|\bhis\b|수염|면도|\bbeard\b|\bshav(?:er|ing)\b/i;
 export function genderMismatch(product,gender) {
- if(!gender||/unisex|남녀\s*공용|유니섹스/i.test(nameOf(product)))return false;
  const name=nameOf(product);
- if(gender==='male')return /여성|여자|레이디|숙녀|걸스|\bwom[ae]n'?s?\b|\bladies\b|\bgirls?\b|\bher\b/i.test(name);
- return /남성|남자|맨즈|\bmen'?s?\b|\bboys?\b|\bhis\b|수염|면도|\bbeard\b|\bshav(?:er|ing)\b/i.test(name);
+ if(!gender||/unisex|남녀\s*공용|유니섹스|커플/i.test(name)||(FOR_WOMEN.test(name)&&FOR_MEN.test(name)))return false;
+ return (gender==='male'?FOR_WOMEN:FOR_MEN).test(name);
 }
+// Baby/kid products for adults, and school-exam items for parents and grandparents.
+const FOR_KIDS=/아기|신생아|유아|베이비|\bbaby\b|\binfant\b|\btoddler\b|키즈|\bkids?\b|어린이|아동|유치원/i;
+const FOR_STUDENTS=/수능|수험생|고등\s*학생|중학생|초등학생|학생용/;
+export function ageMismatch(product,age) {
+ const name=nameOf(product);
+ if(age==='child')return false;
+ if(age==='elder'&&FOR_STUDENTS.test(name))return true;
+ return Boolean(age)&&FOR_KIDS.test(name);
+}
+// Occasion words → occasion tags carried by the Korean web catalog.
+const OCCASION_TAGS={명절:'holiday',설:'holiday',추석:'holiday',생일:'birthday',수험:'exam'};
+export const occasionFit=(product,occasion)=>Boolean(occasion&&product.occasions?.includes(OCCASION_TAGS[occasion]));
+// Items whose title ties them to one occasion (opening-day plants, exam-luck sweets) do not suit another.
+const SPECIFIC_OCCASIONS=[[/개업|개원|오픈\s*축하/,['개업']],[/승진|영전|취임/,['승진']],[/수능|수험생|합격\s*(?:엿|기원)|합격의\s*맛|시험\s*응원/,['수험','합격']]];
+export const occasionClash=(product,occasion)=>SPECIFIC_OCCASIONS.some(([re,fits])=>re.test(nameOf(product))&&!fits.includes(occasion));
 // How much a product reads as a gift: sets and gift boxes up, pantry staples and device parts down.
 // ponytail: name keywords only; replace with a curated gift flag in the catalog when one exists.
 export function giftFit(product) {
  const name=nameOf(product);
  // Listing titles say "perfect gift" for anything, so only real sets, boxes and hampers count.
  if(isGiftSet(product)||/선물\s*(?:세트|박스|상자|바구니)|기프트\s*(?:박스|세트)|\bgift\s*(?:box|hamper|basket)\b|\bhamper\b/i.test(name))return 1;
- if(/감미료|sweetener|(?<![가-힣])기\s*\d|\bghee\b|밀가루|\bflour\b|\batta\b|설탕|소금|식용유|cooking oil|코코넛\s*오일|coconut oil|풍선|balloon|베이킹\s*매트|baking mat|쿡탑|cooktop|가스\s*(?:레인지|스토브)|\bstove\b|압력솥|pressure cooker|이들리|\bidli\b|파니야라캄|paniyaram|패치|\bpatch(?:es)?\b|트리머\s*벨트|waist trimmer|케이스|\bcase\b|스트랩|\bstrap\b|충전기|charger|케이블|\bcable\b|리필|refill|디스플레이\s*케이스/i.test(name))return -2;
+ if(/감미료|sweetener|(?<![가-힣])기\s*\d|\bghee\b|밀가루|\bflour\b|\batta\b|설탕|소금|식용유|cooking oil|코코넛\s*오일|coconut oil|풍선|balloon|베이킹\s*매트|baking mat|쿡탑|cooktop|가스\s*(?:레인지|스토브)|\bstove\b|압력솥|pressure cooker|이들리|\bidli\b|파니야라캄|paniyaram|패치|\bpatch(?:es)?\b|트리머\s*벨트|waist trimmer|케이스|\bcase\b|스트랩|\bstrap\b|충전기|charger|케이블|\bcable\b|리필|refill|디스플레이\s*케이스|연장\s*(?:줄|체인)|교체용|부품|파우치|\bpouch\b/i.test(name))return -2;
  return 0;
 }
 // Sweet by tag or by name; "no added sugar" style labels are not sweet.
