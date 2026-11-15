@@ -3,27 +3,41 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CATEGORY_NAMES } from '../../lib/catalog.mjs';
 import { feedbackWeights } from '../../lib/engine.mjs';
 import { colors as c, fonts } from './theme';
-import type { ChatMessage, EngineProduct } from './domain';
-import type { FeedbackSignal, PastChat } from './chatHistory';
+import type { EngineProduct } from './domain';
+import type { FeedbackSignal, PastChat, PastChatDetail } from './chatHistory';
 
 const category = (key: string) => (CATEGORY_NAMES as Record<string, string>)[key] ?? key;
 const date = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}월 ${d.getDate()}일`; };
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
-// Mypage: the score weights the ranking currently applies, then past chats (read only).
-export function PastChats({ chats, signal, products, open }: {
+// Mypage shows the current feedback weights and archived conversations.
+export function PastChats({ chats, signal, products, open, remove }: {
   chats: PastChat[]; signal: FeedbackSignal[]; products: EngineProduct[];
-  open: (chat: PastChat) => Promise<ChatMessage[]>
+  open: (chat: PastChat) => Promise<PastChatDetail>;
+  remove?: (id: string) => Promise<void>;
 }) {
-  const [opened, setOpened] = useState<{ id: string; messages: ChatMessage[] | null; error?: string } | null>(null);
+  const [opened, setOpened] = useState<{ id: string; detail: PastChatDetail | null; error?: string } | null>(null);
+  const [deletion, setDeletion] = useState<{ id: string; pending: boolean; error?: string } | null>(null);
   const weights = feedbackWeights(products, { liked: signal.filter(f => f.helpful).map(f => f.giftId), disliked: signal.filter(f => !f.helpful).map(f => f.giftId) });
   const entries = Object.entries(weights.categories as Record<string, number>).sort((a, b) => b[1] - a[1]);
   const name = new Map(products.map(p => [p.id, p.name.replace('가상 ', '')]));
   const toggle = (chat: PastChat) => {
     if (opened?.id === chat.id) return setOpened(null);
-    setOpened({ id: chat.id, messages: chat.messages });
-    if (!chat.messages) open(chat).then(messages => setOpened(o => o?.id === chat.id ? { id: chat.id, messages } : o),
-      () => setOpened(o => o?.id === chat.id ? { id: chat.id, messages: [], error: '대화를 불러오지 못했어요.' } : o));
+    const request = { id: chat.id, detail: null };
+    setOpened(request);
+    open(chat).then(detail => setOpened(current => current === request ? { id: chat.id, detail } : current),
+      () => setOpened(current => current === request ? { ...request, error: '대화를 불러오지 못했어요.' } : current));
+  };
+  const confirmRemoval = async (id: string) => {
+    if (!remove || deletion?.pending) return;
+    setDeletion({ id, pending: true });
+    try {
+      await remove(id);
+      setOpened(current => current?.id === id ? null : current);
+      setDeletion(null);
+    } catch {
+      setDeletion({ id, pending: false, error: '대화를 삭제하지 못했어요. 다시 시도해주세요.' });
+    }
   };
   return (
     <View style={st.wrap}>
@@ -48,9 +62,29 @@ export function PastChats({ chats, signal, products, open }: {
             </Pressable>
             {isOpen && (
               <View style={st.body}>
-                {opened.messages === null ? <Text style={st.muted}>불러오는 중…</Text> : opened.error ? <Text style={st.muted}>{opened.error}</Text>
-                  : opened.messages.map((m, i) => <Text key={i} style={m.role === 'user' ? st.user : st.assistant}>{m.text}</Text>)}
+                {opened.error ? <Text style={st.muted}>{opened.error}</Text> : !opened.detail ? <Text style={st.muted}>불러오는 중…</Text> : <>
+                  {opened.detail.messages.map((m, i) => <Text key={i} style={m.role === 'user' ? st.user : st.assistant}>{m.text}</Text>)}
+                  {opened.detail.recommendations.length > 0 && <>
+                    <Text style={st.line}>그때 추천한 상품</Text>
+                    {opened.detail.recommendations.map(gift => <Text key={gift.id} style={st.muted}>{gift.name} · {gift.price.toLocaleString('ko-KR')}원</Text>)}
+                  </>}
+                </>}
                 {chat.feedback.map(f => <Text key={f.giftId} style={st.muted}>{f.helpful ? '👍' : '👎'} {f.rank}순위 · {name.get(f.giftId) ?? f.giftId}</Text>)}
+                {remove && (deletion?.id === chat.id ? (
+                  <View style={st.body}>
+                    <Text style={st.muted}>{deletion.error ?? '이 대화를 삭제할까요?'}</Text>
+                    <Pressable accessibilityRole="button" disabled={deletion.pending} onPress={() => void confirmRemoval(chat.id)}>
+                      <Text style={st.line}>{deletion.pending ? '삭제 중…' : '삭제'}</Text>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" disabled={deletion.pending} onPress={() => setDeletion(null)}>
+                      <Text style={st.muted}>취소</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable accessibilityRole="button" disabled={deletion?.pending} onPress={() => setDeletion({ id: chat.id, pending: false })}>
+                    <Text style={st.muted}>대화 삭제</Text>
+                  </Pressable>
+                ))}
               </View>
             )}
           </View>

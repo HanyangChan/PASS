@@ -1,8 +1,15 @@
 import { decodeFeedback, type CardFeedback } from './cardFeedback.ts';
-import type { ChatMessage } from './domain';
+import { decodeGifts } from './storage.ts';
+import type { ChatMessage, Gift } from './domain';
 
 // A finished conversation as mypage shows it. Account rows load messages on demand (`messages: null`).
-export type PastChat = { id: string; at: string; title: string; recipients: string[]; messages: ChatMessage[] | null; feedback: CardFeedback[] };
+export type PastChat = { id: string; at: string; title: string; recipients: string[]; messages: ChatMessage[] | null; feedback: CardFeedback[]; recommendations?: Gift[] };
+export type PastChatDetail = { messages: ChatMessage[]; recommendations: Gift[] };
+export const HISTORY_RECOMMENDATION_LIMIT = 12;
+export function decodeHistoryRecommendations(value: unknown): Gift[] {
+  return Array.isArray(value) ? decodeGifts(JSON.stringify(value.slice(0, HISTORY_RECOMMENDATION_LIMIT))) : [];
+}
+
 export type FeedbackSignal = { giftId: string; helpful: boolean };
 export const historyKey = 'pass.chat-history.v1';
 export const HISTORY_LIMIT = 30;
@@ -14,7 +21,7 @@ export function decodeHistory(raw: unknown): PastChat[] {
   return raw.filter(c => c && typeof c === 'object' && str(c.id, 100) && str(c.at, 40) && str(c.title, 200) &&
     Array.isArray(c.recipients) && c.recipients.every((r: unknown) => str(r, 40)) && Array.isArray(c.messages) &&
     c.messages.every((m: ChatMessage) => m && ['user', 'assistant'].includes(m.role) && str(m.text, 16000)))
-    .map(c => ({ id: c.id, at: c.at, title: c.title, recipients: c.recipients, messages: c.messages, feedback: decodeFeedback(c.feedback) }))
+    .map(c => ({ id: c.id, at: c.at, title: c.title, recipients: c.recipients, messages: c.messages, feedback: decodeFeedback(c.feedback), ...(Array.isArray(c.recommendations) ? { recommendations: decodeHistoryRecommendations(c.recommendations) } : {}) }))
     .slice(0, HISTORY_LIMIT);
 }
 

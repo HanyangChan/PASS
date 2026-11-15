@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { decodeGifts } from '../storage.ts';
 import type { ChatMessage, ChatSession, Gift, GiftRecords } from '../domain';
 import { decodeFeedback, stampConversation, type CardFeedback } from '../cardFeedback.ts';
-import { HISTORY_LIMIT, type PastChat } from '../chatHistory.ts';
+import { decodeHistoryRecommendations, HISTORY_LIMIT, type PastChat, type PastChatDetail } from '../chatHistory.ts';
 
 const keyOf = (gift: Gift) => `${gift.source ?? 'prototype'}:${gift.id}`;
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -33,7 +33,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
   // lighter write used when nothing else saved it. `written` is what the server last acknowledged.
   let feedbackState: CardFeedback[] = [];
   let written = '[]';
-  let committed: { id: string; state: ChatSession['state']; ids: string[]; issues: string[] } | null = null;
+  let committed: { id: string; state: ChatSession['state']; ids: string[]; issues: string[]; recommendations: Gift[] } | null = null;
   async function assertOwner() {
     if (!active) throw new Error('계정이 변경되어 저장을 취소했어요.');
     const { data, error } = await client.auth.getSession(); check(error);
@@ -69,11 +69,13 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         feedback: decodeFeedback(row.conditions._pass.feedback),
       }));
     },
-    async loadConversation(id: string): Promise<ChatMessage[]> {
+    async loadConversation(id: string): Promise<PastChatDetail> {
+      await queue;
       await assertOwner();
       const chat = await client.from('conversations').select('conditions').eq('user_id', owner).eq('id', id).single();
       check(chat.error);
-      const ids: unknown = chat.data?.conditions?._pass?.message_ids;
+      const meta = chat.data?.conditions?._pass;
+      const ids: unknown = meta?.committed === true ? meta.message_ids : null;
       if (!Array.isArray(ids) || !ids.every(v => typeof v === 'string')) throw new Error('대화 기록 형식을 확인할 수 없어요.');
       const found = new Map<string, { role: ChatMessage['role']; content: string }>();
       for (let offset = 0; offset < ids.length; offset += 100) {
@@ -81,7 +83,20 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         check(result.error);
         for (const row of result.data ?? []) found.set(row.id, row);
       }
-      return ids.flatMap(mid => { const row = found.get(mid); return row && ['user', 'assistant'].includes(row.role) ? [{ role: row.role, text: row.content }] : []; });
+      await assertOwner();
+      const messages = ids.map(mid => {
+        const row = found.get(mid);
+        if (!row || !['user', 'assistant'].includes(row.role) || typeof row.content !== 'string') throw new Error('대화 기록 일부를 불러오지 못했어요.');
+        return { role: row.role, text: row.content };
+      });
+      return { messages, recommendations: decodeHistoryRecommendations(meta?.recommendations) };
+    },
+    deleteConversation(id: string) {
+      return enqueue(async () => {
+        if (id === conversationId) throw new Error('현재 대화는 지난 대화 목록에서 삭제할 수 없어요.');
+        const result = await client.from('conversations').delete().eq('user_id', owner).eq('id', id);
+        check(result.error);
+      });
     },
     async load(emptySession: ChatSession) {
       await assertOwner();
@@ -124,7 +139,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         if (normalized.notices.length) migrationNotice = `${normalized.notices.join(' ')} 조건 편집창에서 범위를 확인해주세요.`;
         conversationId = conversation.id;
         feedback = decodeFeedback(_pass.feedback);
-        committed = { id: conversation.id, state: session.state, ids, issues: session.issues };
+        committed = { id: conversation.id, state: session.state, ids, issues: session.issues, recommendations: decodeHistoryRecommendations(_pass.recommendations) };
         messageIds = ids;
         messageTimes = ids.map(id => found.get(id)!.created_at);
       }
@@ -144,7 +159,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         // Not committed yet (or a newer conversation took over): the next chat commit carries it.
         if (!committed || committed.id !== id) return;
         if (JSON.stringify(feedback) === written) return; // a chat commit already carried it
-        const update = await client.from('conversations').update({ conditions: { ...committed.state, _pass: { version: 1, committed: true, message_ids: committed.ids, issues: committed.issues, feedback } } }).eq('id', id).eq('user_id', owner);
+        const update = await client.from('conversations').update({ conditions: { ...committed.state, _pass: { version: 1, committed: true, message_ids: committed.ids, issues: committed.issues, feedback, recommendations: committed.recommendations } } }).eq('id', id).eq('user_id', owner);
         check(update.error);
         written = JSON.stringify(feedback);
       });
@@ -178,7 +193,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
         }
       });
     },
-    saveChat(sessionValue: ChatSession, messagesValue: ChatMessage[]) {
+    saveChat(sessionValue: ChatSession, messagesValue: ChatMessage[], recommendationsValue?: Gift[]) {
       const session = copy(sessionValue), messages = copy(messagesValue);
       if (messages.some(message => !message.text || [...message.text].length > 16000)) return Promise.reject(new Error('메시지는 16,000자까지 저장할 수 있어요.'));
       // Reserve IDs at enqueue time so a failed request can be retried without duplicates.
@@ -188,8 +203,10 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       for (let index = messageIds.length; index < messages.length; index++) { messageIds.push(uuid()); messageTimes.push(new Date().toISOString()); }
       const ids = messageIds.slice(0, messages.length), times = messageTimes.slice(0, messages.length);
       const feedback = stampConversation(copy(feedbackState), id);
+      const snapshot = recommendationsValue === undefined ? undefined : decodeHistoryRecommendations(recommendationsValue);
       previousMessages = copy(messages);
       return enqueue(async () => {
+        const recommendations = snapshot ?? (committed?.id === id ? committed.recommendations : []);
         // Initial row is retry-safe. The final conditions update commits the ordered message IDs.
         // Readers ignore messages from an interrupted write until that commit succeeds.
         const create = await client.from('conversations').upsert({ id, user_id: owner, conditions: { ...session.state, _pass: { version: 1, committed: false, message_ids: [], issues: [], feedback: [] } } }, { onConflict: 'id', ignoreDuplicates: true });
@@ -198,9 +215,9 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
           const result = await client.from('messages').upsert(messages.map((message, index) => ({ id: ids[index], conversation_id: id, user_id: owner, role: message.role, content: message.text, created_at: times[index] })), { onConflict: 'id' });
           check(result.error);
         }
-        const commit = await client.from('conversations').update({ conditions: { ...session.state, _pass: { version: 1, committed: true, message_ids: ids, issues: session.issues, feedback } }, title: messages.find(message => message.role === 'user')?.text.slice(0, 80) ?? '' }).eq('id', id).eq('user_id', owner);
+        const commit = await client.from('conversations').update({ conditions: { ...session.state, _pass: { version: 1, committed: true, message_ids: ids, issues: session.issues, feedback, recommendations } }, title: messages.find(message => message.role === 'user')?.text.slice(0, 80) ?? '' }).eq('id', id).eq('user_id', owner);
         check(commit.error);
-        committed = { id, state: session.state, ids, issues: session.issues };
+        committed = { id, state: session.state, ids, issues: session.issues, recommendations };
         written = JSON.stringify(feedback);
       });
     },

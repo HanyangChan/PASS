@@ -61,7 +61,7 @@ import { personalizeSession, emptyPersonalization, assertSameRecipient, recipien
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
-import { chatTitle, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
+import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
 import { PastChats } from './src/PastChats';
 import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
@@ -161,6 +161,7 @@ export function AppContent({
     pastChats,
     rankingSignal,
     openPastChat,
+    deletePastChat,
     heroFailed,
     setHeroFailed,
     recipient,
@@ -1048,7 +1049,7 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
-                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat}/>
+                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
                 </View>
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
@@ -1147,6 +1148,8 @@ function usePassState() {
   const rankingSignalRef = useRef<FeedbackSignal[]>([]);
   const pastFeedback = useRef<CardFeedback[]>([]);
   const [pastChats, setPastChats] = useState<PastChat[]>([]);
+  const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
+  const deletedPastChats = useRef(new Set<string>());
   const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
@@ -1224,6 +1227,11 @@ function usePassState() {
       if (chatFlight.current.revision !== revision) return null;
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(baseSession)) setSession(turn.session);
       if (operation !== 'view') {
+        const result = 'view' in turn ? turn.view.result : chatService.view(turn.session).result;
+        if (result.items.length) {
+          setChatRecommendations(result.items.slice(0, HISTORY_RECOMMENDATION_LIMIT)
+            .map(product => chatService.toGift(product, turn.session.state)));
+        }
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
@@ -1281,15 +1289,17 @@ function usePassState() {
     // Save the ending conversation's feedback first; the save is queued before anything for the new chat.
     void feedbackScheduler.current?.flushNow();
     // The ending chat becomes history: its feedback now counts as past, and guests archive it on the device.
-    pastFeedback.current = [...pastFeedback.current, ...cardFeedbackRef.current];
     if (messages.length) {
-      const ended: PastChat = { id: cloud.current?.currentId() ?? guestSession.current, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback: cardFeedbackRef.current };
+      const id = cloud.current?.currentId() ?? guestSession.current;
+      const feedback = stampConversation(cardFeedbackRef.current, id);
+      pastFeedback.current = [...pastFeedback.current, ...feedback];
+      const ended: PastChat = { id, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback, recommendations: chatRecommendations };
       setPastChats(old => [ended, ...old.filter(c => c.id !== ended.id)].slice(0, 30));
       if (!cloud.current) historyRepository.archive(ended).catch(() => setNotice('기기에 지난 대화를 저장하지 못했어요.'));
     }
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
-    setChatPending(false); setChatError(''); setRecommendation(null);
+    setChatPending(false); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
     const next = chatService.createSession();
     setSession(next); setMessages([]);
     return next;
@@ -1314,27 +1324,29 @@ function usePassState() {
         : Promise.all([historyRepository.load(), feedbackRepository.load()]).then(([list, logged]) => ({ list, logged: logged.filter(f => !list.some(c => c.id === f.conversationId)) }));
       history.then(({ list, logged }) => {
         if (!mounted) return;
-        setPastChats(list);
-        pastFeedback.current = [...list.flatMap(c => c.feedback), ...logged];
+        const remaining = list.filter(chat => !deletedPastChats.current.has(chat.id));
+        setPastChats(current => [...current, ...remaining.filter(chat => !current.some(shown => shown.id === chat.id))].slice(0, 30));
+        const localIds = new Set(pastFeedback.current.map(item => item.conversationId));
+        pastFeedback.current = [...remaining.filter(chat => !localIds.has(chat.id)).flatMap(chat => chat.feedback), ...logged, ...pastFeedback.current];
         refreshSignal();
       }).catch(() => { if (mounted) setNotice('지난 대화를 불러오지 못했어요.'); });
       persistence.current.restore({ gifts: JSON.stringify({ saved: records.saved, recent: records.recent }), chat: JSON.stringify({ session: records.session, messages: records.messages }) });
       if ('failed' in records && Array.isArray(records.failed) && records.failed.length) setNotice('기기에 저장한 기록 일부를 불러오지 못했어요.');
       setReady(true);
     }).catch(() => { if (mounted) setLoadError('계정 기록을 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.'); });
-    return () => { mounted = false; repository?.close(); };
+    return () => { mounted = false; repository?.close(); if (cloud.current === repository) cloud.current = null; };
   }, [owner, loadAttempt]);
   useEffect(() => {
     if (!ready) return;
     let mounted = true;
     const revision = ++saveRevision.current;
     const gifts = JSON.stringify({ saved, recent });
-    const chat = JSON.stringify({ session, messages });
+    const chat = JSON.stringify({ session, messages, recommendations: chatRecommendations });
     const tasks: Promise<void>[] = [];
     const giftWrite = persistence.current.write('gifts', gifts, () => cloud.current ? cloud.current.saveGifts({ saved, recent }) : giftRepository.save({ saved, recent }));
     if (giftWrite) tasks.push(giftWrite);
     if (cloud.current) {
-      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages));
+      const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages, chatRecommendations));
       if (chatWrite) tasks.push(chatWrite);
     }
     if (tasks.length) Promise.all(tasks).then(() => {
@@ -1343,7 +1355,7 @@ function usePassState() {
       if (mounted && revision === saveRevision.current) { setSyncFailed(true); setNotice(user ? '계정에 기록을 저장하지 못했어요. 다시 시도해주세요.' : '기기에 기록을 저장하지 못했어요.'); }
     });
     return () => { mounted = false; };
-  }, [saved, recent, session, messages, ready, saveAttempt, user]);
+  }, [saved, recent, session, messages, chatRecommendations, ready, saveAttempt, user]);
   useEffect(() => {
     // Calendar events are device-local only (not part of the account sync above),
     // so they load and save independently of login state.
@@ -1403,7 +1415,19 @@ function usePassState() {
     rateCard,
     pastChats,
     rankingSignal,
-    openPastChat: async (chat: PastChat) => chat.messages ?? (cloud.current ? cloud.current.loadConversation(chat.id) : []),
+    openPastChat: async (chat: PastChat) => chat.messages
+      ? { messages: chat.messages, recommendations: chat.recommendations ?? [] }
+      : cloud.current ? cloud.current.loadConversation(chat.id) : { messages: [], recommendations: [] },
+    deletePastChat: async (id: string) => {
+      const repository = cloud.current;
+      if (!repository) return;
+      await repository.deleteConversation(id);
+      if (cloud.current !== repository) return;
+      deletedPastChats.current.add(id);
+      setPastChats(current => current.filter(chat => chat.id !== id));
+      pastFeedback.current = pastFeedback.current.filter(item => item.conversationId !== id);
+      refreshSignal();
+    },
     loadError,
     retryLoad: () => setLoadAttempt(value => value + 1),
     chatService,

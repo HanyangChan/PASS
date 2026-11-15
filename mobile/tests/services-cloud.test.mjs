@@ -11,7 +11,7 @@ function fixture() {
   const client = {
     auth: { getSession: async () => ({ data: { session: { user: { id: owner } } }, error: null }) },
     from(table) {
-      let operation = 'select', payload, options, filters = [], sorting, maximum = 1000, start = 0;
+      let operation = 'select', payload, options, filters = [], sorting, maximum = 1000, start = 0, single = false;
       const query = {
         select() { return query; },
         eq(key, value) { filters.push(row => key === 'conditions->_pass->>committed' ? String(row.conditions._pass.committed) === value : row[key] === value); return query; },
@@ -19,6 +19,7 @@ function fixture() {
         order(key, { ascending }) { sorting = [key, ascending]; return query; },
         range(from, to) { start = from; maximum = to - from + 1; return query; },
         limit(value) { maximum = value; return query; },
+        single() { single = true; return query; },
         upsert(value, opt) { operation = 'upsert'; payload = structuredClone(value); options = opt; return query; },
         update(value) { operation = 'update'; payload = structuredClone(value); return query; },
         delete() { operation = 'delete'; return query; },
@@ -41,7 +42,7 @@ function fixture() {
             selected = selected.slice(start, start + maximum);
           }
           if (failAfter === `${table}:${operation}`) { failAfter = ''; return resolve({ error: { message: 'lost acknowledgement' }, data: null }); }
-          resolve({ data: structuredClone(selected), error: null });
+          resolve({ data: structuredClone(single ? selected[0] ?? null : selected), error: null });
         },
       };
       return query;
@@ -218,4 +219,39 @@ test('old conversations without a feedback field still load', async () => {
   await repo.saveChat(empty(), [message('first')]);
   delete f.rows.conversations[0].conditions._pass.feedback;
   assert.deepEqual((await f.repo().load(empty())).feedback, []);
+});
+
+test('queued chat saves and feedback keep the historical recommendations', async () => {
+  const f = fixture(), repo = f.repo();
+  await repo.load(empty());
+  const recommended = gift('recommended');
+  const messages = [message('친구에게 과일 선물')];
+  const first = repo.saveChat(empty(), messages, [recommended]);
+  const next = repo.saveChat(empty(), [...messages, { role: 'assistant', text: '답변' }]);
+  await Promise.all([first, next]);
+  repo.setFeedback([fb()]);
+  await repo.saveFeedback();
+  const [chat] = await repo.listConversations();
+  assert.deepEqual(await repo.loadConversation(chat.id), {
+    messages: [...messages, { role: 'assistant', text: '답변' }],
+    recommendations: [recommended],
+  });
+  assert.equal(chat.feedback.length, 1);
+  await repo.saveChat(empty(), []);
+  assert.deepEqual((await repo.loadConversation(repo.currentId())).recommendations, []);
+});
+
+test('history deletion is scoped to the account and cannot recreate the active conversation', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveChat(empty(), [message('지난 대화')]);
+  const previous = repo.currentId();
+  await repo.saveChat(empty(), []);
+  const active = repo.currentId();
+  await assert.rejects(repo.deleteConversation(active), /현재 대화/);
+  f.rows.conversations.push({ ...structuredClone(f.rows.conversations[0]), user_id: 'other' });
+  await repo.deleteConversation(previous);
+  assert.deepEqual((await repo.listConversations()).map(chat => chat.id), [active]);
+  assert.equal(f.rows.conversations.find(row => row.user_id === 'other').id, previous);
+  f.switchOwner();
+  await assert.rejects(repo.loadConversation(active), /로그인/);
 });
