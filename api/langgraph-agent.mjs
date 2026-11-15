@@ -62,7 +62,7 @@ function conditionQuestion(text) {
   return null;
 }
 
-export async function prototypeLangGraphTurn(input, products, { env, fetcher, signal, advisorContext }) {
+export async function prototypeLangGraphTurn(input, products, { env, fetcher, signal, advisorContext, ranking = APP_RANKING }) {
   const before = input.state;
   const catalog = products.map(product => ({ ...product, rating_count: product.rating_count ?? 0 }));
   const session = { id: 'prototype-request', version: 0, state: engineState(before) };
@@ -73,7 +73,7 @@ export async function prototypeLangGraphTurn(input, products, { env, fetcher, si
     : shortcut ? { kind: 'patch', patch: shortcut.session.state }
       : intent.kind === 'message' ? { kind: 'message', text: input.text } : { kind: 'view' }) };
   const { disabled, ...context } = advisorContext;
-  const output = await runAgentTurn({ session, request, products: catalog, context: { ...context, today: todayKst() }, disabled, llm: createAttributor(env, fetcher, signal), preparePatch: prepareSingleGiftPatch, ranking: APP_RANKING });
+  const output = await runAgentTurn({ session, request, products: catalog, context: { ...context, today: todayKst() }, disabled, llm: createAttributor(env, fetcher, signal), preparePatch: prepareSingleGiftPatch, ranking });
   if (signal?.aborted) throw Error('aborted');
   const trace = output.agents?.trace ?? output.trace[0];
   const agents = output.agents ?? { attribution: [], opinions: [], suggestions: [], memoryProposals: [], autoApplied: [], trace };
@@ -93,14 +93,14 @@ export async function prototypeLangGraphTurn(input, products, { env, fetcher, si
   }
   validateState(state);
   const turn = finishSingle(before, state, issues, products);
-  const result = recommend(products, evaluated, APP_RANKING);
+  const result = recommend(products, evaluated, ranking);
   let message = turn.question.key ? turn.question.text : result.message;
   if (!turn.question.key && intent.kind === 'what_if_budget') {
-    const compared = recommend(products, { ...evaluated, budget: { ...evaluated.budget, amount_krw: intent.amount_krw } }, APP_RANKING);
+    const compared = recommend(products, { ...evaluated, budget: { ...evaluated.budget, amount_krw: intent.amount_krw } }, ranking);
     const candidates = compared.items.map(p => `${p.name} (${p.total.toLocaleString('ko-KR')}원)`).join(', ');
     message = `예산을 ${intent.amount_krw.toLocaleString('ko-KR')}원으로 가정했어요. ${candidates || '조건에 맞는 상품이 없습니다.'}\n현재 예산은 그대로입니다.`;
   } else if (!turn.question.key && intent.intent === 'explain' && result.items.length) {
     message = result.items.map((p, index) => `${index + 1}위 ${p.name}: 적용 비용 ${p.total.toLocaleString('ko-KR')}원, 선호 점수 ${p.score}점`).join('\n');
   }
-  return { ...turn, message, agent: LANGGRAPH_AGENT, mode: 'agents', agents, routing, view: { question: turn.question, result, comparison: budgetAlternatives(products, evaluated, APP_RANKING) } };
+  return { ...turn, message, agent: LANGGRAPH_AGENT, mode: 'agents', agents, routing, view: { question: turn.question, result, comparison: budgetAlternatives(products, evaluated, ranking) } };
 }

@@ -1,10 +1,10 @@
 {
-  "source": "PASS-auth/lib (shared budget and holiday ranking, tea/coffee preference and fragrance filter)",
+  "source": "PASS-auth/lib (shared budget and holiday ranking, tea/coffee preference and fragrance filter, card feedback weights)",
   "sha256": {
     "allergens.mjs": "b04cc6d5ae8fd7f3f03212260a0c9a7d4feea3c63d7e1b6aabc2a0acb561e85c",
     "catalog.mjs": "7211218e9b331b72db073e9f62064d05bd8fe56924ec05d69c107f0e4086edeb",
     "counterfactual.mjs": "528d5918e6bc87a8a46ea391f4e9e0c50444b8196cb71e9850dbf5fdc046139f",
-    "engine.mjs": "21ceea4a23e5080b90c603e89cc3075f331c816399111bb3fece399f6499f936",
+    "engine.mjs": "51a76c021f0341c5627d52002c2246b1b13338893459d32f49b041eb9d9be0ea",
     "ranking.mjs": "11679a9601be41ded47fcc2161cf042765bd5c659c41e1b74370838621172a89",
     "fragrance.mjs": "98184bd94c91b88492d08669861ebba5911ef13c5aefa0ae76cd1e4b1584132e"
   }

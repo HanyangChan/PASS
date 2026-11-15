@@ -14,8 +14,20 @@ export const ALLERGY_NOTICE='상품명 기준으로 알레르기 성분을 추�
 // Category-relative popularity, then absolute review count (so leaders of small categories do not tie on price).
 export const morePopular=(a,b)=>a.popularity-b.popularity||(a.rating_count||0)-(b.rating_count||0);
 export const APP_RANKING = Object.freeze({ preferBudgetRange: true, preferHolidaySets: true });
-export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false } = {}) {
+// Card feedback (👍/👎 on recommended products): each category moves by likes − dislikes, capped at ±2,
+// and a product marked unhelpful sinks by 5 so it is not offered again. Filters and budget still apply first.
+export function feedbackWeights(products, feedback) {
+ const categoryOf=new Map(products.map(p=>[p.id,p.category]));
+ const categories={};
+ const tally=(ids,step)=>{for(const id of ids??[]){const c=categoryOf.get(id);if(c)categories[c]=(categories[c]??0)+step;}};
+ tally(feedback?.liked,1);tally(feedback?.disliked,-1);
+ for(const c of Object.keys(categories)){categories[c]=Math.max(-2,Math.min(2,categories[c]));if(!categories[c])delete categories[c];}
+ return {categories,disliked:new Set(feedback?.disliked??[])};
+}
+export function rankProducts(products, s, { preferBudgetRange = false, preferHolidaySets = false, feedback = null } = {}) {
  const suited=recipientCategories(s.recipients);
+ const learned=feedbackWeights(products,feedback);
+ const useFeedback=Object.keys(learned.categories).length>0||learned.disliked.size>0;
  const leader=new Map();
  for (const product of products) {
   leader.set(product.category, Math.max(leader.get(product.category) ?? 0, product.rating_count ?? 0));
@@ -39,7 +51,8 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
 
   const cost=budgetCost(product,s);
   if (cap!==null && cost>cap) continue;
-  const explicitScore=typeScore(product,s)+s.preferences.reduce((score,preference)=>{
+  const feedbackScore=useFeedback?(learned.categories[product.category]??0)+(learned.disliked.has(product.id)?-5:0):0;
+  const explicitScore=feedbackScore+typeScore(product,s)+s.preferences.reduce((score,preference)=>{
    if (preference===`category:${product.category}`) return score+3;
    if (preference==='unsweetened' && product.sweetness==='unsweetened') return score+2;
    if (preference==='less_sweet') return score+({unsweetened:2,naturally_sweet:1}[product.sweetness]??0);
@@ -53,6 +66,7 @@ export function rankProducts(products, s, { preferBudgetRange = false, preferHol
    popularity:(product.rating_count??0)/(leader.get(product.category)||1),
    total:quantity*(product.price_krw+(s.budget.shipping_included?product.shipping_fee_per_set_krw:0)),
    score,
+   ...(feedbackScore?{feedback_score:feedbackScore}:{}),
   }});
  }
  // Explicit tastes remain meaningful even when matching products cost less than the preferred range.
