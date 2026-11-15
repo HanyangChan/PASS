@@ -8,12 +8,12 @@ const web = JSON.parse(readFileSync(new URL('../../supabase/seed/products-kr.jso
 const amazonRows = JSON.parse(readFileSync(new URL('../../supabase/seed/products-amazon.json', import.meta.url))).slice(0, 40);
 const env = extra => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: 'https://app.example',
   IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) }, ...extra });
-function fakeSupabase() {
+function fakeSupabase(products = amazonRows) {
   const calls = [];
   const fetcher = async url => {
     calls.push(String(url));
     if (String(url).includes('/auth/v1/user')) return Response.json({ id: 'owner', role: 'authenticated' });
-    if (String(url).includes('/rest/v1/products')) return Response.json(amazonRows);
+    if (String(url).includes('/rest/v1/products')) return Response.json(products);
     return new Response('not found', { status: 404 });
   };
   return { fetcher, calls };
@@ -30,6 +30,15 @@ test('CATALOG_SOURCE defaults to the Amazon catalog', async () => {
   assert.equal(result.products, amazonRows.length);
   assert.equal(result.catalog, 'amazon-kaggle-v1');
   assert.ok(calls.some(url => url.includes('/rest/v1/products')));
+});
+
+test('Amazon-only mode preserves distinct listings with the same name and brand', async () => {
+  const first = { ...amazonRows[0], brand: 'Demo' };
+  const second = { ...first, id: amazonRows[1].id, source_url: amazonRows[1].source_url };
+  const { fetcher } = fakeSupabase([first, second]);
+  for (const extra of [{}, { CATALOG_SOURCE: 'amazon' }]) {
+    assert.equal((await health(createApi({ fetcher }), extra)).products, 2);
+  }
 });
 
 test('CATALOG_SOURCE=web serves the Korean catalog without reading Supabase products', async () => {
