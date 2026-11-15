@@ -40,7 +40,10 @@ test('one-letter items count only as separate words', () => {
 test('the most recent mention wins and negations are honored', () => {
   assert.equal(item(['카네이션 꽃 선물', '아니 장미로 바꿔줘']), '장미');
   assert.equal(item('카네이션 말고 장미'), '장미');
-  assert.equal(item('카네이션은 빼줘', '카네이션'), null);
+  for (const text of ['카네이션은 빼줘', '카네이션 빼주세요', '카네이션은 안 좋아해요']) {
+    assert.equal(item(text, '카네이션'), null, text);
+    assert.equal(item(text), null, text);
+  }
   assert.equal(item('장미 말고', '카네이션'), '카네이션');
   assert.equal(item('배송비 포함', '카네이션'), '카네이션');
 });

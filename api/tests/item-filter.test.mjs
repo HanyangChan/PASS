@@ -35,6 +35,16 @@ test('ITEM_FILTER off (default) leaves the list and the response unchanged', asy
   assert.ok(!data.view.result.items.every(p => isCarnation(p.id)));
 });
 
+test('an unknown carried item is ignored without failing the request', async () => {
+  const env = { ...base, CHAT_AGENT: 'a-router', ITEM_FILTER: 'on' };
+  const { status, data } = await send(api(), env, {
+    text: '추천해줘', session: { ...ready(), item_filter: 'constructor' },
+  });
+  assert.equal(status, 200);
+  assert.equal(data.session.item_filter, null);
+  assert.equal(data.itemFilter, null);
+});
+
 for (const agent of ['a-router', 'langgraph-advisors', 'legacy']) {
   test(`${agent}: a named item narrows the recommendations and is carried in the session`, async () => {
     const env = { ...base, CHAT_AGENT: agent, ITEM_FILTER: 'on' };
