@@ -37,8 +37,8 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false, rank
   const preparePatch=(state,patch)=>{
     // First identification is not a recipient switch: keep conditions supplied earlier.
     if (patch?.recipients?.length && !state.recipients.length) patch={...structuredClone(state),...patch,budget:{...state.budget,...patch.budget}};
-    return singleGift && patch?.recipients && JSON.stringify(patch.recipients)!==JSON.stringify(state.recipients)
-      ? {...patch,quantity:patch.quantity??1,same_product:patch.same_product??true,budget:{...patch.budget,scope:patch.budget?.scope??'per_set'}} : patch;
+    if (!singleGift) return patch;
+    return {...patch,quantity:1,same_product:true,budget:{...patch.budget,scope:'per_set'}};
   };
   if (interpret!==undefined && typeof interpret!=='function') throw new TypeError('interpret must be a function');
   if (!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>18000) throw new TypeError('timeoutMs must be between 1 and 18000');
@@ -70,7 +70,7 @@ export function createAgent({ interpret, timeoutMs=18000, singleGift=false, rank
         return annotate(out,{intent:intent.intent,route:'rules'});
       }
       const view=await runCoreTurn({session,products,ranking,request:{kind:'view',expectedVersion:session.version}});
-      let parsed=parseConditions(request.text,session.state,{pendingQuestion:pendingQuestion || (view.kind==='question'?view.question:'')});
+      let parsed=parseConditions(request.text,session.state,{pendingQuestion:pendingQuestion || (view.kind==='question'?view.question:''),singleGift});
       let llmCalls=0,route=parsed.route;
       if (parsed.unresolved && parsed.route==='unresolved' && interpret) {
         llmCalls=1; route='llm';

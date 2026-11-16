@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { CATEGORY_NAMES } from '../../lib/catalog.mjs';
 import { feedbackWeights } from '../../lib/engine.mjs';
 import { colors as c, fonts } from './theme';
@@ -11,8 +11,11 @@ const date = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.g
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
 // Mypage shows the current feedback weights and archived conversations.
-export function PastChats({ chats, signal, products, open, remove }: {
+export function PastChats({ chats, signal, feedbackEnabled, feedbackToggleDisabled, onFeedbackChange, products, open, remove }: {
   chats: PastChat[]; signal: FeedbackSignal[]; products: EngineProduct[];
+  feedbackEnabled: boolean;
+  feedbackToggleDisabled: boolean;
+  onFeedbackChange: (enabled: boolean) => void;
   open: (chat: PastChat) => Promise<PastChatDetail>;
   remove?: (id: string) => Promise<void>;
 }) {
@@ -41,8 +44,17 @@ export function PastChats({ chats, signal, products, open, remove }: {
   };
   return (
     <View style={st.wrap}>
-      <Text style={st.title}>추천에 반영 중인 피드백</Text>
-      {entries.length || weights.disliked.size ? (
+      <View style={st.feedbackHeader}>
+        <Text style={[st.title, st.feedbackTitle]}>지난 피드백 반영</Text>
+        <Switch
+          accessibilityLabel="지난 피드백 반영"
+          value={feedbackEnabled}
+          disabled={feedbackToggleDisabled}
+          onValueChange={onFeedbackChange}
+        />
+      </View>
+      {!feedbackEnabled ? <Text style={st.muted}>저장된 피드백을 추천 순위에 반영하지 않아요.</Text>
+      : entries.length || weights.disliked.size ? (
         <View style={st.box}>
           {entries.map(([key, score]) => <Text key={key} style={st.line}>{category(key)} {signed(score)}점</Text>)}
           {weights.disliked.size > 0 && <Text style={st.line}>👎 받은 상품 {weights.disliked.size}개는 −5점</Text>}
@@ -95,6 +107,8 @@ export function PastChats({ chats, signal, products, open, remove }: {
 }
 const st = StyleSheet.create({
   wrap: { gap: 8 },
+  feedbackHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  feedbackTitle: { marginTop: 0, flexShrink: 1 },
   title: { fontFamily: fonts.bold, fontSize: 16, color: c.text, marginTop: 8 },
   box: { backgroundColor: c.white, borderColor: c.border, borderWidth: 1, borderRadius: 12, padding: 12, gap: 4 },
   line: { fontFamily: fonts.medium, fontSize: 14, color: c.text },

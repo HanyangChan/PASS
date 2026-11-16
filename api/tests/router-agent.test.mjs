@@ -88,9 +88,9 @@ test('no-key ambiguity and giver facts ask instead of inventing recipient tastes
  }
 });
 
-test('explanation uses engine facts, multiple gifts are clarified, auth and config still fail closed',async()=>{
+test('explanation uses engine facts, single gift stays fixed, auth and config still fail closed',async()=>{
  const explained=await send(body({session:ready(),text:'왜 추천했어?'}));assert.match(explained.data.message,/33,000/);assert.match(explained.data.message,/선호 점수/);
- const multi=await send(body({session:ready(),text:'두 세트'}));assert.equal(multi.data.question.key,'issue');assert.match(multi.data.message,/선물 하나/);assert.deepEqual(multi.data.session.state,ready().state);
+ const multi=await send(body({session:ready(),text:'두 세트'}));assert.equal(multi.data.question.key,null);assert.doesNotMatch(multi.data.message,/현재 앱은 선물 하나 기준/);assert.deepEqual(multi.data.session.state,ready().state);
  const response=await api({fetcher:async()=>new Response(null,{status:401})}).fetch(request(body()),env());assert.equal(response.status,401);
  const bad=await send(body(),{...env(),CHAT_AGENT:'not-an-agent'});assert.equal(bad.status,503);assert.equal(bad.data.code,'configuration');
 });
@@ -127,4 +127,15 @@ test('prototype API keeps tea preference when adjusting the budget for the full 
  assert.deepEqual(next.data.session.state.preferences,first.data.session.state.preferences);
  const health=await instance.fetch(new Request('https://api.example/health'),env());
  const info=await health.json();assert.equal(info.products,3376);
+});
+
+test('legacy total budget phrasing updates the single-gift budget without a scope question',async()=>{
+ const session={...ready(),issues:['현재 앱은 선물 하나 기준입니다. 선물 하나의 예산과 조건을 알려주세요.']};
+ for(const text of ['총 10만 원','총 예산 10만 원','두 세트 총 10만 원']) {
+  const out=await send(body({session,text}));
+  assert.equal(out.status,200,text);
+  assert.deepEqual(out.data.session.state.budget,{...session.state.budget,amount_krw:100000},text);
+  assert.equal(out.data.question.key,null,text);
+  assert.deepEqual(out.data.session.issues,[],text);
+ }
 });

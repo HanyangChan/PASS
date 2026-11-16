@@ -48,7 +48,7 @@ test('health returns unavailable status when catalog fails and advertises modes 
  const bad=await createApi({catalog:async()=>{throw Error('private detail');}}).fetch(new Request('http://local/health'),env);
  assert.equal(bad.status,503);assert.equal((await bad.json()).ok,false);
  const good=await createApi({catalog:async()=>products}).fetch(new Request('http://local/health'),env);
- assert.deepEqual((await good.json()).availableAgents,['a-router','langgraph-advisors']);
+ assert.deepEqual((await good.json()).availableAgents,['a-router']);
  const llm=await createApi({catalog:async()=>products}).fetch(new Request('http://local/health'),{...env,LLM_API_KEY:'synthetic'});
- assert.deepEqual((await llm.json()).availableAgents,['a-router','langgraph-advisors','full-chat','full-chat-feedback-2']);
+ assert.deepEqual((await llm.json()).availableAgents,['a-router','full-chat','full-chat-feedback-2']);
 });

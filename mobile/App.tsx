@@ -54,13 +54,12 @@ import { colors as c, fonts as f } from './src/theme';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
 import { AgentModeControl } from './src/AgentModeControl';
-import { AgentPanel, type AgentPayload } from './src/AgentPanel';
 import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
-import { personalizeSession, emptyPersonalization, assertSameRecipient, recipientCalendar } from './src/services/personalization';
+import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
 import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
-import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
+import { giftRepository, productRepository, calendarRepository, feedbackRepository, feedbackPreference, historyRepository } from './src/services/localServices';
 import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
 import { PastChats } from './src/PastChats';
@@ -153,13 +152,14 @@ export function AppContent({
     chatError,
     sendChat,
     changeChatConditions,
-    disabledAdvisors,
-    toggleAdvisor,
     resetChat,
     cardFeedback,
     rateCard,
     pastChats,
     rankingSignal,
+    feedbackEnabled,
+    feedbackToggleDisabled,
+    changeFeedbackEnabled,
     openPastChat,
     deletePastChat,
     heroFailed,
@@ -862,17 +862,6 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
-                  {agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                    <View style={s.advisorPanel}>
-                      <AgentPanel
-                        agents={recommendation.agents}
-                        disabled={disabledAdvisors}
-                        busy={chatPending}
-                        onToggle={toggleAdvisor}
-                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                      />
-                    </View>
-                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
@@ -1049,7 +1038,7 @@ export function AppContent({
                   )}
                 </View>
                 <View style={s.homeSection}>
-                  <PastChats chats={pastChats} signal={rankingSignal} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
+                  <PastChats chats={pastChats} signal={rankingSignal} feedbackEnabled={feedbackEnabled} feedbackToggleDisabled={feedbackToggleDisabled} onFeedbackChange={changeFeedbackEnabled} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
                 </View>
                 <View style={s.homeSection}>
                   <SectionHeader title="도움말" />
@@ -1146,11 +1135,14 @@ function usePassState() {
   // Feedback the ranking uses: past chats plus this chat's taps, snapshotted per request so cards don't jump mid-tap.
   const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
   const rankingSignalRef = useRef<FeedbackSignal[]>([]);
+  const [feedbackEnabled, setFeedbackEnabled] = useState(true);
+  const feedbackEnabledRef = useRef(true);
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
   const pastFeedback = useRef<CardFeedback[]>([]);
   const [pastChats, setPastChats] = useState<PastChat[]>([]);
   const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
   const deletedPastChats = useRef(new Set<string>());
-  const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products, feedbackEnabled ? rankingSignal : []), [catalog.products, feedbackEnabled, rankingSignal]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
@@ -1183,11 +1175,10 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : []) : null, [owner]);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
-  const [disabledAdvisors, setDisabledAdvisors] = useState<string[]>([]);
   const [chatError, setChatError] = useState(chatConfigurationError);
   const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
   const cardFeedbackRef = useRef<CardFeedback[]>([]);
@@ -1199,7 +1190,7 @@ function usePassState() {
     setChatError('');
   }, []);
   useEffect(() => () => { chatFlight.current.revision++; chatFlight.current.controller?.abort(); }, []);
-  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', advisors = disabledAdvisors, fresh?: ChatSession) => {
+  const runChat = async (operation: 'turn' | 'conditions' | 'view', text: string, patch?: Parameters<typeof chatService.updateConditions>[1], clearIssues = true, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => {
     if (!ready || chatFlight.current.controller) return false;
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
@@ -1209,17 +1200,15 @@ function usePassState() {
     try {
       // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
       const baseSession = fresh ?? session, baseMessages = fresh ? [] : messages;
-      const useAdvisors = agentMode === 'langgraph-advisors' && Boolean(serverChat);
       const noHistory = emptyPersonalization();
-      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text, undefined, !useAdvisors).session
-        : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients, !useAdvisors).session
+      const requestSession = operation === 'turn' ? personalizeSession(baseSession, noHistory, text).session
+        : operation === 'conditions' && patch?.recipients ? personalizeSession(baseSession, noHistory, '', patch.recipients).session
           : baseSession;
       const requestPatch = patch?.recipients ? { ...patch, recipients: requestSession.state.recipients } : patch;
-      const agents = useAdvisors ? { disabled: advisors, calendar: recipientCalendar(requestSession.state.recipients, events) } : undefined;
       const turn = serverChat
-        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode, agents)
-          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode, agents)
-          : await serverChat.view(baseSession, controller.signal, agentMode, agents)
+        ? operation === 'turn' ? await serverChat.send(requestSession, text, requestSession.state.recipients.join() === baseSession.state.recipients.join() ? baseMessages : [], source, controller.signal, agentMode)
+          : operation === 'conditions' ? await serverChat.updateConditions(requestSession, requestPatch!, clearIssues, controller.signal, agentMode)
+          : await serverChat.view(baseSession, controller.signal, agentMode)
         : operation === 'turn' ? await chatService.send(requestSession, text, baseMessages) : chatService.updateConditions(requestSession, requestPatch ?? {}, clearIssues);
       assertSameRecipient(requestSession, turn.session);
       // A newer revision (new chat / another send) superseded this one; drop the result without
@@ -1235,7 +1224,7 @@ function usePassState() {
         setSession(turn.session);
         setMessages(old => [...old, { role: 'user', text: text.trim() }, { role: 'assistant', text: turn.message }]);
       }
-      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode, agents: 'agents' in turn ? turn.agents : undefined });
+      if ('view' in turn) setRecommendation({ key: JSON.stringify(turn.session), view: turn.view, agentMode, mode: turn.mode });
       return true;
     } catch (error) {
       if (chatFlight.current.revision !== revision) return null;
@@ -1243,6 +1232,21 @@ function usePassState() {
       return false;
     } finally {
       if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+    }
+  };
+  const changeFeedbackEnabled = async (enabled: boolean) => {
+    if (chatFlight.current.controller || feedbackSaving || feedbackEnabledRef.current === enabled) return;
+    feedbackEnabledRef.current = enabled;
+    setFeedbackEnabled(enabled);
+    setFeedbackSaving(true);
+    setRecommendation(null);
+    if (serverChat) void runChat('view', '');
+    try {
+      await feedbackPreference.save(owner, enabled);
+    } catch {
+      setNotice('피드백 반영 설정을 기기에 저장하지 못했어요.');
+    } finally {
+      setFeedbackSaving(false);
     }
   };
   useEffect(() => {
@@ -1311,8 +1315,9 @@ function usePassState() {
     setLoadError('');
     const emptySession = chatService.createSession();
     const restore = repository ? repository.load(emptySession) : giftRepository.load().then(records => ({ ...records, session: emptySession, messages: [] as ChatMessage[] }));
-    restore.then(records => {
+    Promise.all([restore, feedbackPreference.load(owner).catch(() => true)]).then(([records, enabled]) => {
       if (!mounted) return;
+      feedbackEnabledRef.current = enabled; setFeedbackEnabled(enabled);
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
@@ -1401,20 +1406,16 @@ function usePassState() {
     changeAgentMode,
     agentConnected: Boolean(serverChat),
     chatError,
-    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => runChat('turn', text, undefined, true, source, undefined, fresh),
+    sendChat: (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => runChat('turn', text, undefined, true, source, fresh),
     changeChatConditions: (patch: Parameters<typeof chatService.updateConditions>[1], text: string, clearIssues = true) => runChat('conditions', text, patch, clearIssues),
-    disabledAdvisors,
-    toggleAdvisor: (advisor: string, enabled: boolean) => {
-      const next = enabled ? disabledAdvisors.filter(name => name !== advisor) : [...new Set([...disabledAdvisors, advisor])];
-      void runChat('view', '', undefined, true, 'typed', next).then(applied => {
-        if (applied) setDisabledAdvisors(next);
-      });
-    },
     resetChat,
     cardFeedback,
     rateCard,
     pastChats,
     rankingSignal,
+    feedbackEnabled,
+    feedbackToggleDisabled: chatPending || feedbackSaving,
+    changeFeedbackEnabled,
     openPastChat: async (chat: PastChat) => chat.messages
       ? { messages: chat.messages, recommendations: chat.recommendations ?? [] }
       : cloud.current ? cloud.current.loadConversation(chat.id) : { messages: [], recommendations: [] },
@@ -1790,7 +1791,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: c.border,
   },
-  chips: { paddingHorizontal: 16, gap: 8 },
+  chips: { paddingHorizontal: 16, gap: 8, userSelect: 'none' },
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1824,7 +1825,6 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: c.tint,
   },
-  advisorPanel: { marginHorizontal: 16, marginVertical: 4 },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },

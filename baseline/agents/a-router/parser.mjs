@@ -90,7 +90,7 @@ function tidy(text) {
     .replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))\s*(?:(?:내외|안팎|언저리|쯤|대)(?:에서|로|으로)?|선(?:에서|으로)(?![가-힣]))/g,'$1');
 }
 
-export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
+export function parseConditions(text, state, { pendingQuestion = '', singleGift = false } = {}) {
   let rest=tidy(normalizeMoney(text)).trim();
   const patch={};
   const limitations=[];
@@ -124,7 +124,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   const positiveShipping=/배송비(?:도|를|는)?\s*포함(?!\s*(?:하지|안))|배송비\s*(?:까지|합쳐서|합해서)/.test(rest);
   const negativeShipping=/배송비(?:는|은|도)?\s*(?:포함하지|포함\s*안|불포함|미포함|제외|별도|따로|빼)|상품값만/.test(rest);
   if (positiveShipping && negativeShipping) return question('배송비 포함 여부를 하나로 지정해 주세요.');
-  if (/세트당|개당/.test(rest) && /총예산|총|전체\s*예산|합쳐/.test(rest)) return question('총예산인지 세트당 예산인지 하나로 지정해 주세요.');
+  if (!singleGift && /세트당|개당/.test(rest) && /총예산|총|전체\s*예산|합쳐/.test(rest)) return question('총예산인지 세트당 예산인지 하나로 지정해 주세요.');
   const shippingYes=/^(?:네|예|응|그래|좋아|좋아요|포함(?:해\s*(?:줘|주세요|요)|할게요?|이요|요)?|넣어\s*(?:줘|주세요))[.!?]?$/;
   const shippingNo=/^(?:아니|아니요|아뇨|빼(?:줘|주세요|고요|고)|제외(?:해\s*(?:줘|주세요))?|별도(?:요|로)?|따로(?:요)?|미포함|불포함|포함\s*안\s*(?:해|해요|할게요))[.!?]?$/;
   if ((shippingYes.test(rest)||shippingNo.test(rest)) && /배송비/.test(pendingQuestion)) {
@@ -161,7 +161,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/배송비(?:는|은|도)?\s*(?:포함하지\s*않아|포함\s*안\s*해|불포함|미포함|제외|별도|따로|빼(?:줘|주세요|고)?)(?:요|로)?|상품값만/g,()=>{patch.budget={...patch.budget,shipping_included:false};});
   take(/배송비(?:도|를|는)?\s*포함(?:해줘|해요|해서)?|배송비\s*(?:까지|합쳐서|합해서)(?:\s*(?:해서|포함해서))?/g,()=>{patch.budget={...patch.budget,shipping_included:true};});
   take(/세트당|개당|한\s*(?:세트|개)\s*예산/g,()=>{patch.budget={...patch.budget,scope:'per_set'};});
-  take(/총예산|총|전체\s*예산|모두\s*합쳐서|합쳐서/g,()=>{patch.budget={...patch.budget,scope:'total'};});
+  take(/총\s*예산|총|전체\s*예산|모두\s*합쳐서|합쳐서/g,()=>{patch.budget={...patch.budget,scope:'total'};});
   const quantities={한:1,하나:1,두:2,둘:2,세:3,셋:3,네:4,넷:4,다섯:5};
   take(/(하나|둘|셋|넷|다섯|한|두|세|네|\d+)\s*(?:세트|개)(?!당)/g,(_,n)=>{patch.quantity=quantities[n]??Number(n);if(patch.quantity===1)patch.same_product=true;});
   take(/서로\s*다른\s*상품|각각\s*다른\s*상품/g,()=>{patch.same_product=false;});

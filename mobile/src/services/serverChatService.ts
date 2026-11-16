@@ -5,6 +5,8 @@ import type { ChatAgentMode } from '../chatAgentModes';
 import type { AgentPayload } from '../AgentPanel';
 import type { recipientCalendar } from './personalization';
 import type { FeedbackSignal } from '../chatHistory.ts';
+
+type ServerChatAgentMode = ChatAgentMode | 'langgraph-advisors';
 type AdvisorContext = { disabled: string[]; calendar: ReturnType<typeof recipientCalendar> };
 type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
@@ -16,7 +18,7 @@ export function resolveChatUrl(value?: string) {
   return `${url.origin}/api/chat`;
 }
 export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, feedback: () => FeedbackSignal[] = () => []) {
-  async function request(body: object, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+  async function request(body: object, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
     const { data, error } = await auth.getSession();
     if (error || data.session?.user.id !== owner) throw new Error('다시 로그인해주세요.');
     const controller = new AbortController(); let timedOut = false;
@@ -60,12 +62,12 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   return {
-    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
       return request({ operation: 'turn', session, text: text.trim(), history: history.slice(-6).map(message => ({ ...message, text: message.text.slice(0, 1200) })), source }, signal, agentMode, agents);
     },
-    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
       return request({ operation: 'conditions', session, patch, clearIssues }, signal, agentMode, agents);
     },
-    view(session: ChatSession, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) { return request({ operation: 'view', session }, signal, agentMode, agents); },
+    view(session: ChatSession, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) { return request({ operation: 'view', session }, signal, agentMode, agents); },
   };
 }
