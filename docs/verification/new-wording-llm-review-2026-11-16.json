@@ -1,0 +1,28 @@
+{
+  "judge": "Current Codex assistant (LLM), same implementation author. No independent second model, human rater or paid external model call.",
+  "rubric": "Judge condition interpretation separately from exact string equality and separately from whether the catalog can supply a product. Keep frozen test labels unchanged.",
+  "sourceArtifacts": ["work/unseen-evaluation/diagnostic-after-final.json", "work/unseen-evaluation/reserved-after-final.json"],
+  "judgments": [
+    {"id":"N01","verdict":"interpreted","reason":"생신·어머니·오만원·택배비 포함을 모두 조건으로 반영했다."},
+    {"id":"N02","verdict":"interpreted","reason":"아버지와 배송료 포함 75,000원 상한을 반영했다."},
+    {"id":"N03","verdict":"interpreted","reason":"과거 대상과 현재 대상을 분리하고 친구의 커피 제외와 새 예산만 반영했다."},
+    {"id":"N04","verdict":"interpreted","reason":"차보다 시계를 원한다는 비교 선호를 시계 선택으로 해석했다."},
+    {"id":"N05","verdict":"interpreted","reason":"이모·환갑·80,000원·배송비 별도를 반영했다."},
+    {"id":"N06","verdict":"interpreted","reason":"초등학생 조카라는 연령 정보와 입학·배송비 포함 20,000원을 보존했다."},
+    {"id":"N07","verdict":"interpreted","reason":"할머니·차 종류·덜 단 선호·배송비 포함 예산을 반영했다."},
+    {"id":"N08","verdict":"interpreted","reason":"현재 예산과 일치하는 과거 금액을 명시적으로 고쳐 35,000원을 적용했다."},
+    {"id":"N09","verdict":"interpreted","reason":"직장동료와 상품값 30,000원·배송비 별도를 반영했다."},
+    {"id":"N10","verdict":"interpreted","reason":"수령인 변경 시 어머니의 취향을 삼촌에게 가져가지 않았다."},
+    {"id":"N11","verdict":"interpreted","reason":"친구 결혼과 예산을 반영하고, 와인 제외를 주류 전체 제외로 확대하지 않도록 추가 수정했다."},
+    {"id":"N12","verdict":"clarify","reason":"11월 31일은 존재하지 않아 확인 질문이 맞다. 유효 예산까지 부분 적용하지 않는 원자적 정책 때문에 고정 테스트의 예산 기대값은 미충족으로 남긴다."},
+    {"id":"H01","verdict":"interpreted","reason":"할아버지 생신·배송료 포함 80,000원을 반영했다."},
+    {"id":"H02","verdict":"interpreted","reason":"실제 '직장 상사'는 기대 '상사'와 역할 의미가 같다. 기존 정규형을 바꾸지 않았으며 문자열 실패는 그대로 보고한다."},
+    {"id":"H03","verdict":"clarify","reason":"필기구 선호는 반영했지만 '음료' 제외 범위는 커피·차인지 더 구체적인 종류인지 묻는다. 불명확한 제외 범위를 추정하지 않는 처리가 적절하다."},
+    {"id":"H04","verdict":"interpreted","reason":"예산을 유지하고 꽃다발로 변경했다. 추가된 type:bouquet는 원문 의도를 더 정확히 보존하는 태그이며 고정 테스트의 문자열 기대값은 변경하지 않았다."},
+    {"id":"H05","verdict":"interpreted","reason":"우유 회피와 아버지·배송비 포함 예산을 반영했다. 실제 성분 안전성을 확정하는 평가는 아니다."},
+    {"id":"H06","verdict":"interpreted","reason":"예산 30,000원을 유지하면서 배송비 포함 여부만 별도로 바꿨다."},
+    {"id":"H07","verdict":"clarify","reason":"친구의 차 선호로 전환하고 이전 어머니의 예산까지 자동 상속하지 않았다. 새 대상의 예산을 묻는 것은 안전한 확인이나 사용자 편의 개선 여지는 남는다."},
+    {"id":"H08","verdict":"interpreted","reason":"10만원 가상 비교를 하면서 실제 8만원 예산은 유지했다."}
+  ],
+  "summary": {"conditionInterpretations":17,"appropriateClarifications":3,"generalAccuracyClaim":false}
+}

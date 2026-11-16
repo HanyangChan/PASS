@@ -1,0 +1,944 @@
+{
+  "judge": "Current Codex assistant (LLM), also implementation author; not an independent model or human evaluation",
+  "rubric": {
+    "0": "Explicit request mismatch or clearly unsuitable context",
+    "1": "Partial fit or important product/recipient information is missing",
+    "2": "Fits the stated kind, budget and occasion on the available catalog facts"
+  },
+  "limits": "Product titles and catalog fields only. No medical suitability, product quality, live stock, delivery guarantee or user satisfaction is established.",
+  "runs": {
+    "before": {
+      "tasks": 18,
+      "presentedProducts": 54,
+      "score0": 20,
+      "score1": 11,
+      "score2": 23,
+      "meanScore": 1.0555555555555556,
+      "abstentions": [],
+      "products": [
+        {
+          "source": "amazon",
+          "case": "G01",
+          "product": "amz-B08X2M94KM",
+          "name": "GreenFinity 견과류 모듬 선물세트",
+          "total": 46500,
+          "score": 0,
+          "reason": "꽃다발 요청에 견과류다."
+        },
+        {
+          "source": "amazon",
+          "case": "G01",
+          "product": "amz-B076SGJRKQ",
+          "name": "아트 스트리트 블랙 액자 11종 세트",
+          "total": 35700,
+          "score": 0,
+          "reason": "꽃다발 요청에 액자다."
+        },
+        {
+          "source": "amazon",
+          "case": "G01",
+          "product": "amz-B0791H11NF",
+          "name": "MuscleBlaze 비기너즈 웨이 프로틴",
+          "total": 43200,
+          "score": 0,
+          "reason": "꽃다발 요청에 운동용 프로틴이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B07X3J2GJ7",
+          "name": "Sonata 남성용 포멀 아날로그 시계",
+          "total": 72800,
+          "score": 2,
+          "reason": "남성용 포멀 손목시계이며 배송 포함 예산 안이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B018VZBTLY",
+          "name": "Titan 아날로그 실버 다이얼 시계",
+          "total": 95800,
+          "score": 2,
+          "reason": "아날로그 손목시계로 명시 요청과 예산에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B07BS3LCP1",
+          "name": "카시오 남성용 블루 다이얼 메탈 시계",
+          "total": 78600,
+          "score": 2,
+          "reason": "남성용 메탈 손목시계로 요청과 예산에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B000VPGWUQ",
+          "name": "트래디셔널 메디신스 감초 허브티백",
+          "total": 35200,
+          "score": 1,
+          "reason": "차 종류는 맞지만 단일 감초 허브티백으로 집들이 선물 포장·취향 정보가 약하다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B097HMDY2H",
+          "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+          "total": 33600,
+          "score": 2,
+          "reason": "그린티 버라이어티 세트로 차 선물 요청에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B0892M39NG",
+          "name": "더 티 헤븐 카슈미르 카흐와 티 선물세트",
+          "total": 14700,
+          "score": 2,
+          "reason": "차 선물세트이며 예산 안이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G04",
+          "product": "amz-B07H8WKF5V",
+          "name": "4700BC 고메 팝콘 프리미엄 선물세트",
+          "total": 27300,
+          "score": 0,
+          "reason": "필기구 요청에 팝콘이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G04",
+          "product": "amz-B0BW5KQ486",
+          "name": "앵무새 댄싱 토킹 선인장 인형",
+          "total": 25400,
+          "score": 0,
+          "reason": "필기구 요청에 말하는 인형이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G04",
+          "product": "amz-B08262491C",
+          "name": "누트라즈 프리미엄 캐슈넛",
+          "total": 29200,
+          "score": 0,
+          "reason": "필기구 요청에 캐슈넛이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B0791H11NF",
+          "name": "MuscleBlaze 비기너즈 웨이 프로틴",
+          "total": 43200,
+          "score": 0,
+          "reason": "보디빌딩용 프로틴을 선택할 운동 목적이나 제품 선호가 제시되지 않았다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B0000DJAKA",
+          "name": "Nature Made 포타슘 글루코네이트",
+          "total": 34500,
+          "score": 1,
+          "reason": "건강 상품군이지만 성분 필요성과 단맛 정보가 없어 할머니에게 적합하다고 확정할 수 없다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B0788DFR6C",
+          "name": "MusclePharm 에센셜 BCAA 파우더",
+          "total": 39800,
+          "score": 0,
+          "reason": "BCAA 운동 보충제를 선택할 목적이 없다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B07B3VTJHW",
+          "name": "Urban Forest 가죽 지갑 선물세트",
+          "total": 41900,
+          "score": 2,
+          "reason": "술과 무관한 지갑 선물세트로 직장 감사 선물의 후보가 될 수 있다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B07ZMBCKBY",
+          "name": "FEISEDY 스퀘어 선글라스",
+          "total": 40000,
+          "score": 1,
+          "reason": "예산과 주류 제외는 맞지만 선글라스 디자인 취향을 확인하지 않았다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B076SGJRKQ",
+          "name": "아트 스트리트 블랙 액자 11종 세트",
+          "total": 35700,
+          "score": 1,
+          "reason": "액자는 가능하지만 11종 묶음의 필요성·인테리어 취향은 확인되지 않았다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_6656987060",
+          "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+          "total": 37400,
+          "score": 1,
+          "reason": "생일용 꽃다발 형태지만 비누꽃이다. 생화 선호는 확인되지 않았다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_2139516623",
+          "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+          "total": 44000,
+          "score": 2,
+          "reason": "생일·어버이날 용도의 생화 꽃다발/꽃바구니로 요구와 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_598248515",
+          "name": "드라이플라워 핑크목화 블루목화꽃다발 프리저브드 졸업식꽃다발",
+          "total": 38000,
+          "score": 0,
+          "reason": "제목의 주된 용도가 졸업식 꽃다발로 생신 맥락과 맞지 않는다."
+        },
+        {
+          "source": "web",
+          "case": "G02",
+          "product": "naver_4365188545",
+          "name": "카시오 A168WA-1 빈티지 전자 메탈 손목시계",
+          "total": 44500,
+          "score": 2,
+          "reason": "손목시계 요청에 맞으며 낮은 가격 자체는 부적합 사유가 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G02",
+          "product": "naver_4734036895",
+          "name": "고급 티백 전통차 어르신 남자친구 부모님 인사 진명차 한차 4호 연말 선물 세트",
+          "total": 69000,
+          "score": 0,
+          "reason": "시계 요청의 빈자리를 차로 채웠다."
+        },
+        {
+          "source": "web",
+          "case": "G02",
+          "product": "naver_7054404904",
+          "name": "농협 안심 한우 선물 세트 1등급 소고기 등심 채끝 명절 설",
+          "total": 99000,
+          "score": 0,
+          "reason": "시계 요청의 빈자리를 한우로 채웠다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_12926021848",
+          "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+          "total": 41300,
+          "score": 2,
+          "reason": "전통차 구성의 선물세트로 차·집들이 맥락에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_4059374148",
+          "name": "[50EA] 디카페인 콜롬비아 드립백 선물 세트 티백 원두 커피",
+          "total": 30500,
+          "score": 0,
+          "reason": "티백이라는 단어가 있지만 실제로는 콜롬비아 원두 드립백 커피다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_4954445330",
+          "name": "쌍계명차 클래식 티박스 전통차선물세트(9종, 총 45입)",
+          "total": 27000,
+          "score": 2,
+          "reason": "전통차 티박스 선물세트로 요청에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_13359230452",
+          "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+          "total": 27000,
+          "score": 2,
+          "reason": "0.5mm 샤프로 고등학생의 필기구 요청과 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_9166905804",
+          "name": "핑크풋 곰젤리 랜덤 지우개 ver7 인박스 (60개 세트) 학원 어린이날 생일 초등 학생 단체 선물",
+          "total": 24000,
+          "score": 0,
+          "reason": "초등학생 단체용 랜덤 지우개 60개로 고등학생 개인 필기구 선물과 맞지 않는다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_5214749974",
+          "name": "인디고 기본 스터디 플래너 4개월 밀크 데일리 학습 스케줄러 체크리스트 공부 공시생 시험",
+          "total": 8740,
+          "score": 0,
+          "reason": "스터디 플래너는 유용할 수 있지만 명시한 필기구는 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_5210164377",
+          "name": "100포+100포 6년근 홍삼정 진액 에브리데이 365 홍삼 스틱 순수식품",
+          "total": 49400,
+          "score": 1,
+          "reason": "일반적인 홍삼 선물이나 단맛·성분·수령인 적합성 정보는 부족하다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_2176545119",
+          "name": "닥터웰 온열 찜질기 국산 황토 어깨 허리 복부 매트 전기 찜질팩",
+          "total": 39800,
+          "score": 2,
+          "reason": "먹는 선물의 단맛 문제를 피하는 온열 찜질기다. 의료 효과를 뜻하는 평가는 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_2328997568",
+          "name": "제스파 3단계 강도조절 마사지기 해피메이트 목어깨 안마기 ZP954",
+          "total": 44900,
+          "score": 2,
+          "reason": "일반적인 편안함을 위한 마사지기로 주어진 선물 맥락과 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_8747039833",
+          "name": "7세트[리투 에어 데일리 크루삭스] 무지 무압박 쿠션 편한 여성 중목 패션 면양말",
+          "total": 42900,
+          "score": 0,
+          "reason": "성별이 지정되지 않은 직장 상사에게 여성용 양말 7세트는 맥락 적합성이 약하다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_6007055547",
+          "name": "틸트 크리스탈 와인잔 고급 고블렛잔 2P 선물세트",
+          "total": 49900,
+          "score": 1,
+          "reason": "주류 자체는 아니지만 술을 못 드시는 사람에게 와인잔을 고를 근거가 약하다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_2776076224",
+          "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+          "total": 46800,
+          "score": 2,
+          "reason": "감사·교수님 선물로 명시된 수제청 세트이며 술이 아니다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_6656987060",
+          "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+          "total": 37400,
+          "score": 1,
+          "reason": "생일용 꽃다발 형태지만 비누꽃이다. 생화 선호는 확인되지 않았다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_2139516623",
+          "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+          "total": 44000,
+          "score": 2,
+          "reason": "생일·어버이날 용도의 생화 꽃다발/꽃바구니로 요구와 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_598248515",
+          "name": "드라이플라워 핑크목화 블루목화꽃다발 프리저브드 졸업식꽃다발",
+          "total": 38000,
+          "score": 0,
+          "reason": "제목의 주된 용도가 졸업식 꽃다발로 생신 맥락과 맞지 않는다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B07X3J2GJ7",
+          "name": "Sonata 남성용 포멀 아날로그 시계",
+          "total": 72800,
+          "score": 2,
+          "reason": "남성용 포멀 손목시계이며 배송 포함 예산 안이다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B018VZBTLY",
+          "name": "Titan 아날로그 실버 다이얼 시계",
+          "total": 95800,
+          "score": 2,
+          "reason": "아날로그 손목시계로 명시 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B07BS3LCP1",
+          "name": "카시오 남성용 블루 다이얼 메탈 시계",
+          "total": 78600,
+          "score": 2,
+          "reason": "남성용 메탈 손목시계로 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "naver_12926021848",
+          "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+          "total": 41300,
+          "score": 2,
+          "reason": "전통차 구성의 선물세트로 차·집들이 맥락에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "amz-B000VPGWUQ",
+          "name": "트래디셔널 메디신스 감초 허브티백",
+          "total": 35200,
+          "score": 1,
+          "reason": "차 종류는 맞지만 단일 감초 허브티백으로 집들이 선물 포장·취향 정보가 약하다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "amz-B097HMDY2H",
+          "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+          "total": 33600,
+          "score": 2,
+          "reason": "그린티 버라이어티 세트로 차 선물 요청에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_13359230452",
+          "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+          "total": 27000,
+          "score": 2,
+          "reason": "0.5mm 샤프로 고등학생의 필기구 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_9166905804",
+          "name": "핑크풋 곰젤리 랜덤 지우개 ver7 인박스 (60개 세트) 학원 어린이날 생일 초등 학생 단체 선물",
+          "total": 24000,
+          "score": 0,
+          "reason": "초등학생 단체용 랜덤 지우개 60개로 고등학생 개인 필기구 선물과 맞지 않는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_5214749974",
+          "name": "인디고 기본 스터디 플래너 4개월 밀크 데일리 학습 스케줄러 체크리스트 공부 공시생 시험",
+          "total": 8740,
+          "score": 0,
+          "reason": "스터디 플래너는 유용할 수 있지만 명시한 필기구는 아니다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "naver_5210164377",
+          "name": "100포+100포 6년근 홍삼정 진액 에브리데이 365 홍삼 스틱 순수식품",
+          "total": 49400,
+          "score": 1,
+          "reason": "일반적인 홍삼 선물이나 단맛·성분·수령인 적합성 정보는 부족하다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "amz-B0791H11NF",
+          "name": "MuscleBlaze 비기너즈 웨이 프로틴",
+          "total": 43200,
+          "score": 0,
+          "reason": "보디빌딩용 프로틴을 선택할 운동 목적이나 제품 선호가 제시되지 않았다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "amz-B0000DJAKA",
+          "name": "Nature Made 포타슘 글루코네이트",
+          "total": 34500,
+          "score": 1,
+          "reason": "건강 상품군이지만 성분 필요성과 단맛 정보가 없어 할머니에게 적합하다고 확정할 수 없다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "naver_8747039833",
+          "name": "7세트[리투 에어 데일리 크루삭스] 무지 무압박 쿠션 편한 여성 중목 패션 면양말",
+          "total": 42900,
+          "score": 0,
+          "reason": "성별이 지정되지 않은 직장 상사에게 여성용 양말 7세트는 맥락 적합성이 약하다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "amz-B07B3VTJHW",
+          "name": "Urban Forest 가죽 지갑 선물세트",
+          "total": 41900,
+          "score": 2,
+          "reason": "술과 무관한 지갑 선물세트로 직장 감사 선물의 후보가 될 수 있다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "naver_2776076224",
+          "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+          "total": 46800,
+          "score": 2,
+          "reason": "감사·교수님 선물로 명시된 수제청 세트이며 술이 아니다."
+        }
+      ]
+    },
+    "after": {
+      "tasks": 18,
+      "presentedProducts": 46,
+      "score0": 0,
+      "score1": 12,
+      "score2": 34,
+      "meanScore": 1.7391304347826086,
+      "abstentions": [
+        {
+          "source": "amazon",
+          "id": "G01",
+          "message": "현재 조건과 요청한 상품 종류에 맞는 후보를 찾지 못했어요. 예산이나 상품 종류를 바꿔볼까요?"
+        },
+        {
+          "source": "amazon",
+          "id": "G04",
+          "message": "현재 조건과 요청한 상품 종류에 맞는 후보를 찾지 못했어요. 예산이나 상품 종류를 바꿔볼까요?"
+        }
+      ],
+      "products": [
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B07X3J2GJ7",
+          "name": "Sonata 남성용 포멀 아날로그 시계",
+          "total": 72800,
+          "score": 2,
+          "reason": "남성용 포멀 손목시계이며 배송 포함 예산 안이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B018VZBTLY",
+          "name": "Titan 아날로그 실버 다이얼 시계",
+          "total": 95800,
+          "score": 2,
+          "reason": "아날로그 손목시계로 명시 요청과 예산에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G02",
+          "product": "amz-B07BS3LCP1",
+          "name": "카시오 남성용 블루 다이얼 메탈 시계",
+          "total": 78600,
+          "score": 2,
+          "reason": "남성용 메탈 손목시계로 요청과 예산에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B000VPGWUQ",
+          "name": "트래디셔널 메디신스 감초 허브티백",
+          "total": 35200,
+          "score": 1,
+          "reason": "차 종류는 맞지만 단일 감초 허브티백으로 집들이 선물 포장·취향 정보가 약하다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B097HMDY2H",
+          "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+          "total": 33600,
+          "score": 2,
+          "reason": "그린티 버라이어티 세트로 차 선물 요청에 맞는다."
+        },
+        {
+          "source": "amazon",
+          "case": "G03",
+          "product": "amz-B0892M39NG",
+          "name": "더 티 헤븐 카슈미르 카흐와 티 선물세트",
+          "total": 14700,
+          "score": 2,
+          "reason": "차 선물세트이며 예산 안이다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B0000DJAKA",
+          "name": "Nature Made 포타슘 글루코네이트",
+          "total": 34500,
+          "score": 1,
+          "reason": "건강 상품군이지만 성분 필요성과 단맛 정보가 없어 할머니에게 적합하다고 확정할 수 없다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B08M3NK28T",
+          "name": "Neuherbs 트루 비타민 멀티비타민",
+          "total": 38400,
+          "score": 1,
+          "reason": "멀티비타민이지만 섭취 필요성과 단맛 정보가 없다."
+        },
+        {
+          "source": "amazon",
+          "case": "G05",
+          "product": "amz-B076ZKBFP9",
+          "name": "Amway Nutrilite 비오틴 체리 플러스",
+          "total": 36400,
+          "score": 1,
+          "reason": "비오틴 제품으로 성분 필요성·단맛이 확인되지 않아 부분 적합으로만 본다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B07B3VTJHW",
+          "name": "Urban Forest 가죽 지갑 선물세트",
+          "total": 41900,
+          "score": 2,
+          "reason": "술과 무관한 지갑 선물세트로 직장 감사 선물의 후보가 될 수 있다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B07ZMBCKBY",
+          "name": "FEISEDY 스퀘어 선글라스",
+          "total": 40000,
+          "score": 1,
+          "reason": "예산과 주류 제외는 맞지만 선글라스 디자인 취향을 확인하지 않았다."
+        },
+        {
+          "source": "amazon",
+          "case": "G06",
+          "product": "amz-B076SGJRKQ",
+          "name": "아트 스트리트 블랙 액자 11종 세트",
+          "total": 35700,
+          "score": 1,
+          "reason": "액자는 가능하지만 11종 묶음의 필요성·인테리어 취향은 확인되지 않았다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_6656987060",
+          "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+          "total": 37400,
+          "score": 1,
+          "reason": "생일용 꽃다발 형태지만 비누꽃이다. 생화 선호는 확인되지 않았다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_2139516623",
+          "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+          "total": 44000,
+          "score": 2,
+          "reason": "생일·어버이날 용도의 생화 꽃다발/꽃바구니로 요구와 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G01",
+          "product": "naver_5717596862",
+          "name": "비누꽃바구니 어버이날 카네이션 화분 꽃다발 장미 생신 환갑 살구핑크 30송이",
+          "total": 36100,
+          "score": 1,
+          "reason": "생신·환갑용 꽃 상품이지만 비누꽃이며 바구니/화분/꽃다발 형태가 제목에 섞여 있다."
+        },
+        {
+          "source": "web",
+          "case": "G02",
+          "product": "naver_4365188545",
+          "name": "카시오 A168WA-1 빈티지 전자 메탈 손목시계",
+          "total": 44500,
+          "score": 2,
+          "reason": "손목시계 요청에 맞으며 낮은 가격 자체는 부적합 사유가 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_12926021848",
+          "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+          "total": 41300,
+          "score": 2,
+          "reason": "전통차 구성의 선물세트로 차·집들이 맥락에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_4954445330",
+          "name": "쌍계명차 클래식 티박스 전통차선물세트(9종, 총 45입)",
+          "total": 27000,
+          "score": 2,
+          "reason": "전통차 티박스 선물세트로 요청에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G03",
+          "product": "naver_6933776120",
+          "name": "다비앙 유기농 캐모마일 차 30티백",
+          "total": 12800,
+          "score": 1,
+          "reason": "차는 맞지만 일반 캐모마일 30티백이며 선물 포장 정보가 약하다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_13359230452",
+          "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+          "total": 27000,
+          "score": 2,
+          "reason": "0.5mm 샤프로 고등학생의 필기구 요청과 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_4042925417",
+          "name": "카코 퓨어 소프트 젤펜 볼펜 중성펜 10색 세트",
+          "total": 16500,
+          "score": 2,
+          "reason": "볼펜 10색 세트로 명시한 필기구에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G04",
+          "product": "naver_7023351911",
+          "name": "파이롯트 쥬스업 4색 볼펜 0.4 멀티펜 일본 다색 각인 이니셜 커스덤 단체 선물",
+          "total": 7490,
+          "score": 2,
+          "reason": "멀티 볼펜이며 필기구 선물 요청에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_2176545119",
+          "name": "닥터웰 온열 찜질기 국산 황토 어깨 허리 복부 매트 전기 찜질팩",
+          "total": 39800,
+          "score": 2,
+          "reason": "먹는 선물의 단맛 문제를 피하는 온열 찜질기다. 의료 효과를 뜻하는 평가는 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_2328997568",
+          "name": "제스파 3단계 강도조절 마사지기 해피메이트 목어깨 안마기 ZP954",
+          "total": 44900,
+          "score": 2,
+          "reason": "일반적인 편안함을 위한 마사지기로 주어진 선물 맥락과 예산에 맞는다."
+        },
+        {
+          "source": "web",
+          "case": "G05",
+          "product": "naver_12906683162",
+          "name": "아이리버 IHC-CM010 미니 종아리 발 마사지기 온열 롤링 임산부 부모님 선물",
+          "total": 39900,
+          "score": 2,
+          "reason": "부모님 선물로 명시된 종아리 마사지기이며 예산 안이다. 실사용 가능 여부는 별도 확인 사항이다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_2776076224",
+          "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+          "total": 46800,
+          "score": 2,
+          "reason": "감사·교수님 선물로 명시된 수제청 세트이며 술이 아니다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_9789909393",
+          "name": "궁 육포 선물세트 510g 명절선물 추석 코스트코",
+          "total": 47900,
+          "score": 2,
+          "reason": "육포 선물세트로 예산·주류 제외·감사 맥락을 충족한다. 추가 식이 조건은 제시되지 않았다."
+        },
+        {
+          "source": "web",
+          "case": "G06",
+          "product": "naver_12926021848",
+          "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+          "total": 41300,
+          "score": 2,
+          "reason": "차 선물세트로 주류 제외와 일반적인 감사 맥락에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_6656987060",
+          "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+          "total": 37400,
+          "score": 1,
+          "reason": "생일용 꽃다발 형태지만 비누꽃이다. 생화 선호는 확인되지 않았다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_2139516623",
+          "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+          "total": 44000,
+          "score": 2,
+          "reason": "생일·어버이날 용도의 생화 꽃다발/꽃바구니로 요구와 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G01",
+          "product": "naver_5717596862",
+          "name": "비누꽃바구니 어버이날 카네이션 화분 꽃다발 장미 생신 환갑 살구핑크 30송이",
+          "total": 36100,
+          "score": 1,
+          "reason": "생신·환갑용 꽃 상품이지만 비누꽃이며 바구니/화분/꽃다발 형태가 제목에 섞여 있다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B07X3J2GJ7",
+          "name": "Sonata 남성용 포멀 아날로그 시계",
+          "total": 72800,
+          "score": 2,
+          "reason": "남성용 포멀 손목시계이며 배송 포함 예산 안이다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B018VZBTLY",
+          "name": "Titan 아날로그 실버 다이얼 시계",
+          "total": 95800,
+          "score": 2,
+          "reason": "아날로그 손목시계로 명시 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G02",
+          "product": "amz-B07BS3LCP1",
+          "name": "카시오 남성용 블루 다이얼 메탈 시계",
+          "total": 78600,
+          "score": 2,
+          "reason": "남성용 메탈 손목시계로 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "naver_12926021848",
+          "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+          "total": 41300,
+          "score": 2,
+          "reason": "전통차 구성의 선물세트로 차·집들이 맥락에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "amz-B000VPGWUQ",
+          "name": "트래디셔널 메디신스 감초 허브티백",
+          "total": 35200,
+          "score": 1,
+          "reason": "차 종류는 맞지만 단일 감초 허브티백으로 집들이 선물 포장·취향 정보가 약하다."
+        },
+        {
+          "source": "both",
+          "case": "G03",
+          "product": "amz-B097HMDY2H",
+          "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+          "total": 33600,
+          "score": 2,
+          "reason": "그린티 버라이어티 세트로 차 선물 요청에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_13359230452",
+          "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+          "total": 27000,
+          "score": 2,
+          "reason": "0.5mm 샤프로 고등학생의 필기구 요청과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_4042925417",
+          "name": "카코 퓨어 소프트 젤펜 볼펜 중성펜 10색 세트",
+          "total": 16500,
+          "score": 2,
+          "reason": "볼펜 10색 세트로 명시한 필기구에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G04",
+          "product": "naver_7023351911",
+          "name": "파이롯트 쥬스업 4색 볼펜 0.4 멀티펜 일본 다색 각인 이니셜 커스덤 단체 선물",
+          "total": 7490,
+          "score": 2,
+          "reason": "멀티 볼펜이며 필기구 선물 요청에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "naver_2176545119",
+          "name": "닥터웰 온열 찜질기 국산 황토 어깨 허리 복부 매트 전기 찜질팩",
+          "total": 39800,
+          "score": 2,
+          "reason": "먹는 선물의 단맛 문제를 피하는 온열 찜질기다. 의료 효과를 뜻하는 평가는 아니다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "naver_2328997568",
+          "name": "제스파 3단계 강도조절 마사지기 해피메이트 목어깨 안마기 ZP954",
+          "total": 44900,
+          "score": 2,
+          "reason": "일반적인 편안함을 위한 마사지기로 주어진 선물 맥락과 예산에 맞는다."
+        },
+        {
+          "source": "both",
+          "case": "G05",
+          "product": "naver_12906683162",
+          "name": "아이리버 IHC-CM010 미니 종아리 발 마사지기 온열 롤링 임산부 부모님 선물",
+          "total": 39900,
+          "score": 2,
+          "reason": "부모님 선물로 명시된 종아리 마사지기이며 예산 안이다. 실사용 가능 여부는 별도 확인 사항이다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "amz-B07B3VTJHW",
+          "name": "Urban Forest 가죽 지갑 선물세트",
+          "total": 41900,
+          "score": 2,
+          "reason": "술과 무관한 지갑 선물세트로 직장 감사 선물의 후보가 될 수 있다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "naver_2776076224",
+          "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+          "total": 46800,
+          "score": 2,
+          "reason": "감사·교수님 선물로 명시된 수제청 세트이며 술이 아니다."
+        },
+        {
+          "source": "both",
+          "case": "G06",
+          "product": "naver_9789909393",
+          "name": "궁 육포 선물세트 510g 명절선물 추석 코스트코",
+          "total": 47900,
+          "score": 2,
+          "reason": "육포 선물세트로 예산·주류 제외·감사 맥락을 충족한다. 추가 식이 조건은 제시되지 않았다."
+        }
+      ]
+    }
+  }
+}

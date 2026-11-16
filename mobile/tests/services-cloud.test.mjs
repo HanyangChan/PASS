@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloudRecords } from '../src/services/cloudRecords.ts';
 import { createLocalChatService } from '../src/services/chatService.ts';
+import { record, products, state, scope } from '../../tests/fixtures/context-feedback.mjs';
+import { rankingFeedback } from '../src/chatHistory.ts';
 const empty = () => createLocalChatService([], {}).createSession();
 const gift = id => ({ id, name: '선물', category: '차', price: 30000, description: '예시', icon: 'gift' });
 const message = text => ({ role: 'user', text });
@@ -254,4 +256,28 @@ test('history deletion is scoped to the account and cannot recreate the active c
   assert.equal(f.rows.conversations.find(row => row.user_id === 'other').id, previous);
   f.switchOwner();
   await assert.rejects(repo.loadConversation(active), /로그인/);
+});
+
+test('a populated account preserves evaluation-time context across edits, failed writes and restoration', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  const s = { state: { ...empty().state, recipients: ['어머니'], occasion: '생일', preferences: ['category:coffee_tea'], budget: { amount_krw: 50000, shipping_included: true } }, issues: [] };
+  const vote = record(products[1], s.state);
+  repo.setFeedback([vote, { ...vote, kind: 'reason_helpfulness' }]);
+  await repo.saveChat(s, [message('mother')]);
+  const changed = { state: { ...s.state, recipients: ['친구'] }, issues: [] };
+  f.fail('conversations:update');
+  await assert.rejects(repo.saveChat(changed, [message('mother'), message('friend')]));
+  await repo.saveChat(changed, [message('mother'), message('friend')]);
+  const restored = await f.repo().load(empty());
+  assert.equal(restored.feedback.length, 2);
+  assert.deepEqual(restored.feedback[0].context, vote.context, 'final recipient does not relabel old votes');
+  const signals = rankingFeedback(restored.feedback);
+  const service = createLocalChatService(products, signals, scope), plain = createLocalChatService(products);
+  assert.deepEqual(service.view(restored.session), plain.view(restored.session));
+  const list = await f.repo().listConversations();
+  assert.equal(list.length, 1);
+  assert.equal(list[0].feedback.filter(v => v.kind === 'gift_preference').length, 1);
+  f.switchOwner();
+  repo.setFeedback([]);
+  await assert.rejects(repo.saveFeedback(), /다시 로그인/);
 });

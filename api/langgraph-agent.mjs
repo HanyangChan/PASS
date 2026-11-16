@@ -92,7 +92,7 @@ export async function prototypeLangGraphTurn(input, products, { env, fetcher, si
     issues = ['현재 앱은 선물 하나 기준입니다. 선물 하나의 예산과 조건을 알려주세요.'];
   }
   validateState(state);
-  const turn = finishSingle(before, state, issues, products);
+  const turn = finishSingle(before, state, issues, products, ranking);
   const result = recommend(products, evaluated, ranking);
   let message = turn.question.key ? turn.question.text : result.message;
   if (!turn.question.key && intent.kind === 'what_if_budget') {

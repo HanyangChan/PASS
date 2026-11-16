@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CATEGORY_NAMES } from '../../lib/catalog.mjs';
-import { feedbackWeights } from '../../lib/engine.mjs';
 import { colors as c, fonts } from './theme';
 import type { EngineProduct } from './domain';
 import type { FeedbackSignal, PastChat, PastChatDetail } from './chatHistory';
 
-const category = (key: string) => (CATEGORY_NAMES as Record<string, string>)[key] ?? key;
 const date = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}월 ${d.getDate()}일`; };
-const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
 // Mypage shows the current feedback weights and archived conversations.
 export function PastChats({ chats, signal, products, open, remove }: {
@@ -18,8 +14,6 @@ export function PastChats({ chats, signal, products, open, remove }: {
 }) {
   const [opened, setOpened] = useState<{ id: string; detail: PastChatDetail | null; error?: string } | null>(null);
   const [deletion, setDeletion] = useState<{ id: string; pending: boolean; error?: string } | null>(null);
-  const weights = feedbackWeights(products, { liked: signal.filter(f => f.helpful).map(f => f.giftId), disliked: signal.filter(f => !f.helpful).map(f => f.giftId) });
-  const entries = Object.entries(weights.categories as Record<string, number>).sort((a, b) => b[1] - a[1]);
   const name = new Map(products.map(p => [p.id, p.name.replace('가상 ', '')]));
   const toggle = (chat: PastChat) => {
     if (opened?.id === chat.id) return setOpened(null);
@@ -41,14 +35,9 @@ export function PastChats({ chats, signal, products, open, remove }: {
   };
   return (
     <View style={st.wrap}>
-      <Text style={st.title}>추천에 반영 중인 피드백</Text>
-      {entries.length || weights.disliked.size ? (
-        <View style={st.box}>
-          {entries.map(([key, score]) => <Text key={key} style={st.line}>{category(key)} {signed(score)}점</Text>)}
-          {weights.disliked.size > 0 && <Text style={st.line}>👎 받은 상품 {weights.disliked.size}개는 −5점</Text>}
-          <Text style={st.muted}>같은 조건 안에서만 순서를 바꿔요. 예산·알레르기 조건은 그대로예요.</Text>
-        </View>
-      ) : <Text style={st.muted}>추천 카드의 👍/👎가 다음 추천 점수에 반영돼요.</Text>}
+      <Text style={st.title}>최근 상품 평가 {signal.length}개</Text>
+      <Text style={st.muted}>상품 평가는 같은 대화·같은 조건에서 비슷하게 맞는 후보의 순서를 조정해요. 다른 대화에는 자동 적용하지 않아요.</Text>
+      <Text style={st.muted}>추천 이유에 대한 평가는 상품 취향으로 사용하지 않아요. 상품 평가 사용은 채팅에서 끌 수 있어요.</Text>
       <Text style={st.title}>지난 대화 {chats.length}개</Text>
       {chats.length === 0 && <Text style={st.muted}>새 대화를 시작하면 지금 대화가 여기에 남아요.</Text>}
       {chats.map(chat => {
@@ -69,7 +58,7 @@ export function PastChats({ chats, signal, products, open, remove }: {
                     {opened.detail.recommendations.map(gift => <Text key={gift.id} style={st.muted}>{gift.name} · {gift.price.toLocaleString('ko-KR')}원</Text>)}
                   </>}
                 </>}
-                {chat.feedback.map(f => <Text key={f.giftId} style={st.muted}>{f.helpful ? '👍' : '👎'} {f.rank}순위 · {name.get(f.giftId) ?? f.giftId}</Text>)}
+                {chat.feedback.map((f, i) => <Text key={`${f.giftId}:${i}`} style={st.muted}>{f.kind === 'gift_preference' ? '상품' : '설명'} {f.helpful ? '👍' : '👎'} {f.rank}순위 · {name.get(f.giftId) ?? f.giftId}</Text>)}
                 {remove && (deletion?.id === chat.id ? (
                   <View style={st.body}>
                     <Text style={st.muted}>{deletion.error ?? '이 대화를 삭제할까요?'}</Text>

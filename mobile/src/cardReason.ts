@@ -18,7 +18,7 @@ export function cardReason(item: ReasonItem, conditions: Conditions): string {
   const category = item.category ? names[item.category] ?? item.category : '';
   const picks: (string | null)[] = [
     // Past 👍/👎 moved this item; show the exact score change so the effect is visible.
-    item.feedback_score ? `지난 피드백 반영 (${item.feedback_score > 0 ? '+' : ''}${item.feedback_score}점)` : null,
+    item.feedback_score ? `같은 상황의 상품 평가 반영 (${item.feedback_score > 0 ? '+' : ''}${item.feedback_score}점)` : null,
     conditions.occasion === '명절' && isGiftSet(item) ? '명절 선물세트' : null,
     item.category && conditions.preferences.includes(`category:${item.category}`) ? `${category} 선호 반영` : null,
     conditions.preferences.includes('unsweetened') && item.sweetness === 'unsweetened' ? '단맛 없는 상품'

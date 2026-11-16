@@ -1,0 +1,1619 @@
+{
+  "summary": {
+    "group": "reserved",
+    "label": "first",
+    "datasetHash": "ea95d8354a5fd2757beb4d2cbdf61126ac994bed9610f74d6e304aba3e2621b5",
+    "executions": 16,
+    "passed": 4,
+    "failed": 12,
+    "note": "Newly worded internal evaluation, same author as implementation. Reserved group is not an independently authored benchmark."
+  },
+  "rows": [
+    {
+      "id": "H01",
+      "path": "guest",
+      "say": [
+        "할아버지 생신 선물 찾아줘. 배송료까지 팔만원으로 부탁해"
+      ],
+      "expected": {
+        "recipients": [
+          "할아버지"
+        ],
+        "occasion": "생일",
+        "budget": 80000,
+        "shipping": true,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "할아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 80000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "H01",
+      "path": "server",
+      "say": [
+        "할아버지 생신 선물 찾아줘. 배송료까지 팔만원으로 부탁해"
+      ],
+      "expected": {
+        "recipients": [
+          "할아버지"
+        ],
+        "occasion": "생일",
+        "budget": 80000,
+        "shipping": true,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "할아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 80000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "H02",
+      "path": "guest",
+      "say": [
+        "직장 상사에게 드릴 선물이에요. 택배비 제외하고 6만 원까지요"
+      ],
+      "expected": {
+        "recipients": [
+          "상사"
+        ],
+        "budget": 60000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "budget: null",
+        "shipping: null",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H02",
+      "path": "server",
+      "say": [
+        "직장 상사에게 드릴 선물이에요. 택배비 제외하고 6만 원까지요"
+      ],
+      "expected": {
+        "recipients": [
+          "상사"
+        ],
+        "budget": 60000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "budget: null",
+        "shipping: null",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H03",
+      "path": "guest",
+      "say": [
+        "친구 생일 4만원 배송 포함",
+        "음료 말고 필기구로 보고 싶어"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "budget": 40000,
+        "prefsInclude": [
+          "category:stationery"
+        ],
+        "allowQuestion": true
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "preferences_missing: []",
+        "budget: null"
+      ]
+    },
+    {
+      "id": "H03",
+      "path": "server",
+      "say": [
+        "친구 생일 4만원 배송 포함",
+        "음료 말고 필기구로 보고 싶어"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "budget": 40000,
+        "prefsInclude": [
+          "category:stationery"
+        ],
+        "allowQuestion": true
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "preferences_missing: []",
+        "budget: null"
+      ]
+    },
+    {
+      "id": "H04",
+      "path": "guest",
+      "say": [
+        "엄마 생신 선물 5만원 배송 포함",
+        "오만원은 그대로 두고 꽃다발로 바꿔줘"
+      ],
+      "expected": {
+        "recipients": [
+          "어머니"
+        ],
+        "budget": 50000,
+        "prefs": [
+          "category:flower"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": [
+        "preferences: []",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H04",
+      "path": "server",
+      "say": [
+        "엄마 생신 선물 5만원 배송 포함",
+        "오만원은 그대로 두고 꽃다발로 바꿔줘"
+      ],
+      "expected": {
+        "recipients": [
+          "어머니"
+        ],
+        "budget": 50000,
+        "prefs": [
+          "category:flower"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": [
+        "preferences: []",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H05",
+      "path": "guest",
+      "say": [
+        "아버지 선물로 배송 포함 6만원. 우유 들어간 것은 피해줘"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 60000,
+        "shipping": true,
+        "exIng": [
+          "우유"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "우유"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 60000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "H05",
+      "path": "server",
+      "say": [
+        "아버지 선물로 배송 포함 6만원. 우유 들어간 것은 피해줘"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 60000,
+        "shipping": true,
+        "exIng": [
+          "우유"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "우유"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 60000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "H06",
+      "path": "guest",
+      "say": [
+        "친구 생일 3만원 배송 포함",
+        "예산은 삼만원 그대로, 배송비는 따로 계산해"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "budget": 30000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "budget: null",
+        "shipping: null",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H06",
+      "path": "server",
+      "say": [
+        "친구 생일 3만원 배송 포함",
+        "예산은 삼만원 그대로, 배송비는 따로 계산해"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "budget": 30000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": null,
+            "shipping_included": null
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "exam",
+            "name": "exam",
+            "category": "stationery",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "exam"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "flower",
+            "name": "flower",
+            "category": "flower",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "occasions": [
+              "birthday"
+            ],
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          },
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 0
+          }
+        ]
+      },
+      "errors": [
+        "recipients: []",
+        "budget: null",
+        "shipping: null",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H07",
+      "path": "guest",
+      "say": [
+        "어머니 5만원 배송 포함 커피 선물",
+        "그거 말고 친구 선물이야. 차를 좋아하는 사람이야"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "prefs": [
+          "category:coffee_tea",
+          "type:tea"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [
+            "category:coffee_tea",
+            "type:coffee"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          }
+        ]
+      },
+      "errors": [
+        "recipients: [\"어머니\"]",
+        "preferences: [\"category:coffee_tea\",\"type:coffee\"]",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H07",
+      "path": "server",
+      "say": [
+        "어머니 5만원 배송 포함 커피 선물",
+        "그거 말고 친구 선물이야. 차를 좋아하는 사람이야"
+      ],
+      "expected": {
+        "recipients": [
+          "친구"
+        ],
+        "prefs": [
+          "category:coffee_tea",
+          "type:tea"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [
+            "category:coffee_tea",
+            "type:coffee"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 4
+          }
+        ]
+      },
+      "errors": [
+        "recipients: [\"어머니\"]",
+        "preferences: [\"category:coffee_tea\",\"type:coffee\"]",
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H08",
+      "path": "guest",
+      "say": [
+        "아빠 선물로 배송 포함 8만원",
+        "예산 10만원이라면 뭐가 달라져?"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 80000,
+        "shipping": true,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 80000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": [
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    },
+    {
+      "id": "H08",
+      "path": "server",
+      "say": [
+        "아빠 선물로 배송 포함 8만원",
+        "예산 10만원이라면 뭐가 달라져?"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 80000,
+        "shipping": true,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 80000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": "issue",
+          "text": "받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요.",
+          "choices": []
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": [
+        "question: 받는 사람의 선호나 조건을 조금 더 구체적으로 알려주세요."
+      ]
+    }
+  ]
+}

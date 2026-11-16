@@ -1,6 +1,6 @@
 export const CATALOG_ID='amazon-kaggle-v1';
 export const CATEGORIES=['food','snack','coffee_tea','health','beauty','makeup','personal_care','kitchen','decor','jewelry','watch','bag','accessory','audio','toy','fitness','flower','stationery','digital','liquor'];
-export const PREFERENCE_TAGS=['less_sweet','unsweetened','type:tea','type:coffee','avoid_fragrance',...CATEGORIES.map(c=>`category:${c}`)];
+export const PREFERENCE_TAGS=['less_sweet','unsweetened','type:tea','type:coffee','type:writing','type:bouquet','avoid_fragrance','avoid_wine',...CATEGORIES.map(c=>`category:${c}`)];
 export const CATEGORY_NAMES={food:'식품',snack:'과자·간식',coffee_tea:'커피·차',health:'건강식품',beauty:'뷰티',makeup:'메이크업',personal_care:'생활가전',kitchen:'주방용품',decor:'홈데코',jewelry:'주얼리',watch:'시계',bag:'가방',accessory:'패션소품',audio:'음향기기',toy:'장난감',fitness:'운동용품',flower:'꽃·식물',stationery:'문구',digital:'디지털기기',liquor:'주류'};
 // Recipient groups → categories that usually suit them (ranking tabs and a +1 recommendation boost).
 export const RECIPIENT_CATEGORIES={부모님:['health','food','coffee_tea','kitchen','decor'],친구:['beauty','makeup','jewelry','audio','snack'],직장동료:['coffee_tea','snack','decor','accessory','kitchen']};
@@ -18,7 +18,7 @@ const BASIC_GROUPS=[['부모님',/부모|어머니|아버지|엄마|아빠|처�
 // child / elder (parents and grandparents) / adult; unknown or mixed gives null.
 const CHILD=/조카|어린이|^아이$|손주|손녀/, ELDER=/부모|어머니|아버지|엄마|아빠|할머니|할아버지|장인|장모|시어머니|시아버지/;
 export function recipientAge(recipients){
- const ages=new Set(recipients.map(r=>CHILD.test(r)?'child':ELDER.test(r)?'elder':RECIPIENT_GROUPS.some(([group,re])=>group!=='아이'&&re.test(r))?'adult':null));
+ const ages=new Set(recipients.map(r=>/중학생|고등학생|청소년/.test(r)?'teen':/성인|대학생/.test(r)?'adult':CHILD.test(r)?'child':ELDER.test(r)?'elder':RECIPIENT_GROUPS.some(([group,re])=>group!=='아이'&&re.test(r))?'adult':null));
  return ages.size===1?[...ages][0]:null;
 }
 export const recipientCategories=(recipients,{profiles=false}={})=>{

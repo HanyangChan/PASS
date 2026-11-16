@@ -11,22 +11,23 @@ type RankedProduct = Product & { total: number };
 
 // The local implementation is the guest/offline recommendation path.
 // Only this service knows the engine's internal single-gift state conversion.
-export function createLocalChatService(products: Product[], feedback: FeedbackSignal[] = []) {
-  // Past card feedback re-weights ranking only; it never changes the conditions or the filters.
-  const ranking = feedback.length ? { ...APP_RANKING, feedback: { liked: feedback.filter(f => f.helpful).map(f => f.giftId), disliked: feedback.filter(f => !f.helpful).map(f => f.giftId) } } : APP_RANKING;
+export function createLocalChatService(products: Product[], feedback: FeedbackSignal[] | (() => FeedbackSignal[]) = [], scope: string | null | (() => string | null) = null) {
+  // Snapshot on request, not on React render. The engine selects against the interpreted state.
+  const rankingNow = () => ({ ...APP_RANKING, feedback: { records: structuredClone(typeof feedback === 'function' ? feedback() : feedback), scope: typeof scope === 'function' ? scope() : scope } });
   return {
     createSession(): ChatSession { return { state: singleInitial(), issues: [] }; },
     // Same rules-first router as the server's mode A, without a model: guests get the same understanding.
     async send(session: ChatSession, text: string, history: ChatMessage[] = []) {
       const input = text.trim();
       if (!input) throw new Error('추천할 내용을 입력해주세요.');
-      const turn = await (prototypeRouterTurn as (...args: unknown[]) => Promise<{ session: ChatSession; message: string }>)({ operation: 'turn', state: session.state, issues: session.issues, text: input, history: history.slice(-6), source: 'typed' }, products, { ranking });
+      const turn = await (prototypeRouterTurn as (...args: unknown[]) => Promise<{ session: ChatSession; message: string }>)({ operation: 'turn', state: session.state, issues: session.issues, text: input, history: history.slice(-6), source: 'typed' }, products, { ranking: rankingNow() });
       return { session: turn.session, message: turn.message, question: singleQuestion(turn.session) };
     },
     updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true) {
-      return finishSingle(session.state, apply(session.state, patch), clearIssues ? [] : session.issues, products);
+      return finishSingle(session.state, apply(session.state, patch), clearIssues ? [] : session.issues, products, rankingNow());
     },
     view(session: ChatSession) {
+      const ranking = rankingNow();
       const state = engineState(session.state);
       return {
         question: singleQuestion(session),

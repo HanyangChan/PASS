@@ -1,0 +1,1029 @@
+{
+  "summary": {
+    "group": "fresh",
+    "label": "publish",
+    "datasetHash": "fb225ada217b2e387856409d5a2bb8930ed5e9ed386f0d658810e40f192ac094",
+    "executions": 12,
+    "passed": 12,
+    "failed": 0,
+    "note": "Newly worded internal evaluation, same author as implementation. Reserved group is not an independently authored benchmark."
+  },
+  "rows": [
+    {
+      "id": "F01",
+      "path": "guest",
+      "say": [
+        "아빠 생일인데 택배비까지 오만원 안에서 손목시계로 골라줘"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "occasion": "생일",
+        "budget": 50000,
+        "shipping": true,
+        "prefs": [
+          "category:watch"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [
+            "category:watch"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "watch-now",
+            "name": "watch-now",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old1",
+            "name": "watch-old1",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old2",
+            "name": "watch-old2",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F01",
+      "path": "server",
+      "say": [
+        "아빠 생일인데 택배비까지 오만원 안에서 손목시계로 골라줘"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "occasion": "생일",
+        "budget": 50000,
+        "shipping": true,
+        "prefs": [
+          "category:watch"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "생일",
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [
+            "category:watch"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "watch-now",
+            "name": "watch-now",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old1",
+            "name": "watch-old1",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old2",
+            "name": "watch-old2",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F02",
+      "path": "guest",
+      "say": [
+        "고등학생 조카 입학 선물 삼만원 배송료 포함. 필기구 좋아해"
+      ],
+      "expected": {
+        "recipientContains": "고등학생 조카",
+        "occasion": "입학",
+        "budget": 30000,
+        "shipping": true,
+        "prefs": [
+          "category:stationery",
+          "type:writing"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "입학",
+          "recipients": [
+            "고등학생 조카"
+          ],
+          "preferences": [
+            "category:stationery",
+            "type:writing"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 30000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": []
+      },
+      "errors": []
+    },
+    {
+      "id": "F02",
+      "path": "server",
+      "say": [
+        "고등학생 조카 입학 선물 삼만원 배송료 포함. 필기구 좋아해"
+      ],
+      "expected": {
+        "recipientContains": "고등학생 조카",
+        "occasion": "입학",
+        "budget": 30000,
+        "shipping": true,
+        "prefs": [
+          "category:stationery",
+          "type:writing"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": "입학",
+          "recipients": [
+            "고등학생 조카"
+          ],
+          "preferences": [
+            "category:stationery",
+            "type:writing"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 30000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": []
+      },
+      "errors": []
+    },
+    {
+      "id": "F03",
+      "path": "guest",
+      "say": [
+        "어머니 선물 택배비 별도로 6만원",
+        "예산은 육만원 그대로 두고 꽃다발로 변경해줘"
+      ],
+      "expected": {
+        "recipients": [
+          "어머니"
+        ],
+        "budget": 60000,
+        "shipping": false,
+        "prefs": [
+          "category:flower",
+          "type:bouquet"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [
+            "category:flower",
+            "type:bouquet"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 60000,
+            "shipping_included": false
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": []
+      },
+      "errors": []
+    },
+    {
+      "id": "F03",
+      "path": "server",
+      "say": [
+        "어머니 선물 택배비 별도로 6만원",
+        "예산은 육만원 그대로 두고 꽃다발로 변경해줘"
+      ],
+      "expected": {
+        "recipients": [
+          "어머니"
+        ],
+        "budget": 60000,
+        "shipping": false,
+        "prefs": [
+          "category:flower",
+          "type:bouquet"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "어머니"
+          ],
+          "preferences": [
+            "category:flower",
+            "type:bouquet"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 60000,
+            "shipping_included": false
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": []
+      },
+      "errors": []
+    },
+    {
+      "id": "F04",
+      "path": "guest",
+      "say": [
+        "친구 선물 4만원 배송비 포함 커피로",
+        "그거 말고 아버지 선물이야. 5만원 배송비 포함 시계로"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 50000,
+        "shipping": true,
+        "prefs": [
+          "category:watch"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [
+            "category:watch"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "watch-now",
+            "name": "watch-now",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old1",
+            "name": "watch-old1",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old2",
+            "name": "watch-old2",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F04",
+      "path": "server",
+      "say": [
+        "친구 선물 4만원 배송비 포함 커피로",
+        "그거 말고 아버지 선물이야. 5만원 배송비 포함 시계로"
+      ],
+      "expected": {
+        "recipients": [
+          "아버지"
+        ],
+        "budget": 50000,
+        "shipping": true,
+        "prefs": [
+          "category:watch"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "아버지"
+          ],
+          "preferences": [
+            "category:watch"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "watch-now",
+            "name": "watch-now",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old1",
+            "name": "watch-old1",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          },
+          {
+            "id": "watch-old2",
+            "name": "watch-old2",
+            "category": "watch",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 3
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F05",
+      "path": "guest",
+      "say": [
+        "할머니 선물 5만원 배송료 포함",
+        "땅콩은 빼고 단 건 말고 차로"
+      ],
+      "expected": {
+        "recipients": [
+          "할머니"
+        ],
+        "budget": 50000,
+        "shipping": true,
+        "exIng": [
+          "땅콩"
+        ],
+        "prefsInclude": [
+          "category:coffee_tea",
+          "type:tea",
+          "less_sweet"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "할머니"
+          ],
+          "preferences": [
+            "less_sweet",
+            "category:coffee_tea",
+            "type:tea"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "땅콩"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F05",
+      "path": "server",
+      "say": [
+        "할머니 선물 5만원 배송료 포함",
+        "땅콩은 빼고 단 건 말고 차로"
+      ],
+      "expected": {
+        "recipients": [
+          "할머니"
+        ],
+        "budget": 50000,
+        "shipping": true,
+        "exIng": [
+          "땅콩"
+        ],
+        "prefsInclude": [
+          "category:coffee_tea",
+          "type:tea",
+          "less_sweet"
+        ],
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "할머니"
+          ],
+          "preferences": [
+            "less_sweet",
+            "category:coffee_tea",
+            "type:tea"
+          ],
+          "excluded_categories": [],
+          "excluded_ingredients": [
+            "땅콩"
+          ],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 50000,
+            "shipping_included": true
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 7
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F06",
+      "path": "guest",
+      "say": [
+        "직장 동료 선물 4만원 배송 포함",
+        "배송료는 따로 계산해. 예산은 사만원 그대로"
+      ],
+      "expected": {
+        "recipients": [
+          "직장동료"
+        ],
+        "budget": 40000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "직장동료"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 40000,
+            "shipping_included": false
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    },
+    {
+      "id": "F06",
+      "path": "server",
+      "say": [
+        "직장 동료 선물 4만원 배송 포함",
+        "배송료는 따로 계산해. 예산은 사만원 그대로"
+      ],
+      "expected": {
+        "recipients": [
+          "직장동료"
+        ],
+        "budget": 40000,
+        "shipping": false,
+        "asks": false
+      },
+      "actual": {
+        "state": {
+          "occasion": null,
+          "recipients": [
+            "직장동료"
+          ],
+          "preferences": [],
+          "excluded_categories": [],
+          "excluded_ingredients": [],
+          "brand": null,
+          "delivery_by": null,
+          "packaging": null,
+          "budget": {
+            "amount_krw": 40000,
+            "shipping_included": false
+          }
+        },
+        "question": {
+          "key": null,
+          "text": "조건이 준비됐어요. 추천을 살펴보거나 원하는 조건을 바꿔주세요.",
+          "choices": [
+            "덜 단 상품으로",
+            "견과류는 빼줘"
+          ]
+        },
+        "items": [
+          {
+            "id": "tea-a",
+            "name": "tea-a",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-b",
+            "name": "tea-b",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "tea-c",
+            "name": "tea-c",
+            "category": "coffee_tea",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 10,
+            "arrival_date": "2026-12-01",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "rating_count": 10,
+            "popularity": 1,
+            "total": 40000,
+            "score": 1
+          }
+        ]
+      },
+      "errors": []
+    }
+  ]
+}

@@ -63,6 +63,7 @@ import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository, feedbackRepository, historyRepository } from './src/services/localServices';
 import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
+import { feedbackContext, productFeedbackKey } from '../lib/feedback.mjs';
 import { PastChats } from './src/PastChats';
 import { createFeedbackScheduler, stampConversation, toggleFeedback, type CardFeedback } from './src/cardFeedback';
 import { createLocalChatService } from './src/services/chatService';
@@ -158,6 +159,8 @@ export function AppContent({
     resetChat,
     cardFeedback,
     rateCard,
+    feedbackEnabled,
+    toggleFeedbackUse,
     pastChats,
     rankingSignal,
     openPastChat,
@@ -815,9 +818,13 @@ export function AppContent({
                   ))}
                   {!question.key && result.items.length === 0 && result.status !== 'reference' && <View style={s.noMatches}>
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
-                    <Button label="예산 5만 원으로 다시 찾기" onPress={() => changeBudget({ amount: 50000, patch: { budget: { amount_krw: 50000 } } })}/>
-                    <Button label="제외 조건 풀어보기" onPress={() => {
-                      void changeChatConditions({ excluded_categories: [], excluded_ingredients: [] }, '제외 조건을 풀어줘.');
+                    <Button label="예산을 직접 입력하기" onPress={() => {
+                      if (!input.trim()) setInput('예산을 ');
+                      inputRef.current?.focus();
+                    }}/>
+                    <Button label="상품 종류를 바꿔 입력하기" onPress={() => {
+                      setNotice('예: “차로 바꿔줘”처럼 입력해주세요. 제외 조건은 그대로 유지해요.');
+                      inputRef.current?.focus();
                     }}/>
                   </View>}
                   {!question.key && result.items.length > 0 && (
@@ -826,17 +833,22 @@ export function AppContent({
                         {result.items.map((p: any, i: number) => {
                           const g = toGift(p);
                           const reason = cardReason(p, session.state);
-                          const mine = cardFeedback.find(f => f.giftId === g.id);
+                          const mine = cardFeedback.find(f => f.giftId === g.id && f.kind !== 'gift_preference');
+                          const productMine = cardFeedback.find(f => f.giftId === g.id && f.kind === 'gift_preference' &&
+                            JSON.stringify(feedbackContext(session.state, f.context?.scope)) === JSON.stringify(f.context));
                           const rate = (helpful: boolean) => rateCard({ giftId: g.id, rank: i + 1, helpful, reason });
                           return <View key={g.id} style={s.chatCard}>
                             <View style={s.chatCardHero}>
                               <GiftImage gift={g}/>
                               <Text style={s.rankBadge}>{i + 1}순위</Text>
                               <View style={s.cardRate}>
+                                <Text style={s.small}>설명 평가</Text>
                                 <Pressable
                                   accessibilityRole="button"
                                   accessibilityLabel={`${g.name} 추천 이유가 도움이 됐어요`}
+                                  disabled={chatPending}
                                   accessibilityState={{ selected: mine?.helpful === true }}
+                                  {...(Platform.OS === 'web' ? { 'aria-pressed': mine?.helpful === true } : {})}
                                   onPress={() => rate(true)}
                                   style={s.cardRateButton}
                                 >
@@ -845,7 +857,9 @@ export function AppContent({
                                 <Pressable
                                   accessibilityRole="button"
                                   accessibilityLabel={`${g.name} 추천 이유가 도움이 안 됐어요`}
+                                  disabled={chatPending}
                                   accessibilityState={{ selected: mine?.helpful === false }}
+                                  {...(Platform.OS === 'web' ? { 'aria-pressed': mine?.helpful === false } : {})}
                                   onPress={() => rate(false)}
                                   style={s.cardRateButton}
                                 >
@@ -855,6 +869,19 @@ export function AppContent({
                             </View>
                             <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
                               <Text numberOfLines={2} style={s.cardReason}>{reason}</Text>
+                              <Text style={s.small}>이 상황의 선물로 어떤가요? 같은 선택을 다시 누르면 취소돼요.</Text>
+                              <View style={s.productRate}>
+                                <Pressable accessibilityRole="button" disabled={chatPending} accessibilityLabel={`${g.name} 이 상황에 좋아요`} accessibilityState={{ selected: productMine?.helpful === true }}
+                                  {...(Platform.OS === 'web' ? { 'aria-pressed': productMine?.helpful === true } : {})}
+                                  onPress={() => rateCard({ giftId: g.id, rank: i + 1, helpful: true, reason, kind: 'gift_preference' })} style={s.cardRateButton}>
+                                  <ThumbsUp size={18} color={productMine?.helpful === true ? c.primary : c.muted}/>
+                                </Pressable>
+                                <Pressable accessibilityRole="button" disabled={chatPending} accessibilityLabel={`${g.name} 이 상황에 아쉬워요`} accessibilityState={{ selected: productMine?.helpful === false }}
+                                  {...(Platform.OS === 'web' ? { 'aria-pressed': productMine?.helpful === false } : {})}
+                                  onPress={() => rateCard({ giftId: g.id, rank: i + 1, helpful: false, reason, kind: 'gift_preference' })} style={s.cardRateButton}>
+                                  <ThumbsDown size={18} color={productMine?.helpful === false ? c.primary : c.muted}/>
+                                </Pressable>
+                              </View>
                               <Button label="자세히 보기" onPress={() => open(g)}/>
                             </View>
                           </View>;
@@ -891,6 +918,9 @@ export function AppContent({
                   </ScrollView>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
                   <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />
+                  <Pressable accessibilityRole="switch" aria-checked={feedbackEnabled} accessibilityState={{ checked: feedbackEnabled, disabled: chatPending }} disabled={chatPending} onPress={toggleFeedbackUse}>
+                    <Text style={s.small}>이 대화의 같은 조건에서 상품 평가 사용: {feedbackEnabled ? '켜짐' : '꺼짐'} · 다음 추천부터 적용</Text>
+                  </Pressable>
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={s.inputShell}>
@@ -1147,10 +1177,13 @@ function usePassState() {
   const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
   const rankingSignalRef = useRef<FeedbackSignal[]>([]);
   const pastFeedback = useRef<CardFeedback[]>([]);
+  const guestSession = useRef(randomUUID());
+  const [feedbackEnabled, setFeedbackEnabled] = useState(true);
+  const feedbackEnabledRef = useRef(true);
   const [pastChats, setPastChats] = useState<PastChat[]>([]);
   const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
   const deletedPastChats = useRef(new Set<string>());
-  const chatService = useMemo(() => createLocalChatService(catalog.products, rankingSignal), [catalog.products, rankingSignal]);
+  const chatService = useMemo(() => createLocalChatService(catalog.products, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current), [catalog.products]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
@@ -1183,7 +1216,7 @@ function usePassState() {
     [comparisonId, setComparisonId] = useState<string | null>(null),
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
-  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => rankingSignalRef.current) : null, [owner]);
+  const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string; agents?: AgentPayload } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
@@ -1191,7 +1224,6 @@ function usePassState() {
   const [chatError, setChatError] = useState(chatConfigurationError);
   const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
   const cardFeedbackRef = useRef<CardFeedback[]>([]);
-  const guestSession = useRef(randomUUID());
   const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
   const changeAgentMode = useCallback((next: ChatAgentMode) => {
     if (chatFlight.current.controller) return;
@@ -1266,10 +1298,17 @@ function usePassState() {
     const subscription = AppState.addEventListener('change', state => { if (state !== 'active') void feedbackScheduler.current?.flushNow(); });
     return () => subscription.remove();
   }, []);
-  const rateCard = (card: { giftId: string; rank: number; helpful: boolean; reason: string }) => {
+  const rateCard = (card: { giftId: string; rank: number; helpful: boolean; reason: string; kind?: 'gift_preference' | 'reason_helpfulness' }) => {
     const displayed = recommendation?.key === JSON.stringify(session) ? recommendation : null;
+    if (chatPending) return;
+    const product = catalog.products.find(p => p.id === card.giftId);
+    const context = feedbackContext(session.state, guestSession.current);
+    if (card.kind === 'gift_preference' && (!product || !context)) return;
     const entry: CardFeedback = {
       ...card,
+      version: 2,
+      kind: card.kind ?? 'reason_helpfulness',
+      ...(card.kind === 'gift_preference' && context ? { context, productKey: productFeedbackKey(product) } : {}),
       conversationId: cloud.current ? '' : guestSession.current,
       agentMode: displayed?.agentMode ?? 'local',
       engineMode: displayed?.mode ?? 'local',
@@ -1317,7 +1356,8 @@ function usePassState() {
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
       const restored = 'feedback' in records && Array.isArray(records.feedback) ? stampConversation(records.feedback as CardFeedback[], '') : [];
-      cardFeedbackRef.current = restored; setCardFeedback(restored); guestSession.current = randomUUID();
+      cardFeedbackRef.current = restored; setCardFeedback(restored);
+      guestSession.current = restored.findLast(f => f.kind === 'gift_preference')?.context?.scope ?? randomUUID();
       // History never blocks the chat: a failed load only hides mypage history and past-feedback weights.
       const currentId = repository?.currentId();
       const history = repository ? repository.listConversations().then(list => ({ list: list.filter(c => c.id !== currentId), logged: [] as CardFeedback[] }))
@@ -1413,6 +1453,8 @@ function usePassState() {
     resetChat,
     cardFeedback,
     rateCard,
+    feedbackEnabled,
+    toggleFeedbackUse: () => { feedbackEnabledRef.current = !feedbackEnabledRef.current; setFeedbackEnabled(feedbackEnabledRef.current); },
     pastChats,
     rankingSignal,
     openPastChat: async (chat: PastChat) => chat.messages
@@ -1835,6 +1877,7 @@ const s = StyleSheet.create({
   chatCardHero: { height: 92, backgroundColor: c.image, alignItems: 'center', justifyContent: 'center' },
   rankBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: c.primary, color: c.white, fontFamily: f.bold, fontSize: 12, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   cardRate: { position: 'absolute', top: 2, right: 4 },
+  productRate: { flexDirection: 'row', alignItems: 'center' },
   cardRateButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chatCardBody: { padding: 14, gap: 8 },
   cardReason: { fontSize: 12, color: c.muted },

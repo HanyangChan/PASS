@@ -1,0 +1,2211 @@
+{
+  "label": "after",
+  "hashes": {
+    "amazon": "dd8db2a506b76a3d83f098e7f7ece27f11e60fcec4a3d5098ad612c84007744f",
+    "web": "b48f0835dede35140d7b94be69f18d9a9747eaa30f06869ed104840115b8dae5",
+    "both": "cfe85685a6c5e316d1619ef9458602a1a48618b7fd2e0c0d8d08368b3300deeb"
+  },
+  "sourceHashes": {
+    "lib/engine.mjs": "7184ae9c36297590fbfd3602bd8de83a9596a2eb0427096132989094661c1d68",
+    "lib/ranking.mjs": "f267094e3cd9046aff67f8d90ebf18e25c4a8a9b91ac06afe7056d27b3299d1d",
+    "baseline/agents/a-router/parser.mjs": "ad6513a7acb09d61c97ffec7ec438e45977cf7f4ef592be3715bfaaaf6ba73ac"
+  },
+  "results": [
+    {
+      "source": "amazon",
+      "id": "G01",
+      "request": "어머니 생신에 드릴 꽃다발, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "어머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:flower",
+          "type:bouquet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "no_match",
+        "message": "현재 조건과 요청한 상품 종류에 맞는 후보를 찾지 못했어요. 예산이나 상품 종류를 바꿔볼까요?",
+        "notice": null,
+        "items": []
+      }
+    },
+    {
+      "source": "amazon",
+      "id": "G02",
+      "request": "아버지 생신에 손목시계, 배송비 포함 10만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "아버지"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 100000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:watch"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B07X3J2GJ7",
+            "name": "Sonata 남성용 포멀 아날로그 시계",
+            "name_en": "Sonata Formal Analog Black Dial Men's Watch NM7924NM01/NN7924NM01",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 72800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Sonata",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/61ANkBLq92L._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07X3J2GJ7",
+            "rating": 4.2,
+            "rating_count": 4531,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.3566593198992443,
+            "total": 72800,
+            "score": 3
+          },
+          {
+            "id": "amz-B018VZBTLY",
+            "name": "Titan 아날로그 실버 다이얼 시계",
+            "name_en": "Titan Analog Silver Dial Men's Watch-NL1584SL03/NP1584SL03",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 95800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Titan",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/51PfIs34eML._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B018VZBTLY",
+            "rating": 4.3,
+            "rating_count": 3502,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.27566120906801006,
+            "total": 95800,
+            "score": 3
+          },
+          {
+            "id": "amz-B07BS3LCP1",
+            "name": "카시오 남성용 블루 다이얼 메탈 시계",
+            "name_en": "Casio Enticer Analog Blue Dial Men's Watch-MTP-VD01D-2EVUDF (A1364)",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 78600,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Casio",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/61g5FZOHQEL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07BS3LCP1",
+            "rating": 4.4,
+            "rating_count": 2282,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.17962846347607053,
+            "total": 78600,
+            "score": 3
+          }
+        ]
+      }
+    },
+    {
+      "source": "amazon",
+      "id": "G03",
+      "request": "새집에 이사한 삼촌께 차 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "집들이",
+        "recipients": [
+          "삼촌"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:coffee_tea",
+          "type:tea"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B000VPGWUQ",
+            "name": "트래디셔널 메디신스 감초 허브티백",
+            "name_en": "Traditional Medicinals Tea Licorice Root Herbal, 16 ct",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 35200,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Traditional",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/81X8KX0g1ZL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B000VPGWUQ",
+            "rating": 4.4,
+            "rating_count": 702,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.013865571115368663,
+            "total": 35200,
+            "score": 7
+          },
+          {
+            "id": "amz-B097HMDY2H",
+            "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+            "name_en": "VAHDAM, Green Tea Variety Sampler Pack, 8 Flavors -10 Tea Bags Each | Assorted Green Tea Gift Sets- Lemon Ginger Tea, Cham...",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 33600,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "VAHDAM",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/71BU9g701jL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B097HMDY2H",
+            "rating": 4.5,
+            "rating_count": 177,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.0034960200675502183,
+            "total": 33600,
+            "score": 7
+          },
+          {
+            "id": "amz-B0892M39NG",
+            "name": "더 티 헤븐 카슈미르 카흐와 티 선물세트",
+            "name_en": "The Tea Heaven | Tea Gift - Kashmiri Kahwa| 100 Grams | Tea Gift Pack-Blended with Saffron, Almonds, Spices -100% Natural ...",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 11700,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "The",
+            "allergens_declared": [
+              "견과류"
+            ],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/71ARZyEXAbL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B0892M39NG",
+            "rating": 4.2,
+            "rating_count": 2657,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.05247980406486401,
+            "total": 14700,
+            "score": 8
+          }
+        ]
+      }
+    },
+    {
+      "source": "amazon",
+      "id": "G04",
+      "request": "시험을 앞둔 고등학생 조카에게 필기구, 배송비 포함 3만원",
+      "state": {
+        "occasion": "수험",
+        "recipients": [
+          "고등학생 조카"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 30000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:stationery",
+          "type:writing"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "no_match",
+        "message": "현재 조건과 요청한 상품 종류에 맞는 후보를 찾지 못했어요. 예산이나 상품 종류를 바꿔볼까요?",
+        "notice": null,
+        "items": []
+      }
+    },
+    {
+      "source": "amazon",
+      "id": "G05",
+      "request": "단 것을 싫어하시는 할머니께 건강 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "할머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:health",
+          "less_sweet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B0000DJAKA",
+            "name": "Nature Made 포타슘 글루코네이트",
+            "name_en": "Nature Made Potassium Gluconate 550mg, 100 Tablets",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 34500,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Nature",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/71zOvcIQ0vL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B0000DJAKA",
+            "rating": 4.7,
+            "rating_count": 8125,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.13606068725299753,
+            "total": 34500,
+            "score": 4
+          },
+          {
+            "id": "amz-B08M3NK28T",
+            "name": "Neuherbs 트루 비타민 멀티비타민",
+            "name_en": "Neuherbs True vitamin Multivitamin for Men and Women, With Vitamin C, Zinc, Vitamin-D3 , Gingseng, Ginkgo biloba, Coenzyme...",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 38400,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Neuherbs",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/6178GW2UgIL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B08M3NK28T",
+            "rating": 4.2,
+            "rating_count": 3900,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.0653091298814388,
+            "total": 38400,
+            "score": 4
+          },
+          {
+            "id": "amz-B076ZKBFP9",
+            "name": "Amway Nutrilite 비오틴 체리 플러스",
+            "name_en": "Amway Nutrilite Biotin Cherry Plus Tablets Pack Of 2 ( Packaging May Very)",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 36400,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Amway",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/51EVjZPUhhL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B076ZKBFP9",
+            "rating": 4.1,
+            "rating_count": 1698,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.028434590394534127,
+            "total": 36400,
+            "score": 4
+          }
+        ]
+      }
+    },
+    {
+      "source": "amazon",
+      "id": "G06",
+      "request": "술을 못 드시는 직장 상사께 감사 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "감사",
+        "recipients": [
+          "상사"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [],
+        "excluded_categories": [
+          "liquor"
+        ],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B07B3VTJHW",
+            "name": "Urban Forest 가죽 지갑 선물세트",
+            "name_en": "Urban Forest Spencer Leather Wallet Combo Gift Set",
+            "category": "accessory",
+            "description": "패션소품",
+            "price_krw": 41900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "Urban",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/81gNv3BXJVL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07B3VTJHW",
+            "rating": 4.2,
+            "rating_count": 1192,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.06852543834435182,
+            "total": 41900,
+            "score": 2
+          },
+          {
+            "id": "amz-B07ZMBCKBY",
+            "name": "FEISEDY 스퀘어 선글라스",
+            "name_en": "FEISEDY Polarized Women Square Sunglasses Sparkling Composite Shiny Frame B2289",
+            "category": "accessory",
+            "description": "패션소품",
+            "price_krw": 40000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "FEISEDY",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/61x0HTu7SsL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07ZMBCKBY",
+            "rating": 4.5,
+            "rating_count": 15750,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.9054325955734407,
+            "total": 40000,
+            "score": 1
+          },
+          {
+            "id": "amz-B076SGJRKQ",
+            "name": "아트 스트리트 블랙 액자 11종 세트",
+            "name_en": "Painting Mantra Art Street Boulevard Photo Frame Set of 11 Picture Frames for Wall Hanging (8x10-3 pcs, 6x8-8 pcs)-Black a...",
+            "category": "decor",
+            "description": "홈데코",
+            "price_krw": 35700,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "Painting",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/71LuwKCsyUL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B076SGJRKQ",
+            "rating": 4.2,
+            "rating_count": 3275,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.23396199457065295,
+            "total": 35700,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G01",
+      "request": "어머니 생신에 드릴 꽃다발, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "어머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:flower",
+          "type:bouquet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_6656987060",
+            "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 33900,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/6656987060",
+            "rating": 4.93,
+            "rating_count": 4386,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "나빌레라 플레르",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "비누꽃 다발"
+            ],
+            "alcohol": false,
+            "flower_subtype": "preserved",
+            "popularity": 0.20775898820520108,
+            "total": 37400,
+            "score": 6
+          },
+          {
+            "id": "naver_2139516623",
+            "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 44000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2139516623",
+            "rating": 4.65,
+            "rating_count": 1228,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "메이킹플라워",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "카네이션 꽃바구니"
+            ],
+            "alcohol": false,
+            "flower_subtype": "bouquet",
+            "popularity": 0.05816872720382739,
+            "total": 44000,
+            "score": 6
+          },
+          {
+            "id": "naver_5717596862",
+            "name": "비누꽃바구니 어버이날 카네이션 화분 꽃다발 장미 생신 환갑 살구핑크 30송이",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 32600,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/5717596862",
+            "rating": 4.81,
+            "rating_count": 736,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "로사리움",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "카네이션 화분"
+            ],
+            "alcohol": false,
+            "flower_subtype": "preserved",
+            "popularity": 0.034863341386007295,
+            "total": 36100,
+            "score": 6
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G02",
+      "request": "아버지 생신에 손목시계, 배송비 포함 10만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "아버지"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 100000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:watch"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_4365188545",
+            "name": "카시오 A168WA-1 빈티지 전자 메탈 손목시계",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 41500,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/4365188545",
+            "rating": 4.83,
+            "rating_count": 5389,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "주식회사 니치마켓",
+            "occasions": [
+              "birthday"
+            ],
+            "seed_keywords": [
+              "손목시계"
+            ],
+            "alcohol": false,
+            "popularity": 1,
+            "total": 44500,
+            "score": 4
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G03",
+      "request": "새집에 이사한 삼촌께 차 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "집들이",
+        "recipients": [
+          "삼촌"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:coffee_tea",
+          "type:tea"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_12926021848",
+            "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 37800,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/12926021848",
+            "rating": 4.9,
+            "rating_count": 206,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "생과방 SEOUL",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "전통차 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.023642832549064616,
+            "total": 41300,
+            "score": 8
+          },
+          {
+            "id": "naver_4954445330",
+            "name": "쌍계명차 클래식 티박스 전통차선물세트(9종, 총 45입)",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 27000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/4954445330",
+            "rating": 4.87,
+            "rating_count": 791,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "쌍계명차",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "전통차 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.09078388614713646,
+            "total": 27000,
+            "score": 8
+          },
+          {
+            "id": "naver_6933776120",
+            "name": "다비앙 유기농 캐모마일 차 30티백",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 9800,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/6933776120",
+            "rating": 4.9,
+            "rating_count": 1742,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "평창다원몰",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "캐모마일 차"
+            ],
+            "alcohol": false,
+            "popularity": 0.19993113738092505,
+            "total": 12800,
+            "score": 7
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G04",
+      "request": "시험을 앞둔 고등학생 조카에게 필기구, 배송비 포함 3만원",
+      "state": {
+        "occasion": "수험",
+        "recipients": [
+          "고등학생 조카"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 30000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:stationery",
+          "type:writing"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_13359230452",
+            "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 27000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/13359230452",
+            "rating": 4.9,
+            "rating_count": 160,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "라미 공식스토어",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "샤프 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.00906978062468114,
+            "total": 27000,
+            "score": 8
+          },
+          {
+            "id": "naver_4042925417",
+            "name": "카코 퓨어 소프트 젤펜 볼펜 중성펜 10색 세트",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 13500,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/4042925417",
+            "rating": 4.81,
+            "rating_count": 749,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "카코코리아",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "볼펜 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.04245791054928859,
+            "total": 16500,
+            "score": 8
+          },
+          {
+            "id": "naver_7023351911",
+            "name": "파이롯트 쥬스업 4색 볼펜 0.4 멀티펜 일본 다색 각인 이니셜 커스덤 단체 선물",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 4990,
+            "shipping_fee_per_set_krw": 2500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/7023351911",
+            "rating": 4.94,
+            "rating_count": 575,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "오피스코아",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "볼펜 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.03259452411994785,
+            "total": 7490,
+            "score": 8
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G05",
+      "request": "단 것을 싫어하시는 할머니께 건강 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "할머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:health",
+          "less_sweet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_2176545119",
+            "name": "닥터웰 온열 찜질기 국산 황토 어깨 허리 복부 매트 전기 찜질팩",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 39800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2176545119",
+            "rating": 4.65,
+            "rating_count": 2695,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "닥터웰",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "온열 찜질기"
+            ],
+            "alcohol": false,
+            "popularity": 0.02675734710087371,
+            "total": 39800,
+            "score": 5
+          },
+          {
+            "id": "naver_2328997568",
+            "name": "제스파 3단계 강도조절 마사지기 해피메이트 목어깨 안마기 ZP954",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 44900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2328997568",
+            "rating": 4.78,
+            "rating_count": 1650,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "제스파",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "안마기"
+            ],
+            "alcohol": false,
+            "popularity": 0.01638204924543288,
+            "total": 44900,
+            "score": 5
+          },
+          {
+            "id": "naver_12906683162",
+            "name": "아이리버 IHC-CM010 미니 종아리 발 마사지기 온열 롤링 임산부 부모님 선물",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 39900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/12906683162",
+            "rating": 4.81,
+            "rating_count": 78,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "주식회사 인스토어",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "발마사지기"
+            ],
+            "alcohol": false,
+            "popularity": 0.0007744241461477363,
+            "total": 39900,
+            "score": 5
+          }
+        ]
+      }
+    },
+    {
+      "source": "web",
+      "id": "G06",
+      "request": "술을 못 드시는 직장 상사께 감사 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "감사",
+        "recipients": [
+          "상사"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [],
+        "excluded_categories": [
+          "liquor"
+        ],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_2776076224",
+            "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 46800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2776076224",
+            "rating": 4.85,
+            "rating_count": 2484,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "달꿀농장",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "수제청 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.28509124297027433,
+            "total": 46800,
+            "score": 2
+          },
+          {
+            "id": "naver_9789909393",
+            "name": "궁 육포 선물세트 510g 명절선물 추석 코스트코",
+            "category": "snack",
+            "description": "과자·간식",
+            "price_krw": 44900,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/9789909393",
+            "rating": 4.87,
+            "rating_count": 1749,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "해피유통몰",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "육포 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.03530622956114498,
+            "total": 47900,
+            "score": 2
+          },
+          {
+            "id": "naver_12926021848",
+            "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 37800,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/12926021848",
+            "rating": 4.9,
+            "rating_count": 206,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "생과방 SEOUL",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "전통차 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.023642832549064616,
+            "total": 41300,
+            "score": 2
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G01",
+      "request": "어머니 생신에 드릴 꽃다발, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "어머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:flower",
+          "type:bouquet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_6656987060",
+            "name": "꽃다발 졸업식 비누꽃 선물 여친 생일 결혼기념일 장미 화이트 S 블랙",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 33900,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/6656987060",
+            "rating": 4.93,
+            "rating_count": 4386,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "나빌레라 플레르",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "비누꽃 다발"
+            ],
+            "alcohol": false,
+            "flower_subtype": "preserved",
+            "popularity": 0.20775898820520108,
+            "total": 37400,
+            "score": 6
+          },
+          {
+            "id": "naver_2139516623",
+            "name": "생화 꽃바구니 꽃다발 장미 출산 생일 전국배달서비스 어버이날 카네이션",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 44000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2139516623",
+            "rating": 4.65,
+            "rating_count": 1228,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "메이킹플라워",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "카네이션 꽃바구니"
+            ],
+            "alcohol": false,
+            "flower_subtype": "bouquet",
+            "popularity": 0.05816872720382739,
+            "total": 44000,
+            "score": 6
+          },
+          {
+            "id": "naver_5717596862",
+            "name": "비누꽃바구니 어버이날 카네이션 화분 꽃다발 장미 생신 환갑 살구핑크 30송이",
+            "category": "flower",
+            "description": "꽃·식물",
+            "price_krw": 32600,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/5717596862",
+            "rating": 4.81,
+            "rating_count": 736,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "로사리움",
+            "occasions": [
+              "flower"
+            ],
+            "seed_keywords": [
+              "카네이션 화분"
+            ],
+            "alcohol": false,
+            "flower_subtype": "preserved",
+            "popularity": 0.034863341386007295,
+            "total": 36100,
+            "score": 6
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G02",
+      "request": "아버지 생신에 손목시계, 배송비 포함 10만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "아버지"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 100000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:watch"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B07X3J2GJ7",
+            "name": "Sonata 남성용 포멀 아날로그 시계",
+            "name_en": "Sonata Formal Analog Black Dial Men's Watch NM7924NM01/NN7924NM01",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 72800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Sonata",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/61ANkBLq92L._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07X3J2GJ7",
+            "rating": 4.2,
+            "rating_count": 4531,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.3566593198992443,
+            "total": 72800,
+            "score": 3
+          },
+          {
+            "id": "amz-B018VZBTLY",
+            "name": "Titan 아날로그 실버 다이얼 시계",
+            "name_en": "Titan Analog Silver Dial Men's Watch-NL1584SL03/NP1584SL03",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 95800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Titan",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/51PfIs34eML._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B018VZBTLY",
+            "rating": 4.3,
+            "rating_count": 3502,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.27566120906801006,
+            "total": 95800,
+            "score": 3
+          },
+          {
+            "id": "amz-B07BS3LCP1",
+            "name": "카시오 남성용 블루 다이얼 메탈 시계",
+            "name_en": "Casio Enticer Analog Blue Dial Men's Watch-MTP-VD01D-2EVUDF (A1364)",
+            "category": "watch",
+            "description": "시계",
+            "price_krw": 78600,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Casio",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/61g5FZOHQEL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07BS3LCP1",
+            "rating": 4.4,
+            "rating_count": 2282,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.17962846347607053,
+            "total": 78600,
+            "score": 3
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G03",
+      "request": "새집에 이사한 삼촌께 차 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "집들이",
+        "recipients": [
+          "삼촌"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:coffee_tea",
+          "type:tea"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_12926021848",
+            "name": "생과방 블렌딩 전통차 선물세트 24개입(6종 x 4개) 티세트 티백 고급차 저카페인",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 37800,
+            "shipping_fee_per_set_krw": 3500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/12926021848",
+            "rating": 4.9,
+            "rating_count": 206,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "생과방 SEOUL",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "전통차 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.0040688143159059035,
+            "total": 41300,
+            "score": 8
+          },
+          {
+            "id": "amz-B000VPGWUQ",
+            "name": "트래디셔널 메디신스 감초 허브티백",
+            "name_en": "Traditional Medicinals Tea Licorice Root Herbal, 16 ct",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 35200,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": "Traditional",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/81X8KX0g1ZL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B000VPGWUQ",
+            "rating": 4.4,
+            "rating_count": 702,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.013865571115368663,
+            "total": 35200,
+            "score": 7
+          },
+          {
+            "id": "amz-B097HMDY2H",
+            "name": "VAHDAM 그린티 버라이어티 샘플러 세트",
+            "name_en": "VAHDAM, Green Tea Variety Sampler Pack, 8 Flavors -10 Tea Bags Each | Assorted Green Tea Gift Sets- Lemon Ginger Tea, Cham...",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 33600,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "VAHDAM",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/71BU9g701jL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B097HMDY2H",
+            "rating": 4.5,
+            "rating_count": 177,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.0034960200675502183,
+            "total": 33600,
+            "score": 7
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G04",
+      "request": "시험을 앞둔 고등학생 조카에게 필기구, 배송비 포함 3만원",
+      "state": {
+        "occasion": "수험",
+        "recipients": [
+          "고등학생 조카"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 30000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:stationery",
+          "type:writing"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_13359230452",
+            "name": "[LAMY] 라미 사파리 샤프 네온핑크 0.5mm / LM1C9 NP",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 27000,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/13359230452",
+            "rating": 4.9,
+            "rating_count": 160,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "라미 공식스토어",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "샤프 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.00906978062468114,
+            "total": 27000,
+            "score": 8
+          },
+          {
+            "id": "naver_4042925417",
+            "name": "카코 퓨어 소프트 젤펜 볼펜 중성펜 10색 세트",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 13500,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/4042925417",
+            "rating": 4.81,
+            "rating_count": 749,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "카코코리아",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "볼펜 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.04245791054928859,
+            "total": 16500,
+            "score": 8
+          },
+          {
+            "id": "naver_7023351911",
+            "name": "파이롯트 쥬스업 4색 볼펜 0.4 멀티펜 일본 다색 각인 이니셜 커스덤 단체 선물",
+            "category": "stationery",
+            "description": "문구",
+            "price_krw": 4990,
+            "shipping_fee_per_set_krw": 2500,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/7023351911",
+            "rating": 4.94,
+            "rating_count": 575,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "오피스코아",
+            "occasions": [
+              "exam"
+            ],
+            "seed_keywords": [
+              "볼펜 세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.03259452411994785,
+            "total": 7490,
+            "score": 8
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G05",
+      "request": "단 것을 싫어하시는 할머니께 건강 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "생일",
+        "recipients": [
+          "할머니"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [
+          "category:health",
+          "less_sweet"
+        ],
+        "excluded_categories": [],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "naver_2176545119",
+            "name": "닥터웰 온열 찜질기 국산 황토 어깨 허리 복부 매트 전기 찜질팩",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 39800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2176545119",
+            "rating": 4.65,
+            "rating_count": 2695,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "닥터웰",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "온열 찜질기"
+            ],
+            "alcohol": false,
+            "popularity": 0.02675734710087371,
+            "total": 39800,
+            "score": 5
+          },
+          {
+            "id": "naver_2328997568",
+            "name": "제스파 3단계 강도조절 마사지기 해피메이트 목어깨 안마기 ZP954",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 44900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-19",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2328997568",
+            "rating": 4.78,
+            "rating_count": 1650,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "제스파",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "안마기"
+            ],
+            "alcohol": false,
+            "popularity": 0.01638204924543288,
+            "total": 44900,
+            "score": 5
+          },
+          {
+            "id": "naver_12906683162",
+            "name": "아이리버 IHC-CM010 미니 종아리 발 마사지기 온열 롤링 임산부 부모님 선물",
+            "category": "health",
+            "description": "건강식품",
+            "price_krw": 39900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "basic",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/12906683162",
+            "rating": 4.81,
+            "rating_count": 78,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "주식회사 인스토어",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "발마사지기"
+            ],
+            "alcohol": false,
+            "popularity": 0.0007744241461477363,
+            "total": 39900,
+            "score": 5
+          }
+        ]
+      }
+    },
+    {
+      "source": "both",
+      "id": "G06",
+      "request": "술을 못 드시는 직장 상사께 감사 선물, 배송비 포함 5만원",
+      "state": {
+        "occasion": "감사",
+        "recipients": [
+          "상사"
+        ],
+        "quantity": 1,
+        "same_product": true,
+        "budget": {
+          "amount_krw": 50000,
+          "scope": "per_set",
+          "shipping_included": true
+        },
+        "preferences": [],
+        "excluded_categories": [
+          "liquor"
+        ],
+        "excluded_ingredients": [],
+        "brand": null,
+        "delivery_by": null,
+        "packaging": null
+      },
+      "result": {
+        "status": "ready",
+        "message": "현재 조건에 맞는 상품을 골랐어요.",
+        "notice": null,
+        "items": [
+          {
+            "id": "amz-B07B3VTJHW",
+            "name": "Urban Forest 가죽 지갑 선물세트",
+            "name_en": "Urban Forest Spencer Leather Wallet Combo Gift Set",
+            "category": "accessory",
+            "description": "패션소품",
+            "price_krw": 41900,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": "Urban",
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "image": "https://m.media-amazon.com/images/I/81gNv3BXJVL._AC_UL320_.jpg",
+            "link": "https://www.amazon.in/dp/B07B3VTJHW",
+            "rating": 4.2,
+            "rating_count": 1192,
+            "demo_fields": [
+              "shipping_fee_krw",
+              "arrival_days",
+              "stock",
+              "packaging"
+            ],
+            "popularity": 0.05331424993290992,
+            "total": 41900,
+            "score": 2
+          },
+          {
+            "id": "naver_2776076224",
+            "name": "꿀 레몬 딸기청 수제 청 연말 설날 명절 교수님 선물 세트 돌 상견례 고희 답례품",
+            "category": "coffee_tea",
+            "description": "커피·차",
+            "price_krw": 46800,
+            "shipping_fee_per_set_krw": 0,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-20",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/2776076224",
+            "rating": 4.85,
+            "rating_count": 2484,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "달꿀농장",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "수제청 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.04906279010053527,
+            "total": 46800,
+            "score": 2
+          },
+          {
+            "id": "naver_9789909393",
+            "name": "궁 육포 선물세트 510g 명절선물 추석 코스트코",
+            "category": "snack",
+            "description": "과자·간식",
+            "price_krw": 44900,
+            "shipping_fee_per_set_krw": 3000,
+            "stock_sets": 99,
+            "arrival_date": "2026-11-18",
+            "packaging": "formal",
+            "sweetness": "unknown",
+            "brand": null,
+            "allergens_declared": [],
+            "allergen_information_complete": false,
+            "ingredients": [],
+            "link": "https://smartstore.naver.com/main/products/9789909393",
+            "rating": 4.87,
+            "rating_count": 1749,
+            "demo_fields": [
+              "stock",
+              "arrival_days",
+              "packaging"
+            ],
+            "gift_set": true,
+            "source": "naver_shopping_web",
+            "packaging_source": "name_rule",
+            "seller": "해피유통몰",
+            "occasions": [
+              "holiday"
+            ],
+            "seed_keywords": [
+              "육포 선물세트"
+            ],
+            "alcohol": false,
+            "popularity": 0.03530622956114498,
+            "total": 47900,
+            "score": 2
+          }
+        ]
+      }
+    }
+  ]
+}
