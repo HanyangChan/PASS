@@ -26,7 +26,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   }
   if(input.operation==='conditions'&&input.clearIssues===false) issues=input.issues;
   if(output.kind==='conversation') issues=input.issues;
-  const turn=finishSingle(before,state,issues,products);
+  const turn=finishSingle(before,state,issues,products,ranking);
   let message=turn.message;
   if(output.kind==='conversation') message=conversation[output.responseType];
   else if(output.kind==='comparison') {

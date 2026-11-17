@@ -1,0 +1,15 @@
+[
+  {
+    "mode": "guest",
+    "pass": true,
+    "requests": 0,
+    "writes": 0,
+    "emptyRequestChecked": true
+  },
+  {
+    "mode": "mock-account",
+    "pass": true,
+    "requests": 3,
+    "writes": 3
+  }
+]

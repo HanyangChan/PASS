@@ -15,8 +15,10 @@ export function resolveChatUrl(value?: string) {
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))) throw new Error('추천 API는 HTTPS 주소여야 합니다.');
   return `${url.origin}/api/chat`;
 }
-export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, feedback: () => FeedbackSignal[] = () => []) {
+export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, feedback: () => FeedbackSignal[] = () => [], feedbackScope: () => string | null = () => null) {
   async function request(body: object, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+    const signals = structuredClone(feedback());
+    const scope = feedbackScope();
     const { data, error } = await auth.getSession();
     if (error || data.session?.user.id !== owner) throw new Error('다시 로그인해주세요.');
     const controller = new AbortController(); let timedOut = false;
@@ -26,8 +28,7 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 25000);
     try {
       const context = agentMode === 'langgraph-advisors' && agents ? { agents: { disabled: agents.disabled, calendar: agents.calendar } } : {};
-      const signals = feedback();
-      if (signals.length) Object.assign(context, { feedback: signals });
+      if (signals.length && scope) Object.assign(context, { feedback: signals, feedbackScope: scope });
       const response = await fetcher(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ ...body, agentMode, ...context }), signal: controller.signal });
       if (!response.ok) {
         const failure = await response.json().catch(() => null);

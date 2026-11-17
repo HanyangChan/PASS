@@ -1,5 +1,12 @@
-// Per-card "was this reason helpful" records. Pure helpers only; storage lives in the repositories.
+import { feedbackIdentity, validProductFeedback } from '../../lib/feedback.mjs';
+import type { Conditions } from './domain';
+export type FeedbackContext = { scope: string; state: Conditions };
+// Old records remain explanation evaluations; only explicit v2 gift preferences affect ranking.
 export type CardFeedback = {
+  version?: 2;
+  kind?: 'reason_helpfulness' | 'gift_preference';
+  productKey?: string;
+  context?: FeedbackContext;
   conversationId: string; // account: conversation row id, guest: local session id
   giftId: string;
   rank: number;
@@ -18,11 +25,12 @@ export function decodeFeedback(raw: unknown): CardFeedback[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((f): f is CardFeedback => !!f && typeof f === 'object' &&
     text(f.conversationId, 100) && text(f.giftId, 200) && Number.isInteger(f.rank) && typeof f.helpful === 'boolean' &&
-    text(f.agentMode, 40) && text(f.engineMode, 20) && text(f.reason, 300) && text(f.at, 40)).slice(-FEEDBACK_LIMIT);
+    text(f.agentMode, 40) && text(f.engineMode, 20) && text(f.reason, 300) && text(f.at, 40) &&
+    (f.kind === undefined || f.kind === 'reason_helpfulness' || validProductFeedback(f))).slice(-FEEDBACK_LIMIT);
 }
-// Same answer again clears it; the other answer replaces it. One record per card per conversation.
+// Same answer clears it. Product and explanation votes, and distinct situations, stay separate.
 export function toggleFeedback(list: CardFeedback[], entry: CardFeedback): CardFeedback[] {
-  const same = (f: CardFeedback) => f.conversationId === entry.conversationId && f.giftId === entry.giftId;
+  const same = (f: CardFeedback) => f.conversationId === entry.conversationId && feedbackIdentity(f) === feedbackIdentity(entry);
   const previous = list.find(same);
   const rest = list.filter(f => !same(f));
   return previous && previous.helpful === entry.helpful ? rest : [...rest, entry].slice(-FEEDBACK_LIMIT);

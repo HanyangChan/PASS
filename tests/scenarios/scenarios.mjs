@@ -135,8 +135,8 @@ export const SCENARIOS = [
   // Batch 4: what the Korean web catalog adds (flowers, stationery, traditional liquor, exam items, 개업)
   { say: ['수능 보는 조카 선물 3만원 배송비 포함'], expect: { recipients: ['조카'], occasion: '수험', asks: null } },
   { say: ['여자친구 꽃 선물 5만원 배송비 포함'], expect: { recipients: ['여자친구'], prefs: ['category:flower'], top: { category: 'flower' } } },
-  { say: ['엄마 생신 꽃다발 5만원 배송비 포함'], expect: { occasion: '생일', prefs: ['category:flower'], top: { category: 'flower' } } },
-  { say: ['스승의 날 선생님 볼펜 선물 3만원 배송비 포함'], expect: { prefs: ['category:stationery'], top: { category: 'stationery' } } },
+  { say: ['엄마 생신 꽃다발 5만원 배송비 포함'], expect: { occasion: '생일', prefs: ['category:flower', 'type:bouquet'], top: { category: 'flower' } } },
+  { say: ['스승의 날 선생님 볼펜 선물 3만원 배송비 포함'], expect: { prefs: ['category:stationery', 'type:writing'], top: { category: 'stationery' } } },
   { say: ['아빠 전통주 선물 5만원 배송비 포함'], expect: { prefs: ['category:liquor'], top: { category: 'liquor' } } },
   { say: ['부모님 명절 한우 선물세트 10만원 배송비 포함'], expect: { occasion: '명절', prefs: ['category:food'], top: { category: 'food' } } },
   { say: ['친구 개업 축하 화분 10만원 배송비 포함'], expect: { occasion: '개업', prefs: ['category:flower'] } },

@@ -1,4 +1,5 @@
 import { decodeFeedback, type CardFeedback } from './cardFeedback.ts';
+import { feedbackIdentity, validProductFeedback } from '../../lib/feedback.mjs';
 import { decodeGifts } from './storage.ts';
 import type { ChatMessage, Gift } from './domain';
 
@@ -10,7 +11,7 @@ export function decodeHistoryRecommendations(value: unknown): Gift[] {
   return Array.isArray(value) ? decodeGifts(JSON.stringify(value.slice(0, HISTORY_RECOMMENDATION_LIMIT))) : [];
 }
 
-export type FeedbackSignal = { giftId: string; helpful: boolean };
+export type FeedbackSignal = Pick<CardFeedback, 'giftId' | 'helpful' | 'version' | 'kind' | 'context' | 'productKey'> & { at?: string };
 export const historyKey = 'pass.chat-history.v1';
 export const HISTORY_LIMIT = 30;
 export const SIGNAL_LIMIT = 200;
@@ -28,8 +29,14 @@ export function decodeHistory(raw: unknown): PastChat[] {
 // What the ranking sees: the latest answer per product across every source, newest last, capped.
 export function rankingFeedback(...lists: CardFeedback[][]): FeedbackSignal[] {
   const latest = new Map<string, CardFeedback>();
-  for (const f of lists.flat().sort((a, b) => a.at.localeCompare(b.at))) { latest.delete(f.giftId); latest.set(f.giftId, f); }
-  return [...latest.values()].slice(-SIGNAL_LIMIT).map(f => ({ giftId: f.giftId, helpful: f.helpful }));
+  for (const f of lists.flat().filter(validProductFeedback).sort((a, b) => a.at.localeCompare(b.at))) {
+    const key = feedbackIdentity(f); latest.delete(key); latest.set(key, f);
+  }
+  const signals = [...latest.values()].slice(-SIGNAL_LIMIT).map(({ giftId, helpful, version, kind, context, productKey, at }) =>
+    ({ giftId, helpful, version, kind, context, productKey, at }));
+  // Stay below the API's 32 KiB request limit even with Korean context strings.
+  while (signals.length && JSON.stringify(signals).length > 6000) signals.shift();
+  return signals;
 }
 
 export function chatTitle(messages: ChatMessage[]) {
