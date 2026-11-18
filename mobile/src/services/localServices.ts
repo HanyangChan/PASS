@@ -10,6 +10,17 @@ import { resolveCatalog } from './catalogSource';
 // Composition point: screens depend on services, not engine data or storage drivers.
 export const giftRepository = createGiftRepository(AsyncStorage);
 export const feedbackRepository = createFeedbackRepository(AsyncStorage);
+// The choice belongs to this device and is scoped to the signed-in account or guest.
+const feedbackPreferenceKey = (owner?: string) => `pass.feedback-enabled.v1:${owner ?? 'guest'}`;
+export const feedbackPreference = {
+  async load(owner?: string) {
+    return (await AsyncStorage.getItem(feedbackPreferenceKey(owner))) !== 'off';
+  },
+  save(owner: string | undefined, enabled: boolean) {
+    return AsyncStorage.setItem(feedbackPreferenceKey(owner), enabled ? 'on' : 'off');
+  },
+};
+
 export const historyRepository = createHistoryRepository(AsyncStorage);
 export const productRepository = supabaseConfig
   ? createProductRepository({

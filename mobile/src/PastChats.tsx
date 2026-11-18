@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { colors as c, fonts } from './theme';
 import type { EngineProduct } from './domain';
 import type { FeedbackSignal, PastChat, PastChatDetail } from './chatHistory';
 
 const date = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}월 ${d.getDate()}일`; };
 
-// Mypage shows the current feedback weights and archived conversations.
-export function PastChats({ chats, signal, products, open, remove }: {
+// Mypage keeps the PR23 feedback switch and archived conversations.
+export function PastChats({ chats, feedbackEnabled, feedbackToggleDisabled, onFeedbackChange, products, open, remove }: {
   chats: PastChat[]; signal: FeedbackSignal[]; products: EngineProduct[];
+  feedbackEnabled: boolean;
+  feedbackToggleDisabled: boolean;
+  onFeedbackChange: (enabled: boolean) => void;
   open: (chat: PastChat) => Promise<PastChatDetail>;
   remove?: (id: string) => Promise<void>;
 }) {
@@ -35,10 +38,22 @@ export function PastChats({ chats, signal, products, open, remove }: {
   };
   return (
     <View style={st.wrap}>
-      <Text style={st.title}>최근 상품 평가 {signal.length}개</Text>
-      <Text style={st.muted}>상품 평가는 같은 대화·같은 조건에서 비슷하게 맞는 후보의 순서를 조정해요. 다른 대화에는 자동 적용하지 않아요.</Text>
-      <Text style={st.muted}>추천 이유에 대한 평가는 상품 취향으로 사용하지 않아요. 상품 평가 사용은 채팅에서 끌 수 있어요.</Text>
-      <Text style={st.title}>지난 대화 {chats.length}개</Text>
+      <View style={st.feedbackPanel}>
+        <View style={st.feedbackHeader}>
+          <Text style={[st.title, st.feedbackTitle]}>지난 피드백 반영</Text>
+          <Switch
+            accessibilityLabel="지난 피드백 반영"
+            value={feedbackEnabled}
+            disabled={feedbackToggleDisabled}
+            onValueChange={onFeedbackChange}
+          />
+        </View>
+        <Text style={st.muted}>{feedbackEnabled
+          ? '상품 평가는 같은 대화·같은 조건에서 다음 추천에 반영돼요. 다른 상황이나 대화에는 섞이지 않아요.'
+          : '저장된 피드백을 추천 순위에 반영하지 않아요.'}</Text>
+        {feedbackEnabled && <Text style={st.muted}>추천 카드의 👍/👎로 상품을 평가해요. 같은 선택을 다시 누르면 취소돼요.</Text>}
+      </View>
+      <Text style={[st.title, st.historyTitle]}>지난 대화 {chats.length}개</Text>
       {chats.length === 0 && <Text style={st.muted}>새 대화를 시작하면 지금 대화가 여기에 남아요.</Text>}
       {chats.map(chat => {
         const up = chat.feedback.filter(f => f.helpful).length, down = chat.feedback.length - up;
@@ -83,11 +98,15 @@ export function PastChats({ chats, signal, products, open, remove }: {
   );
 }
 const st = StyleSheet.create({
-  wrap: { gap: 8 },
-  title: { fontFamily: fonts.bold, fontSize: 16, color: c.text, marginTop: 8 },
-  box: { backgroundColor: c.white, borderColor: c.border, borderWidth: 1, borderRadius: 12, padding: 12, gap: 4 },
-  line: { fontFamily: fonts.medium, fontSize: 14, color: c.text },
-  muted: { fontFamily: fonts.regular, fontSize: 12, color: c.muted },
+  wrap: { paddingHorizontal: 20, gap: 12 },
+  feedbackPanel: { backgroundColor: c.background, borderRadius: 16, padding: 16, gap: 8 },
+  feedbackHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  feedbackTitle: { marginTop: 0, flexShrink: 1 },
+  title: { fontFamily: fonts.bold, fontSize: 17, lineHeight: 24, color: c.text },
+  historyTitle: { marginTop: 12, marginBottom: 2 },
+  box: { backgroundColor: c.white, borderColor: c.border, borderWidth: 1, borderRadius: 14, padding: 16, gap: 6 },
+  line: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, color: c.text },
+  muted: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 20, color: c.muted },
   body: { marginTop: 8, gap: 6 },
   user: { alignSelf: 'flex-end', backgroundColor: c.tint, color: c.text, padding: 8, borderRadius: 10, fontFamily: fonts.regular, fontSize: 13 },
   assistant: { alignSelf: 'flex-start', backgroundColor: c.segment, color: c.text, padding: 8, borderRadius: 10, fontFamily: fonts.regular, fontSize: 13 },

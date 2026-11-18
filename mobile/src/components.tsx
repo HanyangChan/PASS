@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Star, ChevronRight } from 'lucide-react-native';
 import CheckIcon from '../assets/figma/check.svg';
 import HeartIcon from '../assets/figma/heart.svg';
 import { colors as c, fonts as f } from './theme';
 import type { Gift } from './catalog';
+export const ProductImagesContext = createContext<ReadonlyMap<string, string>>(new Map());
 export const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
 export function Chip({
   label,
@@ -29,16 +30,18 @@ export function Chip({
 }
 export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
-  const failed = !!gift.image && failedUrl === gift.image;
+  const productImages = useContext(ProductImagesContext);
+  const image = productImages.get(gift.id) ?? gift.image;
+  const failed = !!image && failedUrl === image;
   return (
     <View style={[s.image, { width: size, height: size }]}>
-      {gift.image && !failed ? (
+      {image && !failed ? (
         <Image
           accessibilityLabel={gift.name}
-          source={{ uri: gift.image }}
+          source={{ uri: image }}
           style={{ width: size, height: size }}
           resizeMode="cover"
-          onError={() => setFailedUrl(gift.image)}
+          onError={() => setFailedUrl(image)}
         />
       ) : (
         // Product cards show photos only (no category icons); a missing or broken photo leaves a plain tile.

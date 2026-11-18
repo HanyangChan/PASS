@@ -92,8 +92,7 @@ try {
       await page.waitForFunction(() => [...document.querySelectorAll('[aria-label]')].some(el =>
         el.getAttribute('aria-label')?.endsWith('이 상황에 좋아요') && el.getAttribute('aria-pressed') === 'true'));
       assert.equal(await giftLike.getAttribute('aria-pressed') ?? await giftLike.getAttribute('aria-selected'), 'true');
-      const reasonLike = page.getByRole('button', { name: /추천 이유가 도움이 됐어요$/ }).first();
-      await reasonLike.click();
+      assert.equal(await page.getByRole('button', { name: /추천 이유가 도움이 됐어요$/ }).count(), 0, 'PR23 cards have one product-vote pair');
       await input.fill('다시 추천해줘');
       await page.getByLabel('메시지 보내기', { exact: true }).click();
       await page.getByLabel('메시지 보내기', { exact: true }).waitFor({ state: 'visible' });
@@ -107,11 +106,17 @@ try {
       } else {
         assert.equal(requests.length, 0, 'guest stays on the device');
       }
-      const toggle = page.getByRole('switch', { name: /상품 평가 사용/ });
+      assert.equal(await page.getByRole('switch').count(), 0, 'no extra chat switch');
+      await page.goto(`${base}/mypage`);
+      const toggle = page.getByRole('switch', { name: '지난 피드백 반영', exact: true });
       await toggle.click();
-      assert.equal(await toggle.getAttribute('aria-checked'), 'false');
+      assert.equal(await toggle.isChecked(), false);
+      await page.reload();
+      await toggle.waitFor();
+      assert.equal(await toggle.isChecked(), false, 'preference survives reload');
       await page.screenshot({ path: fileURLToPath(new URL(account ? 'account.png' : 'guest.png', output)), fullPage: true });
       if (!account) {
+        await page.goto(`${base}/chat`);
         await page.getByText('새 대화', { exact: true }).click();
         await input.fill('어머니 생신 꽃다발 5만원 배송비 포함. 땅콩 알레르기 있어요');
         await page.getByLabel('메시지 보내기', { exact: true }).click();
