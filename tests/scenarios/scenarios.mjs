@@ -68,11 +68,19 @@ export const SCENARIOS = [
   { say: ['어버이날 부모님 선물 5만원 배송비 포함'], expect: { recipients: ['부모님'], occasion: '어버이날', budget: 50000, asks: null } },
   { say: ['스승의 날 선생님 선물 3만원 배송비 포함'], expect: { recipients: ['선생님'], occasion: '스승의 날', budget: 30000, asks: null } },
   { say: ['크리스마스에 여자친구한테 줄 선물 10만원 배송비 포함'], expect: { recipients: ['여자친구'], occasion: '크리스마스', budget: 100000, asks: null } },
-  { say: ['남편 생일 선물 7만원 배송비 포함'], expect: { recipients: ['남편'], occasion: '생일', budget: 70000, asks: null } },
+  // Popularity is the review count relative to the category leader. With the v2-extra catalog the bag leader is a 명함지갑
+  // (19k reviews), so the backpacks' relative popularity drops and the 2-glass wine set (a couple gift, 49,900원) ranks
+  // first. That is a fine birthday gift for a husband, so the couple categories (jewelry, watch, bag, accessory, beauty,
+  // audio: RECIPIENT_GROUPS 연인) plus kitchen are accepted here for every catalog source.
+  { say: ['남편 생일 선물 7만원 배송비 포함'], expect: { recipients: ['남편'], occasion: '생일', budget: 70000, asks: null, top: { category: ['jewelry', 'watch', 'bag', 'accessory', 'beauty', 'audio', 'kitchen'] } } },
   { say: ['아내 결혼기념일 선물 15만원 배송비 포함'], expect: { recipients: ['아내'], occasion: '기념일', budget: 150000, asks: null } },
   { say: ['팀장님 승진 선물 5만원 배송비 포함'], expect: { recipients: ['팀장님'], occasion: '승진', asks: null } },
   { say: ['동생 졸업 선물 5만원 배송비 포함'], expect: { recipients: ['동생'], occasion: '졸업', asks: null } },
   { say: ['친구 집들이 선물 3만원 배송비 포함'], expect: { recipients: ['친구'], occasion: '집들이', asks: null } },
+  // Occasions from the v2-extra catalog (lib/occasions.mjs): read by the guest engine and the server's rules mode alike.
+  { say: ['부모님 병문안 선물 5만원 배송비 포함'], expect: { recipients: ['부모님'], occasion: '병문안', budget: 50000, asks: null } },
+  { say: ['직장동료 송별회 선물 3만원 배송비 포함'], expect: { recipients: ['직장동료'], occasion: '송별회', budget: 30000, asks: null } },
+  { say: ['여자친구 프러포즈 선물 20만원 배송비 포함'], expect: { recipients: ['여자친구'], occasion: '프러포즈', budget: 200000, asks: null } },
   { say: ['선배 취업 축하 선물 5만원 배송비 포함'], expect: { recipients: ['선배'], occasion: '취업', asks: null } },
   { say: ['엄마 환갑 선물 10만원 배송비 포함'], expect: { recipients: ['어머니'], occasion: '환갑', asks: null } },
   { say: ['시어머니 선물 7만원 배송비 포함'], expect: { recipients: ['시어머니'], asks: null } },

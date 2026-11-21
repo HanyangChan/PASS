@@ -1,0 +1,69 @@
+{
+  "version": "v2-extra.2",
+  "note": "추가 선물 상황 32개 × 검색어 4개 = 128페이지. 검색어당 5개 선정 → 상황당 약 20개. 검색어는 팀 검토 후 수정. '사과'(과일)·'백일'(아기 백일) 같은 동음이의어를 피하려고 검색어를 풀어 썼다.",
+  "per_keyword": 5,
+  "groups": {
+    "care": "감사·돌봄",
+    "work": "직장·학업",
+    "culture": "문화·성취",
+    "event": "이벤트·생활",
+    "mood": "마음 전하기",
+    "couple": "연인"
+  },
+  "occasions": {
+    "thanks":          { "label": "감사",          "group": "care",    "keywords": ["감사 선물 쿠키 세트", "감사 떡 선물세트", "프리미엄 수건 선물세트", "드립백 커피 선물세트"] },
+    "invitation":      { "label": "초대",          "group": "care",    "keywords": ["집들이 선물 디퓨저", "초대 선물 와인", "홈파티 디저트 세트", "고급 화장지 선물세트"] },
+    "hospital_visit":  { "label": "병문안",        "group": "care",    "keywords": ["병문안 과일바구니", "병문안 음료 선물세트", "죽 선물세트", "병문안 영양제 선물"] },
+    "discharge":       { "label": "퇴원",          "group": "care",    "keywords": ["퇴원 축하 꽃다발", "보양식 선물세트", "전복죽 선물", "배즙 선물세트"] },
+    "recovery":        { "label": "회복",          "group": "care",    "keywords": ["회복 선물 홍삼 진액", "단백질 음료 선물", "극세사 담요 선물", "흑염소 진액 선물"] },
+    "parenting":       { "label": "육아 응원",     "group": "care",    "keywords": ["출산 선물 세트", "아기 내복 선물", "산모 영양제 선물", "육아맘 간식 선물세트"] },
+
+    "first_job":       { "label": "첫 출근",       "group": "work",    "keywords": ["첫 출근 선물 텀블러", "명함지갑 선물", "넥타이 선물", "사원증 목걸이 가죽"] },
+    "project_done":    { "label": "프로젝트 완료", "group": "work",    "keywords": ["팀 간식 선물세트", "원두 커피 선물세트", "단체 수제 쿠키 선물", "레터링 케이크 주문"] },
+    "farewell":        { "label": "송별회",        "group": "work",    "keywords": ["송별 선물 만년필", "각인 텀블러 선물", "롤링페이퍼 앨범", "퇴직 꽃바구니"] },
+    "internship_end":  { "label": "인턴 수료",     "group": "work",    "keywords": ["수료식 꽃바구니", "명함케이스 선물", "각인 볼펜 선물", "노트북 서류가방"] },
+    "cert_exam":       { "label": "자격시험",      "group": "work",    "keywords": ["시험 합격 기원 선물", "수험생 영양제 선물", "합격 떡 선물", "시험 응원 간식 박스"] },
+    "study_abroad":    { "label": "유학",          "group": "work",    "keywords": ["유학 선물 여행용 파우치", "멀티 어댑터 여행용", "한국 기념품 선물", "캐리어 네임택 가죽"] },
+
+    "exhibition":      { "label": "전시회",        "group": "culture", "keywords": ["전시회 축하 꽃다발", "전시 축하 화분", "플라워박스 선물", "축하 디저트 박스"] },
+    "performance":     { "label": "공연",          "group": "culture", "keywords": ["공연 축하 꽃다발", "공연 응원 간식 선물", "미니 꽃바구니 축하", "응원 꽃 쿠키"] },
+    "recital":         { "label": "연주회",        "group": "culture", "keywords": ["연주회 꽃다발", "장미 한송이 포장", "오르골 선물", "마카롱 선물세트"] },
+    "publication":     { "label": "출간",          "group": "culture", "keywords": ["출간 축하 화분", "만년필 선물세트", "원목 북스탠드", "축하 와인 선물"] },
+    "competition":     { "label": "대회",          "group": "culture", "keywords": ["대회 응원 간식 선물", "스포츠음료 선물세트", "응원 키링", "에너지바 선물세트"] },
+    "award":           { "label": "수상",          "group": "culture", "keywords": ["수상 축하 꽃다발", "수제 케이크 선물", "샴페인잔 세트", "축하 화분 배송"] },
+
+    "manitto":         { "label": "마니또",        "group": "event",   "keywords": ["마니또 선물", "귀여운 문구 세트", "미니 핸드크림 세트", "랜덤 간식 박스"] },
+    "prize":           { "label": "경품",          "group": "event",   "keywords": ["경품 블루투스 스피커", "경품 무선충전기", "경품 보조배터리", "경품 텀블러"] },
+    "travel":          { "label": "여행",          "group": "event",   "keywords": ["여행 파우치 세트", "여행용 목베개", "여행용 세면도구 세트", "캐리어 벨트"] },
+    "return_gift":     { "label": "답례",          "group": "event",   "keywords": ["답례품 수건", "답례 떡", "답례품 쿠키", "답례품 꿀스틱"] },
+    "pet_adoption":    { "label": "반려동물 입양", "group": "event",   "keywords": ["강아지 입양 선물 세트", "고양이 장난감 세트", "반려동물 간식 선물세트", "반려동물 방석"] },
+
+    "mood_boost":      { "label": "기분 전환",     "group": "mood",    "keywords": ["향초 선물", "입욕제 선물세트", "구움과자 선물세트", "미니 꽃다발"] },
+    "surprise":        { "label": "깜짝 선물",     "group": "mood",    "keywords": ["서프라이즈 꽃 상자", "주문제작 포토 액자", "깜짝 케이크", "서프라이즈 용돈 박스"] },
+    "apology":         { "label": "사과",          "group": "mood",    "keywords": ["미안해 선물 꽃다발", "화해 초콜릿 선물", "손편지 세트", "레터링 디저트 선물"] },
+    "reconciliation":  { "label": "화해",          "group": "mood",    "keywords": ["화해 선물 꽃", "커플 키링", "화해 쿠키 선물세트", "엽서 편지지 세트"] },
+
+    "couple_100days":  { "label": "백일(연인)",    "group": "couple",  "keywords": ["100일 선물 커플링", "100일 꽃다발", "커플 포토북", "100일 선물 향수"] },
+    "first_meeting":   { "label": "첫 만남",       "group": "couple",  "keywords": ["첫만남 꽃다발", "수제 초콜릿 선물", "미니 향수 선물세트", "미니 핸드크림 선물"] },
+    "proposal":        { "label": "프러포즈",      "group": "couple",  "keywords": ["프러포즈 꽃다발", "프러포즈 반지", "장미 플라워박스", "커플 목걸이"] },
+    "engagement":      { "label": "약혼",          "group": "couple",  "keywords": ["약혼 꽃다발", "커플 와인잔 세트", "커플 시계", "상견례 선물"] },
+    "reunion":         { "label": "재회",          "group": "couple",  "keywords": ["재회 선물 꽃다발", "와인 선물세트", "디저트 선물세트", "커플 사진 액자"] }
+  },
+  "seed_changes": [
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "invitation", "from": "홈파티 디저트 박스", "to": "홈파티 디저트 세트", "why": "결과 46개 중 42개가 빈 선물박스(포장재), 선정 1개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "project_done", "from": "커피 기프트 박스", "to": "원두 커피 선물세트", "why": "결과 45개 전부 빈 선물박스, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "mood_boost", "from": "디저트 선물 박스", "to": "구움과자 선물세트", "why": "결과 49개 중 38개가 빈 선물박스, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "reconciliation", "from": "화해 디저트 박스", "to": "화해 쿠키 선물세트", "why": "결과 47개 전부 빈 선물박스, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "discharge", "from": "건강즙 선물세트", "to": "배즙 선물세트", "why": "결과가 배즙·도라지즙뿐이라 제목에 \"건강즙\"이 없음, 선정 1개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "farewell", "from": "송별 꽃다발", "to": "퇴직 꽃다발", "why": "네이버 검색 결과 6개뿐(조화), 선정 1개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "internship_end", "from": "수료 축하 꽃다발", "to": "수료식 꽃다발", "why": "결과 44개 중 36개가 케이크 토퍼, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "award", "from": "축하 케이크 선물", "to": "수제 케이크 선물", "why": "결과 46개 중 35개가 케이크 토퍼, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "engagement", "from": "약혼 축하 케이크", "to": "상견례 선물", "why": "결과 47개 전부 케이크 토퍼, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "engagement", "from": "약혼 축하 꽃다발", "to": "약혼 꽃다발", "why": "네이버 검색 결과 1개뿐, 선정 1개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "first_meeting", "from": "첫만남 선물 미니 꽃다발", "to": "첫만남 꽃다발", "why": "네이버 검색 결과 1개뿐, 선정 0개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "manitto", "from": "마니또 선물 1만원", "to": "마니또 선물", "why": "결과 47개 중 45개가 무관, 선정 2개"},
+    {"version": "v2-extra.1", "date": "2026-11-21", "occasion": "surprise", "from": "레터링 케이크 깜짝", "to": "깜짝 케이크", "why": "네이버 검색 결과 2개뿐, 선정 2개"},
+    {"version": "v2-extra.2", "date": "2026-11-21", "occasion": "farewell", "from": "퇴직 꽃다발", "to": "퇴직 꽃바구니", "why": "교체 후에도 결과 43개 중 38개가 케이크 토퍼, 선정 0개"},
+    {"version": "v2-extra.2", "date": "2026-11-21", "occasion": "internship_end", "from": "수료식 꽃다발", "to": "수료식 꽃바구니", "why": "교체 후에도 결과 44개 중 36개가 케이크 토퍼, 선정 0개"}
+  ]
+}
