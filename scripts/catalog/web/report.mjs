@@ -3,14 +3,16 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CATEGORY_NAMES } from '../../../lib/catalog.mjs';
-import { BLOCKED_TITLE_WORDS, COLLECTION_NOTES, GENERIC_WORDS, IMAGE_PACING_MS, OUTLIER_RATIO, PACING, PATHS, PER_KEYWORD, TERM_ALIASES, loadSeeds, path } from './config.mjs';
+import { BLOCKED_TITLE_WORDS, COLLECTION_NOTES, GENERIC_WORDS, IMAGE_PACING_MS, OCCASION_WORDS, OUTLIER_RATIO, PACING, PATHS, PER_KEYWORD, SEED_CHANGES, SEED_SET, SUFFIX, TERM_ALIASES, loadSeeds, path } from './config.mjs';
 import { CATEGORY_MAP } from './enrich.mjs';
 
-const OCCASIONS = { holiday: '명절', birthday: '생일', exam: '수험', flower: '꽃' };
-const FIGURES = join(PATHS.web, 'figures');
+const EXTRA = SEED_SET === 'extra';
+const FIGURES = PATHS.figures;
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 
 const seeds = loadSeeds();
+const OCCASIONS = EXTRA ? Object.fromEntries(Object.entries(seeds.occasions).map(([id, { label }]) => [id, label]))
+  : { holiday: '명절', birthday: '생일', exam: '수험', flower: '꽃' };
 const parsed = readFileSync(PATHS.parsed, 'utf8').trim().split('\n').map(line => JSON.parse(line));
 const { keywords, photo_replacements: photoReplacements = [] } = readJson(PATHS.selected);
 const imagesLog = existsSync(PATHS.imagesLog) ? Object.values(readJson(PATHS.imagesLog)) : [];
@@ -35,7 +37,7 @@ const priceStats = list => {
 
 // ---------- manifest ----------
 const collected = parsed.map(line => line.collected_at).filter(Boolean).sort();
-const blockedFiles = existsSync(PATHS.web) ? readdirSync(PATHS.web).filter(f => /^blocked-.*\.json$/.test(f)) : [];
+const blockedFiles = existsSync(PATHS.web) ? readdirSync(PATHS.web).filter(f => (EXTRA ? /^blocked-[a-z]+\.extra\.json$/ : /^blocked-[a-z]+\.json$/).test(f)) : [];
 const excludedTotals = keywords.reduce((acc, k) => { for (const [r, n] of Object.entries(k.excluded_counts)) acc[r] = (acc[r] ?? 0) + n; return acc; }, {});
 const manifest = {
   generated_at: new Date().toISOString(),
@@ -49,7 +51,8 @@ const manifest = {
     parse: '페이지에 내장된 Next.js flight 데이터(self.__next_f)의 상품 카드 JSON. CSS 선택자 없음',
   },
   collection_period: { first: collected[0] ?? null, last: collected.at(-1) ?? null },
-  seeds: { version: seeds.version, keywords: seeds.items.length, changes: COLLECTION_NOTES.seed_changes },
+  seeds: { version: seeds.version, keywords: seeds.items.length, changes: SEED_CHANGES,
+    ...(EXTRA ? { occasions: Object.keys(seeds.occasions).length, groups: seeds.groups, occasion_words_not_counted_for_relevance: OCCASION_WORDS } : {}) },
   robots: COLLECTION_NOTES.robots,
   selection: { per_keyword: PER_KEYWORD, outlier_ratio: OUTLIER_RATIO, price_bands: seeds.priceBands,
     blocked_title_words: BLOCKED_TITLE_WORDS, generic_words: GENERIC_WORDS, term_aliases: TERM_ALIASES,
@@ -92,10 +95,10 @@ ${body}
 
 // Box plot of product prices per occasion on a log axis (Tukey whiskers in log space).
 function boxplot() {
-  const W = 720, H = 360, left = 72, right = 24, top = 56, bottom = 48;
+  const rows = Object.keys(OCCASIONS).length;
+  const W = 720, left = 96, right = 24, top = 56, bottom = 48, rowH = EXTRA ? 34 : (360 - top - bottom) / rows, H = top + bottom + rowH * rows;
   const lo = Math.log10(200), hi = Math.log10(600000);
   const x = v => left + (Math.log10(v) - lo) / (hi - lo) * (W - left - right);
-  const rowH = (H - top - bottom) / 4;
   const ticks = [[1000, '1천'], [10000, '1만'], [30000, '3만'], [100000, '10만'], [500000, '50만']];
   let body = `<text x="${left}" y="24" font-size="15" font-weight="600" fill="${C.text}">상황별 상품 가격 분포</text>
 <text x="${left}" y="42" font-size="12" fill="${C.text2}">네이버 쇼핑 검색 결과에서 고른 상품, 가격 축은 로그 눈금(원). 상자=사분위, 선=중앙값, 수염=로그 눈금 기준 1.5×IQR</text>\n`;
@@ -105,6 +108,7 @@ function boxplot() {
   }
   Object.entries(OCCASIONS).forEach(([occ, label], i) => {
     const prices = forOccasion(occ).map(p => p.price).sort((a, b) => a - b);
+    if (!prices.length) return;
     // Same quartiles as the report table; whiskers are measured in log space to match the axis.
     const [q1, med, q3] = [0.25, 0.5, 0.75].map(q => quantile(prices, q));
     const iqr = Math.log10(q3) - Math.log10(q1);
@@ -131,7 +135,7 @@ function boxplot() {
 // Occasion × category product counts.
 function heatmap() {
   const cats = Object.entries(countBy(products, p => p.category)).sort((a, b) => b[1] - a[1]).map(([c]) => c);
-  const cell = 34, left = 64, top = 140, W = left + cats.length * cell + 24, H = top + 4 * cell + 20;
+  const rows = Object.keys(OCCASIONS).length, cell = 34, left = EXTRA ? 96 : 64, top = 140, W = left + cats.length * cell + 24, H = top + rows * cell + 20;
   const counts = Object.keys(OCCASIONS).map(occ => cats.map(c => forOccasion(occ).filter(p => p.category === c).length));
   const max = Math.max(...counts.flat());
   const step = n => C.ramp[Math.min(C.ramp.length - 1, Math.floor(Math.sqrt(n / max) * (C.ramp.length - 1)))];
@@ -164,6 +168,7 @@ const bandRows = Object.entries(OCCASIONS).map(([occ, label]) => {
 });
 const statRows = Object.entries(OCCASIONS).map(([occ, label]) => {
   const s = priceStats(forOccasion(occ));
+  if (!s) return [label, 0, '-', '-', '-', '-', '-'];
   return [label, s.n, won(s.min), won(s.q1), won(s.median), won(s.q3), won(s.max)];
 });
 const allCats = Object.entries(countBy(products, p => p.category)).sort((a, b) => b[1] - a[1]).map(([c]) => c);
@@ -178,9 +183,13 @@ const cmpRows = compareCats.map(c => {
   return [`${CATEGORY_NAMES[c] ?? c}`, amazonCats[c] ?? 0, a ? won(a.median) : '-', k?.n ?? 0, k ? won(k.median) : '-'];
 });
 const flowerSub = countBy(products.filter(p => p.category === 'flower'), p => p.flower_subtype);
-const reasonNames = { ad: '광고', irrelevant: '관련성(핵심어 없음·금지어)', price_outlier: '가격 이상치', not_gift_set: '선물세트 아님', outside_bands: '가격대 밖(50만 원 초과)', no_price: '가격 없음', sold_out: '품절' };
+const reasonNames = { ad: '광고', irrelevant: '관련성(핵심어 없음·금지어)', price_outlier: '가격 이상치', not_gift_set: '선물세트 아님', outside_bands: '가격대 밖(50만 원 초과)', no_price: '가격 없음', sold_out: '품절', excluded_category: '선물이 아닌 네이버 카테고리(케이크토퍼 등)' };
 const shippingKnown = products.filter(p => p.shipping_source === 'naver_listing');
 const allAmazon = priceStats(amazon), allKr = priceStats(products);
+
+const seedLine = EXTRA
+  ? `상황 ${Object.keys(OCCASIONS).length}개마다 검색어 4개를 시드로 정했다(\`${seeds.version}\`).`
+  : `상황(명절·생일·수험·꽃)마다 서로 다른 품목 50개를 시드로 정했다(\`${seeds.version}\`).`;
 
 const report = `# 한국 선물 상품 카탈로그 수집 보고서
 
@@ -191,9 +200,9 @@ const report = `# 한국 선물 상품 카탈로그 수집 보고서
 - **출처:** 네이버 쇼핑 검색 결과 첫 페이지(\`search.shopping.naver.com/ns/search\`, 기본 랭킹순). 상세 페이지·리뷰 본문·판매자 정보는 수집하지 않았다.
 - **방식:** 사람이 Chrome 시크릿 창에서 검색 결과를 열고 "웹페이지, 전체"로 저장(로그인 없음). 자동 수집(Playwright, 창 표시 모드, 요청 간격 ${PACING.delayMs.map(v => v / 1000).join('~')}초)은 파일럿에서 두 사이트 모두 첫 품목에서 차단되어 쓰지 않았다.
 - **기간:** ${manifest.collection_period.first?.slice(0, 10)} ~ ${manifest.collection_period.last?.slice(0, 10)}
-- **규모:** 시드 ${seeds.items.length}개(4개 상황 × 50) → 페이지 ${parsed.length}개 → 결과 ${manifest.counts.results.toLocaleString()}개 → 선정 ${manifest.counts.picked}개 → 중복을 합친 상품 ${products.length}개
+- **규모:** 시드 ${seeds.items.length}개(${EXTRA ? `${Object.keys(OCCASIONS).length}개 상황` : '4개 상황 × 50'}) → 페이지 ${parsed.length}개 → 결과 ${manifest.counts.results.toLocaleString()}개 → 선정 ${manifest.counts.picked}개 → 중복을 합친 상품 ${products.length}개
 - **robots.txt:** 네이버는 HTTP 418 오류 페이지만 돌아와 **신뢰할 수 없음**. 조교의 크롤링 허락이 사이트 약관을 대신하지는 않는다.
-- **시드 변경:** ${COLLECTION_NOTES.seed_changes.map(c => `${c.from} → ${c.to}`).join(', ')}
+- **시드 변경:** ${SEED_CHANGES.length ? SEED_CHANGES.map(c => `${c.from} → ${c.to}`).join(', ') : '없음'}
 
 ## 2. 상황별 상품 수와 가격
 
@@ -217,7 +226,7 @@ ${table(['카테고리', ...Object.values(OCCASIONS), '전체'], catRows)}
 - 리뷰 수 보유: ${withReviews}/${products.length} (${pct(withReviews, products.length)})
 - 배송비(목록 기본 배송비) 보유: ${shippingKnown.length}/${products.length}, 그중 유료 ${shippingKnown.filter(p => p.shipping_fee > 0).length}개. 조건부 무료배송 기준 금액은 목록에 없어 전부 null
 - 선물세트 규칙: ${products.filter(p => p.gift_set === true).length}개 true, ${products.filter(p => p.gift_set === false).length}개 false(규칙 완화)
-- 주류: ${products.filter(p => p.alcohol).length}개, 모두 명절 태그만
+- 주류: ${products.filter(p => p.alcohol).length}개${EXTRA ? ' (v2-extra 주류는 명절 전용 규칙 결정 전까지 enrich가 보류하므로 0개가 정상. 보류 목록은 enrich-held.extra.json의 held_liquor)' : ', 모두 명절 태그만'}
 
 ## 5. 선정 과정에서 제외된 결과
 
@@ -232,10 +241,10 @@ ${table(['카테고리', '아마존 n', '아마존 중앙값', '네이버 n', '�
 ## 7. 논문 데이터 파트 재료
 
 - **수집:** ${manifest.collection_period.first?.slice(0, 10)}~${manifest.collection_period.last?.slice(0, 10)}, 네이버 쇼핑 검색 결과 첫 페이지, 수동 저장 ${parsed.length}페이지.
-- **품목 선정:** 상황(명절·생일·수험·꽃)마다 서로 다른 품목 50개를 시드로 정했다(\`${seeds.version}\`).
+- **품목 선정:** ${seedLine}
 - **상품 선정 규칙:** 광고·가격 없음·품절 제외 → 제목에 핵심어 필요(꽃다발·화분 같은 일반어 제외, 이표기 허용)와 금지어 제외 → 품목별 가격 중앙값의 ${OUTLIER_RATIO[0]}배 미만·${OUTLIER_RATIO[1]}배 초과 제외 → 서로 다른 가격대에서 순위가 가장 높은 상품부터 품목당 ${PER_KEYWORD}개 → 같은 판매처·브랜드 1개, 같은 상품 중복 제거. "…선물세트" 품목은 선물세트 표기 상품을 우선.
 - **합성·대체 필드:** 도착일·포장·당도는 아마존 카탈로그와 같은 규칙(\`scripts/catalog/demo-rules.mjs\`)으로 합성했다. 도착일은 상품 id 해시로 2~4일, 포장은 상품명에 gift/hamper/combo/set/box·선물·세트·기프트·박스·바구니가 있으면 격식 포장, 당도는 무가당·무설탕·제로슈거·슈가프리·설탕무첨가(영문 sugar free 등)가 있으면 단맛 없음이다. 선물세트 여부(\`gift_set\`)는 포장과 따로 기록한다. 인기도는 검색 시점의 누적 리뷰 수. 배송비는 목록의 기본 배송비로, 지역 추가 요금과 조건부 무료는 반영하지 않았다. 알레르기는 상품명 키워드 추정이다.
 - **한계:** 검색 랭킹(광고 제외)에 의존하고 랭킹 알고리즘은 공개되지 않았다. 가격·리뷰 수는 수집 시점 값이다. 브랜드 필드가 없어 판매처 기준으로만 다양성을 맞췄다. robots.txt를 확인할 수 없었고, 허락이 약관을 대신하지 않는다. 상품 사진은 판매자 이미지라 레포·공개 배포·논문 캡처에 쓰지 않는다.
 `;
-writeFileSync(join(PATHS.web, 'report.md'), report);
-console.log(JSON.stringify({ manifest: 'data/catalog/web/manifest.json', report: 'data/catalog/web/report.md', figures: readdirSync(FIGURES) }));
+writeFileSync(PATHS.report, report);
+console.log(JSON.stringify({ manifest: `data/catalog/web/manifest${SUFFIX}.json`, report: `data/catalog/web/report${SUFFIX}.md`, figures: readdirSync(FIGURES) }));

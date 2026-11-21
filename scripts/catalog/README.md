@@ -26,3 +26,16 @@ FLOWER_DB_PATH=data/shopping-poc/catalog.sqlite SHOPPING_DB_PATH=data/shopping-p
 자동 수집이 막히면 `node scripts/catalog/web/collect.mjs --site naver --manual-list`로 URL 목록(`data/catalog/web/manual/naver-urls.tsv`)을 만든 뒤 `node scripts/catalog/web/manual-helper.mjs --site naver --occasion holiday`를 실행한다(`--occasion`은 `holiday`·`birthday`·`exam`·`flower`, 생략하면 전체). 도우미는 아직 저장하지 않은 다음 검색 결과를 Chrome 시크릿 창으로 열고, 저장할 파일명을 클립보드에 넣고, 저장 폴더를 터미널에 보여준다. 페이지가 다 뜨면 스크롤하지 말고 `Cmd+S` → 형식 "웹페이지, 전체" → `Cmd+Shift+G`로 그 폴더로 이동 → 파일명 붙여넣기로 저장한 다음 터미널에서 Enter를 누르면, 파일이 생겼는지 확인하고 다음 품목으로 넘어간다(`s` 건너뛰기, `q` 종료, 다시 실행하면 저장된 파일은 건너뜀). 보안 확인이 뜨면 직접 풀어도 되지만 로그인은 하지 않는다. 저장한 HTML은 `/data/` 아래라 Git에 올라가지 않는다.
 
 수집이 끝나면 `node scripts/catalog/web/parse.mjs --site naver` → `select.mjs` → `enrich.mjs`(→ `supabase/seed/products-kr.json`) → `report.mjs`(→ `data/catalog/web/report.md`, `manifest.json`, `figures/`) 순서로 돌린다. 모두 저장된 페이지만 읽는다. 논문용 사본은 `docs/catalog-kr/`에 복사해 커밋한다.
+
+### 추가 상황 수집 (`occasion-seeds.v2-extra.json`, 32개 상황 × 검색어 4개)
+
+기존 시드(v1.2, 200개)는 그대로 두고, 같은 파이프라인을 환경변수 `SEEDS=extra`로 돌린다. 상황 id가 v1.2와 겹치면 `loadSeeds`가 멈춘다. 검색어당 선정 개수는 시드 파일의 `per_keyword`(5)를 따르고(`PER_KEYWORD` 환경변수가 우선), 가격대는 v1.2의 b1~b5를 쓴다. 저장 폴더는 기존과 같은 `data/catalog/web/manual/naver/<상황>/`이고, 중간 산출물만 `.extra` 이름으로 따로 생긴다(`parsed.extra.jsonl`, `selected.extra.json`, `manifest.extra.json`, `report.extra.md`, `figures.extra/`).
+
+```sh
+SEEDS=extra node scripts/catalog/web/collect.mjs --site naver --manual-list      # 128개 → manual/naver-urls.extra.tsv (group 열 포함)
+SEEDS=extra node scripts/catalog/web/manual-helper.mjs --site naver --occasion-group care   # care|work|culture|event|mood|couple
+```
+
+폴더를 매번 옮기기 싫으면 `--inbox`를 붙인다: 모든 페이지를 `data/catalog/web/manual/_inbox/` 한 폴더에 저장하면(Chrome이 마지막 저장 위치를 기억한다) 도우미가 Enter 때마다 상황 폴더로 옮긴다. 파일명이 바뀌었으면(`(1)` 등) 페이지 `<title>`의 검색어로 찾는다. 도우미 없이 저장했거나 남은 파일은 `SEEDS=extra node scripts/catalog/web/sort-inbox.mjs --site naver [--dry-run]`로 분류한다. 이미 있는 파일은 덮어쓰지 않고 inbox에 남긴다.
+
+저장이 끝나면: `SEEDS=extra` 로 `parse.mjs --site naver` → `select.mjs` → `images.mjs` → `select.mjs`(사진 없는 상품 교체) → `review-extra.mjs`(이상한 검색어·상황별 분포·기존과 겹침·매핑 없는 카테고리) → 매핑 승인 후 `category-map.v2-extra.json` 작성 → `enrich.mjs`(→ `data/catalog/web/products-kr.extra.json`) → `report.mjs`. 마지막으로 `node scripts/catalog/web/merge-extra.mjs`(미리보기) / `--write`가 같은 상품(id·URL·정규화 상품명+판매처)을 하나로 합치고 기존 레코드에는 `occasions` 태그만 추가한다. 추가 상황의 주류는 상황 태그 규칙이 정해질 때까지 `enrich-held.extra.json`의 `held_liquor`로 보류된다.

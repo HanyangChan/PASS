@@ -1,6 +1,7 @@
 // ① collect: open one search result page per seed keyword and cache it verbatim.
-// Usage: node scripts/catalog/web/collect.mjs --site naver|coupang [--occasion holiday] [--limit 3]
+// Usage: node scripts/catalog/web/collect.mjs --site naver|coupang [--occasion holiday] [--occasion-group care] [--limit 3]
 //        [--dry-run] [--manual-list] [--robots] [--refresh] [--capture-json]
+// SEEDS=extra selects occasion-seeds.v2-extra.json (see config.mjs); the default is v1.2.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
@@ -9,12 +10,12 @@ import { parseArgs } from 'node:util';
 import { PACING, PATHS, SITES, loadSeeds, randomBetween } from './config.mjs';
 
 const { values: args } = parseArgs({ options: {
-  site: { type: 'string' }, occasion: { type: 'string' }, limit: { type: 'string' },
+  site: { type: 'string' }, occasion: { type: 'string' }, 'occasion-group': { type: 'string' }, limit: { type: 'string' },
   'dry-run': { type: 'boolean' }, 'manual-list': { type: 'boolean' }, robots: { type: 'boolean' },
   refresh: { type: 'boolean' }, 'capture-json': { type: 'boolean' },
 } });
 
-const { version, items: allItems } = loadSeeds();
+const { version, items: allItems, groups } = loadSeeds();
 
 if (args.robots) {
   mkdirSync(PATHS.robots, { recursive: true });
@@ -33,7 +34,12 @@ if (!site) {
   console.error(`--site must be one of: ${Object.keys(SITES).join(', ')}`);
   process.exit(1);
 }
-let items = allItems.filter(item => !args.occasion || item.occasion === args.occasion);
+if (args['occasion-group'] && !groups[args['occasion-group']]) {
+  console.error(`--occasion-group must be one of: ${Object.keys(groups).join(', ') || '(this seed set has no groups)'}`);
+  process.exit(1);
+}
+let items = allItems.filter(item => (!args.occasion || item.occasion === args.occasion)
+  && (!args['occasion-group'] || item.group === args['occasion-group']));
 if (args.occasion && !items.length) throw Error(`Unknown occasion: ${args.occasion}`);
 if (args.limit) items = items.slice(0, Number(args.limit));
 const rawPath = item => join(PATHS.raw, args.site, item.occasion, `${item.slug}.html`);
@@ -46,11 +52,15 @@ if (args['dry-run']) {
 
 if (args['manual-list']) {
   // Manual fallback (spec §1): user opens each URL and saves with Cmd+S to the listed path.
-  const file = join(PATHS.manual, `${args.site}-urls.tsv`);
+  // The group column is last so older readers of the four-column list keep working. The extra run writes
+  // naver-urls.extra.tsv, leaving the v1.2 list untouched; both use the same manual/<site>/<occasion>/ folders.
+  const file = PATHS.urlList(args.site);
   mkdirSync(dirname(file), { recursive: true });
   const lines = items.map(item => [item.occasion, item.keyword, site.searchUrl(item.keyword),
-    join('data/catalog/web/manual', args.site, item.occasion, `${item.slug}.html`)].join('\t'));
-  writeFileSync(file, ['occasion\tkeyword\turl\tsave_as', ...lines].join('\n') + '\n');
+    join('data/catalog/web/manual', args.site, item.occasion, `${item.slug}.html`), item.group ?? ''].join('\t'));
+  writeFileSync(file, ['occasion\tkeyword\turl\tsave_as\tgroup', ...lines].join('\n') + '\n');
+  const perGroup = Object.entries(Object.groupBy(items, item => item.group ?? '-')).map(([g, list]) => `${g} ${list.length}`).join(', ');
+  console.log(`groups: ${perGroup}`);
   console.log(`${items.length} URLs → ${file}`);
   process.exit(0);
 }
@@ -109,7 +119,7 @@ try {
       const evidence = join(PATHS.raw, args.site, '_blocked', `${item.occasion}-${item.slug}.html`);
       mkdirSync(dirname(evidence), { recursive: true });
       writeFileSync(evidence, await page.content().catch(() => ''));
-      writeFileSync(join(PATHS.web, `blocked-${args.site}.json`), JSON.stringify(failures, null, 1));
+      writeFileSync(PATHS.blocked(args.site), JSON.stringify(failures, null, 1));
       console.log('같은 품목에서 두 번 연속 차단되어 오늘 수집을 중단합니다.');
       break;
     }
