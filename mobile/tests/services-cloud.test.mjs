@@ -281,3 +281,37 @@ test('a populated account preserves evaluation-time context across edits, failed
   repo.setFeedback([]);
   await assert.rejects(repo.saveFeedback(), /다시 로그인/);
 });
+
+test('resuming an archived conversation restores conditions and appends to the same message IDs', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  const first = { state: { ...empty().state, recipients: ['어머니'], occasion: '명절', budget: { amount_krw: 50000, shipping_included: true } }, issues: [] };
+  repo.setFeedback([record(products[0], first.state)]);
+  await repo.saveChat(first, [message('첫 대화')], [gift('historic')]);
+  const firstId = repo.currentId();
+  const originalIds = [...f.rows.conversations.find(c => c.id === firstId).conditions._pass.message_ids];
+  await repo.saveChat(empty(), [message('다른 대화')]);
+  const otherId = repo.currentId();
+  const detail = await repo.resumeConversation(firstId);
+  assert.equal(repo.currentId(), firstId);
+  assert.deepEqual(detail.session, first);
+  assert.deepEqual(detail.messages, [message('첫 대화')]);
+  assert.deepEqual(detail.recommendations, [gift('historic')]);
+  assert.equal(detail.feedback.length, 1);
+  await repo.saveChat(first, [...detail.messages, message('이어서')]);
+  assert.equal(f.rows.conversations.length, 2);
+  assert.deepEqual(f.rows.conversations.find(c => c.id === firstId).conditions._pass.message_ids.slice(0, 1), originalIds);
+  assert.deepEqual((await repo.loadConversation(firstId)).messages, [message('첫 대화'), message('이어서')]);
+  assert.deepEqual((await repo.loadConversation(otherId)).messages, [message('다른 대화')]);
+  assert.deepEqual((await f.repo().load(empty())).recommendations, [gift('historic')]);
+});
+
+test('failed or cancelled history loads preserve the active conversation and enforce ownership', async () => {
+  const f = fixture(), repo = f.repo(); await repo.load(empty());
+  await repo.saveChat(empty(), [message('현재')]); const id = repo.currentId();
+  await assert.rejects(repo.resumeConversation('missing'));
+  assert.equal(repo.currentId(), id);
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(repo.resumeConversation(id, controller.signal), /취소/);
+  assert.equal(repo.currentId(), id);
+  f.switchOwner(); await assert.rejects(repo.resumeConversation(id), /로그인/);
+});

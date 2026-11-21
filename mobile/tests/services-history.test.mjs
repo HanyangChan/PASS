@@ -49,3 +49,23 @@ test('the server request carries feedback only when there is some', async () => 
   assert.equal('feedback' in bodies[0], false);
   assert.deepEqual(bodies[1].feedback, [{ giftId: 'x', helpful: true }]);
 });
+
+test('guest history preserves conditions and legacy records reconstruct them before continuing', async () => {
+  const { restoreHistorySession } = await import('../src/chatHistory.ts');
+  const service = createLocalChatService(products);
+  const first = await service.send(service.createSession(), '어머니 생신 선물 5만원 배송비 포함');
+  const chat = { id: 'resume', at: '2026-11-18', title: '선물', recipients: ['어머니'], session: first.session,
+    messages: [{ role: 'user', text: '어머니 생신 선물 5만원 배송비 포함' }, { role: 'assistant', text: first.message }], feedback: [] };
+  const repo = createHistoryRepository(memory()); await repo.archive(chat);
+  const [loaded] = await repo.load();
+  assert.deepEqual(await restoreHistorySession(loaded, service), first.session);
+  delete loaded.session;
+  const restored = await restoreHistorySession(loaded, service);
+  assert.deepEqual(restored, first.session);
+  const next = await service.send(restored, '예산 7만원으로 바꿔줘', loaded.messages);
+  assert.equal(next.session.state.budget.amount_krw, 70000);
+  assert.deepEqual(next.session.state.recipients, ['어머니']);
+  await repo.archive({ ...chat, session: next.session, messages: [...chat.messages, { role: 'user', text: '예산 7만원으로 바꿔줘' }] });
+  assert.equal((await repo.load()).length, 1);
+  assert.equal((await repo.load())[0].session.state.budget.amount_krw, 70000);
+});
