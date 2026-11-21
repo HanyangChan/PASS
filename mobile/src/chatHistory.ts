@@ -1,6 +1,6 @@
 import { normalizeConditions } from '../../lib/condition-compat.mjs';
 import { validateState } from '../../lib/llm.mjs';
-import { decodeFeedback, type CardFeedback } from './cardFeedback.ts';
+import { decodeFeedback, stampConversation, type CardFeedback } from './cardFeedback.ts';
 import { feedbackIdentity, validProductFeedback } from '../../lib/feedback.mjs';
 import { decodeGifts } from './storage.ts';
 import type { ChatMessage, ChatSession, Gift } from './domain';
@@ -82,5 +82,9 @@ export function createHistoryRepository(storage: Storage) {
   return {
     load,
     archive: (chat: PastChat) => write(list => [chat, ...list.filter(c => c.id !== chat.id)]),
+    saveFeedback(id: string, feedback: CardFeedback[]) {
+      const snapshot = stampConversation(feedback, id);
+      return write(list => list.map(chat => chat.id === id ? { ...chat, feedback: snapshot } : chat));
+    },
   };
 }

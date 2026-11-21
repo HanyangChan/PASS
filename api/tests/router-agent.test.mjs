@@ -128,3 +128,16 @@ test('prototype API keeps tea preference when adjusting the budget for the full 
  const health=await instance.fetch(new Request('https://api.example/health'),env());
  const info=await health.json();assert.equal(info.products,3376);
 });
+
+test('single-gift budget buttons send plain amounts and advance to the shipping question', async () => {
+ const start=await send(body({text:'부모님',source:'quick_reply'}));
+ assert.equal(start.status,200);
+ assert.equal(start.data.view.question.key,'amount');
+ assert.deepEqual(start.data.view.question.choices,['5만 원','10만 원','20만 원']);
+ for(const [choice,amount] of start.data.view.question.choices.map((choice,i)=>[choice,[50000,100000,200000][i]])) {
+  const selected=await send(body({session:start.data.session,text:choice,source:'quick_reply'}));
+  assert.equal(selected.status,200);
+  assert.equal(selected.data.session.state.budget.amount_krw,amount);
+  assert.equal(selected.data.view.question.key,'shipping');
+ }
+});

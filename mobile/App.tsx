@@ -312,7 +312,30 @@ export function AppContent({
   const changeBudget = (a: any) => {
     void changeChatConditions(a.patch, `예산을 ${won(a.amount)}으로 변경해줘.`, false).then(ok => { if (ok) setComparisonId(null); });
   };
-  const cards = (gifts: Gift[], ranked = false) =>
+  const voteButtons = (gift: Gift, rank: number, product?: EngineProduct, reason?: string) => {
+    const mine = cardFeedback.find(entry => entry.giftId === gift.id && entry.kind === 'gift_preference' &&
+      JSON.stringify(feedbackContext(session.state, entry.context?.scope)) === JSON.stringify(entry.context));
+    const productKey = product ? productFeedbackKey(product) : mine?.productKey;
+    return ([true, false] as const).map(helpful => {
+      const Icon = helpful ? ThumbsUp : ThumbsDown;
+      const selected = mine?.helpful === helpful;
+      return (
+        <Pressable
+          key={String(helpful)}
+          accessibilityRole="button"
+          accessibilityLabel={`${gift.name} 이 상황에 ${helpful ? '좋아요' : '아쉬워요'}`}
+          disabled={chatPending || !productKey}
+          accessibilityState={{ selected }}
+          {...(Platform.OS === 'web' ? { 'aria-pressed': selected } : {})}
+          onPress={() => rateCard({ giftId: gift.id, productKey, rank, helpful, reason: reason ?? mine?.reason ?? '', kind: 'gift_preference' })}
+          style={[s.cardRateButton, !productKey && s.unavailableVote]}
+        >
+          <Icon size={18} color={selected ? c.primary : c.muted} fill={selected ? c.primary : 'none'} />
+        </Pressable>
+      );
+    });
+  };
+  const cards = (gifts: Gift[], ranked = false, rateable = false) =>
     gifts.map((g, i) => (
       <GiftCard
         key={g.id}
@@ -321,6 +344,7 @@ export function AppContent({
         saved={liked(g)}
         onSave={() => save(g)}
         onOpen={() => open(g)}
+        actions={rateable ? voteButtons(g, i + 1, catalogProducts.find(product => product.id === g.id)) : undefined}
       />
     ));
   const tiles = (gifts: Gift[]) => (
@@ -815,7 +839,7 @@ export function AppContent({
                   {!!restoredRecommendations?.length && (
                     <View>
                       <SectionHeader title="이전 추천 상품" />
-                      {cards(restoredRecommendations, true)}
+                      {cards(restoredRecommendations, true, true)}
                     </View>
                   )}
                   {restoredRecommendations === null && !question.key && result.items.length === 0 && result.status !== 'reference' && <View style={s.noMatches}>
@@ -835,37 +859,11 @@ export function AppContent({
                         {result.items.map((p: any, i: number) => {
                           const g = toGift(p);
                           const reason = cardReason(p, session.state);
-                          const mine = cardFeedback.find(f => f.giftId === g.id && f.kind === 'gift_preference' &&
-                            JSON.stringify(feedbackContext(session.state, f.context?.scope)) === JSON.stringify(f.context));
-                          const rate = (helpful: boolean) => rateCard({ giftId: g.id, rank: i + 1, helpful, reason, kind: 'gift_preference' });
                           return <View key={g.id} style={s.chatCard}>
                             <View style={s.chatCardHero}>
                               <GiftImage gift={g}/>
                               <Text style={s.rankBadge}>{i + 1}순위</Text>
-                              <View style={s.cardRate}>
-                                <Pressable
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`${g.name} 이 상황에 좋아요`}
-                                  disabled={chatPending}
-                                  accessibilityState={{ selected: mine?.helpful === true }}
-                                  {...(Platform.OS === 'web' ? { 'aria-pressed': mine?.helpful === true } : {})}
-                                  onPress={() => rate(true)}
-                                  style={s.cardRateButton}
-                                >
-                                  <ThumbsUp size={18} color={mine?.helpful === true ? c.primary : c.muted} fill={mine?.helpful === true ? c.primary : 'none'}/>
-                                </Pressable>
-                                <Pressable
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`${g.name} 이 상황에 아쉬워요`}
-                                  disabled={chatPending}
-                                  accessibilityState={{ selected: mine?.helpful === false }}
-                                  {...(Platform.OS === 'web' ? { 'aria-pressed': mine?.helpful === false } : {})}
-                                  onPress={() => rate(false)}
-                                  style={s.cardRateButton}
-                                >
-                                  <ThumbsDown size={18} color={mine?.helpful === false ? c.primary : c.muted} fill={mine?.helpful === false ? c.primary : 'none'}/>
-                                </Pressable>
-                              </View>
+                              <View style={s.cardRate}>{voteButtons(g, i + 1, p, reason)}</View>
                             </View>
                             <View style={s.chatCardBody}><Text numberOfLines={2} style={s.sectionTitle}>{g.name}</Text><Text style={s.chatCardPrice}>{won(g.price)}</Text><Text style={s.small}>{g.shippingIncluded ? '배송비 포함' : '상품값 기준'}</Text>
                               <Text numberOfLines={2} style={s.cardReason}>{reason}</Text>
@@ -1236,7 +1234,10 @@ function usePassState() {
   // Account: the in-memory list is stamped with the conversation id inside cloudRecords. Guest: the
   // device log is keyed by a per-chat session id. Neither path runs on every tap; see the scheduler.
   const saveFeedbackNow = useCallback(() => {
-    const task = cloud.current ? cloud.current.saveFeedback() : feedbackRepository.save(guestSession.current, cardFeedbackRef.current);
+    const resumedId = resumedGuestId.current;
+    const task = cloud.current ? cloud.current.saveFeedback() : resumedId
+      ? historyRepository.saveFeedback(resumedId, cardFeedbackRef.current)
+      : feedbackRepository.save(guestSession.current, cardFeedbackRef.current);
     return task.catch(() => { setNotice(user ? '계정에 피드백을 저장하지 못했어요.' : '기기에 피드백을 저장하지 못했어요.'); });
   }, [user]);
   // The scheduler is created once and always calls the latest save closure through this ref.
@@ -1249,17 +1250,16 @@ function usePassState() {
     const subscription = AppState.addEventListener('change', state => { if (state !== 'active') void feedbackScheduler.current?.flushNow(); });
     return () => subscription.remove();
   }, []);
-  const rateCard = (card: { giftId: string; rank: number; helpful: boolean; reason: string; kind?: 'gift_preference' | 'reason_helpfulness' }) => {
+  const rateCard = ({ productKey, ...card }: { giftId: string; productKey?: string; rank: number; helpful: boolean; reason: string; kind?: 'gift_preference' | 'reason_helpfulness' }) => {
     const displayed = recommendation?.key === JSON.stringify(session) ? recommendation : null;
     if (chatPending) return;
-    const product = catalog.products.find(p => p.id === card.giftId);
     const context = feedbackContext(session.state, guestSession.current);
-    if (card.kind === 'gift_preference' && (!product || !context)) return;
+    if (card.kind === 'gift_preference' && (!productKey || !context)) return;
     const entry: CardFeedback = {
       ...card,
       version: 2,
       kind: card.kind ?? 'reason_helpfulness',
-      ...(card.kind === 'gift_preference' && context ? { context, productKey: productFeedbackKey(product) } : {}),
+      ...(card.kind === 'gift_preference' && context ? { context, productKey } : {}),
       conversationId: cloud.current ? '' : guestSession.current,
       agentMode: displayed?.agentMode ?? 'local',
       engineMode: displayed?.mode ?? 'local',
@@ -1314,8 +1314,9 @@ function usePassState() {
       const restored = await restoreHistorySession(detail, chatService);
       if (controller.signal.aborted || chatFlight.current.revision !== revision) throw new Error('대화 불러오기가 취소됐어요.');
       archiveCurrentChat(activeId);
-      const feedback = stampConversation(detail.feedback ?? chat.feedback, repository ? chat.id : '');
-      guestSession.current = feedback.findLast(f => f.kind === 'gift_preference')?.context?.scope ?? (repository ? randomUUID() : chat.id);
+      const storedFeedback = detail.feedback ?? chat.feedback;
+      guestSession.current = storedFeedback.findLast(f => f.kind === 'gift_preference')?.context?.scope ?? (repository ? randomUUID() : chat.id);
+      const feedback = stampConversation(storedFeedback, repository ? '' : guestSession.current);
       resumedGuestId.current = repository ? null : chat.id;
       cardFeedbackRef.current = feedback; setCardFeedback(feedback);
       repository?.setFeedback(feedback);
@@ -1847,6 +1848,7 @@ const s = StyleSheet.create({
   chatCardHero: { height: 92, backgroundColor: c.image, alignItems: 'center', justifyContent: 'center' },
   rankBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: c.primary, color: c.white, fontFamily: f.bold, fontSize: 12, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   cardRate: { position: 'absolute', top: 2, right: 4 },
+  unavailableVote: { opacity: 0.45 },
   cardRateButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   chatCardBody: { padding: 14, gap: 8 },
   cardReason: { fontSize: 12, color: c.muted },
