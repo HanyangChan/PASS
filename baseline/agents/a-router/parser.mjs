@@ -1,6 +1,10 @@
 import { initial } from '../../src/vendor/engine.mjs';
 import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 
+// Occasion words beyond the originals (병문안, 송별회, 프러포즈 …), as a regex alternation. A copy of
+// extractableOccasionSource() from lib/occasions.mjs so this folder stays standalone;
+// tests/occasions.test.mjs fails if the two drift apart.
+const EXTRA_OCCASIONS = '프로젝트\\s*완료|프로젝트\\s*종료|반려동물\\s*입양|인턴\\s*수료|기분\\s*전환|서프라이즈|산후조리|첫\\s*출근|자격시험|100일|프러포즈|프로포즈|집들이|홈파티|병문안|송별회|환송회|수료식|전시회|연주회|마니또|첫만남|소개팅|상견례|감사|초대|퇴원|회복|쾌유|출산|육아|입사|취업|송별|퇴사|퇴직|이직|은퇴|수료|합격|시험|유학|전시|공연|출간|대회|수상|경품|여행|답례|입양|깜짝|미안|화해|청혼|약혼|재회';
 const categories = [
   ['coffee_tea','커피|홍차|녹차|전통차|(?<![가-힣])차(?=[를을는은도가이로와랑나]|보다|[\\s,.!?]|$)'], ['snack','과자|간식|초콜릿|쿠키|한과|디저트|사탕|젤리|(?<![가-힣])단\\s*(?:것|거|걸)(?=\\s*좋아)'],
   ['health','건강식품|영양제|비타민|유산균|홍삼|(?<![가-힣])건강(?!\\s*식품)'],
@@ -153,7 +157,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/(?<![가-힣])(생신|생일|명절|기념일|환갑|칠순|졸업|입학|결혼|개업)(?:\s*축하)?(?=[\s,.!?]|$)/g,(_,occasion)=>occasions.push(occasionOf(occasion)));
   // The occasion may come before the recipient or the product: "설날 부모님 선물", "수능 보는 조카",
   // "생신 꽃다발", "개업 축하 화분".
-  take(new RegExp(`(명절|설날|추석|한가위|생일|생신|합격|결혼\\s*기념일|기념일|(?:수능|수험생|수험)(?:\\s*응원)?|개업|개원|졸업|입학|취업|승진|이직|퇴직|은퇴|집들이|결혼|출산|환갑|칠순|팔순|고희|돌잔치|어버이날|스승의\\s*날|크리스마스|발렌타인\\s*데이|화이트\\s*데이|빼빼로\\s*데이)(?:\\s*축하)?(?:\\s*기념)?(?:에|때|날에)?(?:\\s*(?:보는|치는|준비하는|앞둔|준비\\s*중인))?(?=\\s*(?:(?:${RECIPIENTS})(?:께|에게|한테|의)?\\s*)?(?:(?:드릴|줄|드리는|주는)\\s+)?선물|\\s*$|\\s+(?:${RECIPIENTS})|\\s*(?:${ALL_WORDS}))`,'g'),(_,occasion)=>occasions.push(occasionOf(occasion)));
+  take(new RegExp(`(명절|설날|추석|한가위|생일|생신|합격|결혼\\s*기념일|기념일|(?:수능|수험생|수험)(?:\\s*응원)?|개업|개원|졸업|입학|취업|승진|이직|퇴직|은퇴|집들이|결혼|출산|환갑|칠순|팔순|고희|돌잔치|어버이날|스승의\\s*날|크리스마스|발렌타인\\s*데이|화이트\\s*데이|빼빼로\\s*데이|(?<![가-힣])(?:${EXTRA_OCCASIONS}))(?:\\s*축하)?(?:\\s*기념)?(?:에|때|날에)?(?:\\s*(?:보는|치는|준비하는|앞둔|준비\\s*중인))?(?=\\s*(?:(?:${RECIPIENTS})(?:께|에게|한테|의)?\\s*)?(?:(?:드릴|줄|드리는|주는)\\s+)?선물|\\s*$|\\s+(?:${RECIPIENTS})|\\s*(?:${ALL_WORDS}))`,'g'),(_,occasion)=>occasions.push(occasionOf(occasion)));
   if (unique(occasions).length>1) return question('이번 선물은 어떤 상황에 주는 건가요?');
   if (occasions.length) patch.occasion=occasions[0];
   const recipients=[];
