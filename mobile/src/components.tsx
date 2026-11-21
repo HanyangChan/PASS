@@ -58,12 +58,14 @@ export function GiftCard({
   saved,
   onSave,
   onOpen,
+  actions,
 }: {
   gift: Gift;
   rank?: number;
   saved: boolean;
   onSave: () => void;
   onOpen: () => void;
+  actions?: React.ReactNode;
 }) {
   return (
     <View style={s.card}>
@@ -90,15 +92,18 @@ export function GiftCard({
           {gift.description}
         </Text>
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${gift.name} ${saved ? '찜 해제' : '찜하기'}`}
-        accessibilityState={{ selected: saved }}
-        onPress={onSave}
-        style={[s.heart, saved && s.selected]}
-      >
-        <HeartIcon color={saved ? c.primary : c.muted} />
-      </Pressable>
+      <View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${gift.name} ${saved ? '찜 해제' : '찜하기'}`}
+          accessibilityState={{ selected: saved }}
+          onPress={onSave}
+          style={[s.heart, saved && s.selected]}
+        >
+          <HeartIcon color={saved ? c.primary : c.muted} />
+        </Pressable>
+        {actions}
+      </View>
     </View>
   );
 }

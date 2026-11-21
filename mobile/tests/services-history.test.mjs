@@ -69,3 +69,17 @@ test('guest history preserves conditions and legacy records reconstruct them bef
   assert.equal((await repo.load()).length, 1);
   assert.equal((await repo.load())[0].session.state.budget.amount_krw, 70000);
 });
+
+test('rating a reopened guest chat updates its saved feedback without rewriting messages or recommendations', async () => {
+  const storage = memory(), repo = createHistoryRepository(storage);
+  const messages = [{ role: 'user', text: '선물' }];
+  const recommendations = [{ id: 'gift', name: '차', category: '커피·차', price: 25000, description: '차 선물', icon: 'coffee_tea' }];
+  const session = createLocalChatService(products).createSession();
+  const chat = { id: 'resume', at: '2026-11-18', title: '선물', recipients: [], session, messages, recommendations, feedback: [] };
+  const vote = { ...fb('gift', true, '2026-11-21'), version: 2, kind: 'gift_preference', productKey: 'catalog:gift', context: { scope: 'resume', state: session.state } };
+  await Promise.all([repo.archive(chat), repo.saveFeedback(chat.id, [vote])]);
+  const restored = await createHistoryRepository(storage).load();
+  assert.deepEqual(restored, [{ ...chat, feedback: [{ ...vote, conversationId: 'resume' }] }]);
+  await repo.saveFeedback(chat.id, []);
+  assert.deepEqual(await repo.load(), [chat]);
+});
