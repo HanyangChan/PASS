@@ -46,11 +46,20 @@ import {
   ThumbsDown,
   ThumbsUp,
   Calendar as CalendarIcon,
-  X,
+  Clock3,
+  LogIn,
+  Cake,
+  Gem,
+  GraduationCap,
+  Users,
+  Puzzle,
+  Briefcase,
+  HandHeart,
 } from 'lucide-react-native';
 import SearchIcon from './assets/figma/search.svg';
 import FilterIcon from './assets/figma/filter.svg';
 import { colors as c, fonts as f } from './src/theme';
+import { CalendarScreen, ddayLabel, eventKindMeta } from './src/CalendarScreen';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
 import { AgentModeControl } from './src/AgentModeControl';
@@ -58,9 +67,9 @@ import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
-import { Gift, categories, rankGifts, selectGifts } from './src/catalog';
+import { Gift, rankGifts, selectGifts } from './src/catalog';
 import { giftRepository, productRepository, calendarRepository, feedbackRepository, feedbackPreference, historyRepository } from './src/services/localServices';
-import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, type FeedbackSignal, type PastChat } from './src/chatHistory';
+import { chatTitle, HISTORY_RECOMMENDATION_LIMIT, rankingFeedback, restoreHistorySession, type FeedbackSignal, type PastChat } from './src/chatHistory';
 import { cardReason } from './src/cardReason';
 import { feedbackContext, productFeedbackKey } from '../lib/feedback.mjs';
 import { PastChats } from './src/PastChats';
@@ -71,9 +80,8 @@ import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
 import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
-import { daysUntil, sortByUpcoming, upcomingWithin, isValidMonthDay } from './src/services/calendarDates';
+import { daysUntil, upcomingWithin } from './src/services/calendarDates';
 import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
-import { calendarEventKinds } from './src/domain';
 import {
   Chip,
   GiftCard,
@@ -97,16 +105,16 @@ const nav = [
   { key: 'calendar', label: '캘린더', Icon: CalendarIcon },
   { key: 'mypage', label: '마이페이지', Icon: User },
 ] as const;
-const eventKindMeta: Record<CalendarEventKind, { label: string; emoji: string }> = {
-  birthday: { label: '생일', emoji: '🎂' },
-  anniversary: { label: '기념일', emoji: '💝' },
-  etc: { label: '기타', emoji: '📌' },
-};
-const formatMonthDay = (date: string) => {
-  const [month, day] = date.split('-');
-  return `${Number(month)}월 ${Number(day)}일`;
-};
-const ddayLabel = (days: number) => (days === 0 ? 'D-day' : `D-${days}`);
+const homeCategories = [
+  { label: '생일', Icon: Cake },
+  { label: '결혼', Icon: Gem },
+  { label: '졸업', Icon: GraduationCap },
+  { label: '부모님', Icon: Users },
+  { label: '아이', Icon: Puzzle },
+  { label: '연인', Icon: Heart },
+  { label: '직장', Icon: Briefcase },
+  { label: '감사', Icon: HandHeart },
+];
 function Button({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={s.button}>
@@ -158,11 +166,11 @@ export function AppContent({
     cardFeedback,
     rateCard,
     pastChats,
-    rankingSignal,
     feedbackEnabled,
     feedbackToggleDisabled,
     changeFeedbackEnabled,
-    openPastChat,
+    resumePastChat,
+    restoredRecommendations,
     deletePastChat,
     heroFailed,
     setHeroFailed,
@@ -170,8 +178,6 @@ export function AppContent({
     setRecipient,
     search,
     setSearch,
-    showSearch,
-    setShowSearch,
     filter,
     setFilter,
     showFilter,
@@ -204,22 +210,7 @@ export function AppContent({
   const [draftFilter, setDraftFilter] = useState('전체');
   const [draftSort, setDraftSort] = useState('인기순');
   const [draftPrice, setDraftPrice] = useState<number | null>(null);
-  const [eventTitle, setEventTitle] = useState('');
-  const [eventMonth, setEventMonth] = useState('');
-  const [eventDay, setEventDay] = useState('');
-  const [eventKind, setEventKind] = useState<CalendarEventKind>('birthday');
-  const [eventFormError, setEventFormError] = useState('');
-  const submitEvent = () => {
-    if (!eventsReady) return;
-    const month = Number(eventMonth), day = Number(eventDay);
-    if (!eventTitle.trim()) return setEventFormError('이름을 입력해주세요.');
-    if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(day) || day < 1 || day > 31)
-      return setEventFormError('날짜를 월/일로 올바르게 입력해주세요.');
-    const date = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (!isValidMonthDay(date)) return setEventFormError('존재하는 날짜를 입력해주세요.');
-    addEvent(eventTitle, date, eventKind);
-    setEventTitle(''); setEventMonth(''); setEventDay(''); setEventKind('birthday'); setEventFormError('');
-  };
+  const [composerFocused, setComposerFocused] = useState(false);
   const screen = activeScreen ?? baseScreen;
   const detail = detailPage ? selectedDetail : null;
   const resultsOpen = resultPage;
@@ -255,8 +246,8 @@ export function AppContent({
               : '/mypage',
     );
     setSearch('');
-    setShowSearch(false);
     setFilter('전체');
+    setPriceLimit(null);
     setAllSaved(false);
     setAllRecent(false);
   };
@@ -640,16 +631,18 @@ export function AppContent({
                 <View style={s.homeSection}>
                   <SectionHeader title="선물 카테고리" />
                   <View style={s.categoryGrid}>
-                    {categories.map((cat) => (
+                    {homeCategories.map(({ label, Icon }) => (
                       <Pressable
-                        key={cat.label}
+                        key={label}
                         accessibilityRole="button"
-                        accessibilityLabel={`${cat.label} 선물 상담`}
-                        onPress={() => chatNew(cat.label)}
+                        accessibilityLabel={`${label} 선물 상담`}
+                        onPress={() => chatNew(label)}
                         style={s.category}
                       >
-                        <Text style={s.emoji}>{cat.emoji}</Text>
-                        <Text style={s.categoryLabel}>{cat.label}</Text>
+                        <View style={s.categoryIcon}>
+                          <Icon size={22} strokeWidth={1.6} color={c.text} />
+                        </View>
+                        <Text style={s.categoryLabel}>{label}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -660,9 +653,6 @@ export function AppContent({
                     onMore={() => navigate('ranking')}
                   />
                   {tiles(popularGifts)}
-                  <Text style={s.demoNote}>
-                    상품 정보: Kaggle Amazon Products Dataset (CC BY-NC 4.0) · 가격·배송은 데모 값이에요.
-                  </Text>
                 </View>
                 <View style={s.homeSection}>
                   <SectionHeader
@@ -683,42 +673,41 @@ export function AppContent({
               </ScrollView>
             ) : screen === 'ranking' ? (
               <>
-                <View style={s.header}>
-                  <Text style={[s.title, s.flex]}>선물 랭킹</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="선물 검색"
-                    onPress={() => setShowSearch((v) => !v)}
-                    style={s.iconButton}
-                  >
-                    <SearchIcon />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="상품군 필터"
-                    onPress={() => { setDraftFilter(filter); setDraftSort(sort); setDraftPrice(priceLimit); setShowFilter(true); }}
-                    style={s.iconButton}
-                  >
-                    <FilterIcon />
-                  </Pressable>
+                <View style={s.pageHeading}>
+                  <Text accessibilityRole="header" style={s.pageTitle}>선물 랭킹</Text>
+                  <Text style={s.subtitle}>받는 분과 예산에 맞는 인기 선물을 찾아보세요.</Text>
                 </View>
                 <ScrollView
                   style={s.flex}
                   contentContainerStyle={s.bottom}
                   keyboardShouldPersistTaps="handled"
                 >
-                  <Text style={s.note}>
-                    받는 분에게 어울리는 카테고리별 인기 상품이에요. 리뷰 수 기준이에요.
-                  </Text>
-                  {showSearch && (
-                    <TextInput
-                      accessibilityLabel="선물 이름 검색"
-                      value={search}
-                      onChangeText={setSearch}
-                      placeholder="선물 이름 검색"
-                      style={s.searchInput}
-                      autoFocus
-                    />
+                  <View style={s.rankingToolbar}>
+                    <View style={[s.searchField, s.flex]}>
+                      <SearchIcon />
+                      <TextInput
+                        accessibilityLabel="선물 이름 검색"
+                        value={search}
+                        onChangeText={setSearch}
+                        placeholder="상품명이나 브랜드 검색"
+                        placeholderTextColor={c.muted}
+                        style={[s.searchText, s.flex]}
+                      />
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => { setDraftFilter(filter); setDraftSort(sort); setDraftPrice(priceLimit); setShowFilter(true); }}
+                      style={[s.filterButton, (filter !== '전체' || priceLimit !== null) && s.filterActive]}
+                    >
+                      <FilterIcon />
+                      <Text style={s.actionText}>필터</Text>
+                    </Pressable>
+                  </View>
+                  {(filter !== '전체' || priceLimit !== null) && (
+                    <View style={s.appliedFilters}>
+                      {filter !== '전체' && <Chip label={`${filter} ×`} onPress={() => setFilter('전체')} />}
+                      {priceLimit !== null && <Chip label={`${won(priceLimit)} 이하 ×`} onPress={() => setPriceLimit(null)} />}
+                    </View>
                   )}
                   <View style={s.segment}>
                     {Object.keys(rankingByRecipient).map((label) => (
@@ -741,7 +730,10 @@ export function AppContent({
                     ))}
                   </View>
                   <View style={s.sectionHeader}>
-                    <Text style={s.sectionTitle}>{recipient} 인기 선물</Text>
+                    <View style={s.flex}>
+                      <Text style={s.sectionTitle}>{search.trim() ? '검색 결과' : recipient === '전체' ? '인기 선물' : `${recipient} 선물`}</Text>
+                      {sort === '인기순' && <Text style={s.small}>카테고리별 리뷰 수 기준</Text>}
+                    </View>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`정렬: ${sort}. 눌러 변경`}
@@ -762,7 +754,12 @@ export function AppContent({
                   </View>
                   {cards(ranked, true)}
                   {!ranked.length && (
-                    <Text style={s.empty}>검색 조건에 맞는 선물이 없어요.</Text>
+                    <View style={s.emptyCard}>
+                      <Text style={s.subtitle}>검색 조건에 맞는 선물이 없어요.</Text>
+                      <Pressable accessibilityRole="button" style={s.sort} onPress={() => { setSearch(''); setRecipient('전체'); setFilter('전체'); setPriceLimit(null); }}>
+                        <Text style={s.actionText}>검색 조건 초기화</Text>
+                      </Pressable>
+                    </View>
                   )}
                 </ScrollView>
               </>
@@ -815,7 +812,13 @@ export function AppContent({
                       {m.text}
                     </Text>
                   ))}
-                  {!question.key && result.items.length === 0 && result.status !== 'reference' && <View style={s.noMatches}>
+                  {!!restoredRecommendations?.length && (
+                    <View>
+                      <SectionHeader title="이전 추천 상품" />
+                      {cards(restoredRecommendations, true)}
+                    </View>
+                  )}
+                  {restoredRecommendations === null && !question.key && result.items.length === 0 && result.status !== 'reference' && <View style={s.noMatches}>
                     <Text style={s.sectionTitle}>조건에 맞는 선물이 아직 없어요</Text><Text style={s.small}>{result.message}</Text>
                     <Button label="예산을 직접 입력하기" onPress={() => {
                       if (!input.trim()) setInput('예산을 ');
@@ -826,7 +829,7 @@ export function AppContent({
                       inputRef.current?.focus();
                     }}/>
                   </View>}
-                  {!question.key && result.items.length > 0 && (
+                  {restoredRecommendations === null && !question.key && result.items.length > 0 && (
                     <>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chatCards}>
                         {result.items.map((p: any, i: number) => {
@@ -893,12 +896,15 @@ export function AppContent({
                   <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
-                    <View style={s.inputShell}>
+                    <View style={[s.inputShell, composerFocused && s.inputShellFocused]}>
                     <TextInput
                       ref={inputRef}
                       accessibilityLabel="선물 조건 입력"
                       value={input}
                       onChangeText={setInput}
+                      onFocus={() => setComposerFocused(true)}
+                      onBlur={() => setComposerFocused(false)}
+                      underlineColorAndroid="transparent"
                       onKeyPress={onComposerKeyPress}
                       editable={!chatPending}
                       placeholder={chatPending ? '보내는 중…' : '받는 분, 예산을 말해 주세요'}
@@ -921,105 +927,46 @@ export function AppContent({
                 </View>
               </>
             ) : screen === 'calendar' ? (
-              <ScrollView style={s.flex} contentContainerStyle={s.bottom} keyboardShouldPersistTaps="handled">
-                <View style={s.header}>
-                  <Text style={s.title}>캘린더</Text>
-                </View>
-                <Text style={[s.subtitle, s.eventIntro]}>
-                  생일·기념일을 기록해두면 1주일 전부터 홈 화면에서 알려드려요. 2월 29일은 윤년에 알려드려요.
-                </Text>
-                <View style={s.homeSection}>
-                  {!eventsReady && (calendarLoadError ? (
-                    <View style={s.eventForm}>
-                      <Text accessibilityRole="alert" style={s.small}>{calendarLoadError}</Text>
-                      <Button label="일정 다시 불러오기" onPress={retryCalendarLoad} />
-                    </View>
-                  ) : <Text style={s.empty}>기기 일정을 불러오는 중이에요.</Text>)}
-                  <SectionHeader title="이벤트 추가" />
-                  <View style={s.eventForm}>
-                    <TextInput
-                      accessibilityLabel="이벤트 이름"
-                      value={eventTitle}
-                      onChangeText={(v) => { setEventTitle(v); setEventFormError(''); }}
-                      placeholder="예: 엄마 생신"
-                      style={s.eventInput}
-                    />
-                    <View style={s.eventFormRow}>
-                      <TextInput
-                        accessibilityLabel="월"
-                        value={eventMonth}
-                        onChangeText={(v) => { setEventMonth(v.replace(/\D/g, '').slice(0, 2)); setEventFormError(''); }}
-                        placeholder="월"
-                        keyboardType="numeric"
-                        maxLength={2}
-                        style={[s.eventInput, s.eventDateInput]}
-                      />
-                      <TextInput
-                        accessibilityLabel="일"
-                        value={eventDay}
-                        onChangeText={(v) => { setEventDay(v.replace(/\D/g, '').slice(0, 2)); setEventFormError(''); }}
-                        placeholder="일"
-                        keyboardType="numeric"
-                        maxLength={2}
-                        style={[s.eventInput, s.eventDateInput]}
-                      />
-                      <View style={s.row}>
-                        {calendarEventKinds.map((kind) => (
-                          <Chip key={kind} label={eventKindMeta[kind].label} selected={eventKind === kind} onPress={() => setEventKind(kind)} />
-                        ))}
-                      </View>
-                    </View>
-                    {!!eventFormError && <Text accessibilityRole="alert" style={[s.small, s.eventError]}>{eventFormError}</Text>}
-                    <Pressable accessibilityRole="button" disabled={!eventsReady} onPress={submitEvent} style={[s.button, !eventsReady && { opacity: 0.5 }]}>
-                      <Text style={s.buttonText}>추가하기</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <View style={s.homeSection}>
-                  <SectionHeader title={`이벤트 ${events.length}개`} />
-                  {events.length ? (
-                    sortByUpcoming(events).map((e) => (
-                      <View key={e.id} style={s.eventRow}>
-                        <Text style={s.eventBannerEmoji}>{eventKindMeta[e.kind].emoji}</Text>
-                        <View style={s.flex}>
-                          <Text style={s.eventName}>{e.title}</Text>
-                          <Text style={s.small}>
-                            {eventKindMeta[e.kind].label} · {formatMonthDay(e.date)} · {ddayLabel(daysUntil(e.date))}
-                          </Text>
-                        </View>
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`${e.title} 삭제`}
-                          onPress={() => removeEvent(e.id)}
-                          style={s.eventDelete}
-                        >
-                          <X size={18} color={c.muted} />
-                        </Pressable>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={s.empty}>{eventsReady ? '등록된 이벤트가 없어요.' : '일정을 불러온 후 표시합니다.'}</Text>
-                  )}
-                </View>
-              </ScrollView>
+              <CalendarScreen
+                events={events}
+                ready={eventsReady}
+                loadError={calendarLoadError}
+                onRetry={retryCalendarLoad}
+                onAdd={addEvent}
+                onRemove={removeEvent}
+              />
             ) : (
               <ScrollView style={s.flex} contentContainerStyle={s.bottom}>
-                <View style={s.header}>
-                  <Text style={s.title}>마이 페이지</Text>
+                <View style={s.pageHeading}>
+                  <Text accessibilityRole="header" style={s.pageTitle}>마이페이지</Text>
                 </View>
                 <View style={s.myIntro}>
-                  <User size={32} color={c.primary} />
-                  <Text style={s.sectionTitle}>{loggedIn ? (user?.email ?? '로그인한 사용자') : '로그인하면 이어서 볼 수 있어요'}</Text>
-                  <Button label={loggedIn ? '계정과 선물 기록' : '로그인하기'} onPress={() => router.push(loggedIn ? '/account' : '/login')}/>
-                  {!loggedIn && <Button label="이 기기의 선물 준비 기록" onPress={() => router.push('/account')}/> }
-                  <Text style={s.subtitle}>
-                    {loggedIn ? '찜·최근 본 선물과 대화는 계정에 저장돼요.' : '찜과 최근 본 선물은 이 기기에 저장돼요.'}
-                  </Text>
+                  <View style={s.row}>
+                    <View style={s.featureIcon}><User size={22} color={c.primary} /></View>
+                    <View style={s.flex}>
+                      <Text style={s.sectionTitle}>{loggedIn ? (user?.email ?? '로그인한 사용자') : '게스트'}</Text>
+                      <Text style={s.small}>
+                        {loggedIn ? '선물 기록과 대화는 계정에 저장돼요.' : '찜과 최근 본 선물은 이 기기에 저장돼요.'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable accessibilityRole="button" style={s.button} onPress={() => router.push(loggedIn ? '/account' : '/login')}>
+                    {!loggedIn && <LogIn size={16} color={c.white} />}
+                    <Text style={s.buttonText}>{loggedIn ? '계정과 선물 기록' : '로그인하기'}</Text>
+                  </Pressable>
+                  {!loggedIn && (
+                    <Pressable accessibilityRole="button" onPress={() => router.push('/account')} style={s.recordLink}>
+                      <Clock3 size={16} color={c.muted} />
+                      <Text style={[s.small, s.flex]}>이 기기의 선물 준비 기록</Text>
+                      <ChevronRight size={16} color={c.muted} />
+                    </Pressable>
+                  )}
                 </View>
-                <View style={s.homeSection}>
+                <View style={s.accountSection}>
                   <SectionHeader
                     title={`찜한 선물 ${saved.length}개`}
-                    onMore={() => setAllSaved((v) => !v)}
+                    onMore={saved.length > 5 ? () => setAllSaved((v) => !v) : undefined}
+                    moreLabel={allSaved ? '접기' : '더보기'}
                   />
                   {saved.length ? (
                     allSaved ? (
@@ -1033,10 +980,11 @@ export function AppContent({
                     </Text>
                   )}
                 </View>
-                <View style={s.homeSection}>
+                <View style={s.accountSection}>
                   <SectionHeader
                     title={`최근 본 선물 ${recent.length}개`}
-                    onMore={() => setAllRecent((v) => !v)}
+                    onMore={recent.length > 5 ? () => setAllRecent((v) => !v) : undefined}
+                    moreLabel={allRecent ? '접기' : '더보기'}
                   />
                   {recent.length ? (
                     allRecent ? (
@@ -1048,15 +996,26 @@ export function AppContent({
                     <Text style={s.empty}>아직 살펴본 선물이 없어요.</Text>
                   )}
                 </View>
-                <View style={s.homeSection}>
-                  <PastChats chats={pastChats} signal={rankingSignal} feedbackEnabled={feedbackEnabled} feedbackToggleDisabled={feedbackToggleDisabled} onFeedbackChange={changeFeedbackEnabled} products={catalogProducts} open={openPastChat} remove={loggedIn ? deletePastChat : undefined}/>
+                <View style={s.accountSection}>
+                  <PastChats
+                    chats={pastChats}
+                    feedbackEnabled={feedbackEnabled}
+                    feedbackToggleDisabled={feedbackToggleDisabled}
+                    onFeedbackChange={changeFeedbackEnabled}
+                    busy={chatPending}
+                    open={async chat => {
+                      await resumePastChat(chat);
+                      setComparisonId(null);
+                      setAttachments([]);
+                      navigate('chat');
+                    }}
+                    remove={loggedIn ? deletePastChat : undefined}
+                  />
                 </View>
-                <View style={s.homeSection}>
+                <View style={s.accountSection}>
                   <SectionHeader title="도움말" />
                   <Text style={s.help}>
-                    랭킹과 대화 추천은 같은 상품 목록(Kaggle Amazon Products
-                    Dataset, CC BY-NC 4.0)을 사용해요. 실제 결제·배송 기능은 준비
-                    중입니다. {loggedIn ? '로그인은 연결되어 있으며, 대화(최근 30개)와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 새 대화를 시작하면 이 기기의 지난 대화에 남고(최대 30개), 찜과 최근 본 선물은 기기에 남아요.'}
+                    실제 결제·배송 기능은 준비 중입니다. {loggedIn ? '로그인은 연결되어 있으며, 대화(최근 30개)와 선물 기록은 계정에서 복원돼요.' : '게스트 대화는 새 대화를 시작하면 이 기기의 지난 대화에 남고(최대 30개), 찜과 최근 본 선물은 기기에 남아요.'}
                   </Text>
                 </View>
               </ScrollView>
@@ -1117,7 +1076,14 @@ export function AppContent({
               </View>
             </View>
             </ScrollView>
-            <View style={s.row}><Button label="초기화" onPress={() => { setDraftFilter('전체'); setDraftPrice(null); setDraftSort('인기순'); }}/><View style={s.flex}><Button label="필터 적용" onPress={() => { setFilter(draftFilter); setSort(draftSort); setPriceLimit(draftPrice); setShowFilter(false); }} /></View></View>
+            <View style={s.row}>
+              <Pressable accessibilityRole="button" style={s.filterReset} onPress={() => { setDraftFilter('전체'); setDraftPrice(null); setDraftSort('인기순'); }}>
+                <Text style={s.actionText}>초기화</Text>
+              </Pressable>
+              <View style={s.flex}>
+                <Button label="필터 적용" onPress={() => { setFilter(draftFilter); setSort(draftSort); setPriceLimit(draftPrice); setShowFilter(false); }} />
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1153,6 +1119,8 @@ function usePassState() {
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [pastChats, setPastChats] = useState<PastChat[]>([]);
   const [chatRecommendations, setChatRecommendations] = useState<Gift[]>();
+  const [restoredRecommendations, setRestoredRecommendations] = useState<Gift[] | null>(null);
+  const resumedGuestId = useRef<string | null>(null);
   const deletedPastChats = useRef(new Set<string>());
   const chatService = useMemo(() => createLocalChatService(catalog.products, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current), [catalog.products]);
   const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
@@ -1177,7 +1145,6 @@ function usePassState() {
     [heroFailed, setHeroFailed] = useState(false);
   const [recipient, setRecipient] = useState('전체'),
     [search, setSearch] = useState(''),
-    [showSearch, setShowSearch] = useState(false),
     [filter, setFilter] = useState('전체'),
     [showFilter, setShowFilter] = useState(false),
     [sort, setSort] = useState('인기순');
@@ -1225,6 +1192,7 @@ function usePassState() {
       // A newer revision (new chat / another send) superseded this one; drop the result without
       // treating it as a failure, so the caller doesn't restore this request's stale draft text.
       if (chatFlight.current.revision !== revision) return null;
+      setRestoredRecommendations(null);
       if (operation === 'view' && JSON.stringify(turn.session) !== JSON.stringify(baseSession)) setSession(turn.session);
       if (operation !== 'view') {
         const result = 'view' in turn ? turn.view.result : chatService.view(turn.session).result;
@@ -1261,7 +1229,7 @@ function usePassState() {
     }
   };
   useEffect(() => {
-    if (ready && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
+    if (ready && restoredRecommendations === null && serverChat && recommendation?.key !== JSON.stringify(session) && !chatFlight.current.controller) void runChat('view', '');
     // Hydrate server ranking once after restoration; successful turns already include it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, serverChat]);
@@ -1307,24 +1275,63 @@ function usePassState() {
     if (JSON.stringify(next) === JSON.stringify(rankingSignalRef.current)) return;
     rankingSignalRef.current = next; setRankingSignal(next);
   };
-  const resetChat = () => {
+  const archiveCurrentChat = (activeId: string | null) => {
     // Save the ending conversation's feedback first; the save is queued before anything for the new chat.
     void feedbackScheduler.current?.flushNow();
     // The ending chat becomes history: its feedback now counts as past, and guests archive it on the device.
     if (messages.length) {
-      const id = cloud.current?.currentId() ?? guestSession.current;
+      const id = activeId ?? resumedGuestId.current ?? guestSession.current;
       const feedback = stampConversation(cardFeedbackRef.current, id);
       pastFeedback.current = [...pastFeedback.current, ...feedback];
-      const ended: PastChat = { id, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback, recommendations: chatRecommendations };
+      const ended: PastChat = { id, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, messages: cloud.current ? null : messages, feedback, recommendations: chatRecommendations, session };
       setPastChats(old => [ended, ...old.filter(c => c.id !== ended.id)].slice(0, 30));
       if (!cloud.current) historyRepository.archive(ended).catch(() => setNotice('기기에 지난 대화를 저장하지 못했어요.'));
     }
+  };
+  const resetChat = () => {
+    archiveCurrentChat(cloud.current?.currentId() ?? null);
+    resumedGuestId.current = null; setRestoredRecommendations(null);
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
     setChatPending(false); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
     const next = chatService.createSession();
     setSession(next); setMessages([]);
     return next;
+  };
+  const resumePastChat = async (chat: PastChat) => {
+    if (!ready || chatFlight.current.controller) throw new Error('현재 요청을 마친 후 다시 시도해주세요.');
+    const controller = new AbortController();
+    const revision = ++chatFlight.current.revision;
+    chatFlight.current.controller = controller; setChatPending(true);
+    const repository = cloud.current;
+    let activeId = repository?.currentId() ?? null;
+    try {
+      await feedbackScheduler.current?.flushNow();
+      if (repository && messages.length) await repository.saveChat(session, messages, chatRecommendations);
+      activeId = repository?.currentId() ?? activeId;
+      const detail = repository ? await repository.resumeConversation(chat.id, controller.signal)
+        : { messages: chat.messages ?? [], recommendations: chat.recommendations ?? [], session: chat.session, feedback: chat.feedback };
+      const restored = await restoreHistorySession(detail, chatService);
+      if (controller.signal.aborted || chatFlight.current.revision !== revision) throw new Error('대화 불러오기가 취소됐어요.');
+      archiveCurrentChat(activeId);
+      const feedback = stampConversation(detail.feedback ?? chat.feedback, repository ? chat.id : '');
+      guestSession.current = feedback.findLast(f => f.kind === 'gift_preference')?.context?.scope ?? (repository ? randomUUID() : chat.id);
+      resumedGuestId.current = repository ? null : chat.id;
+      cardFeedbackRef.current = feedback; setCardFeedback(feedback);
+      repository?.setFeedback(feedback);
+      setPastChats(old => old.filter(item => item.id !== chat.id));
+      pastFeedback.current = pastFeedback.current.filter(item => item.conversationId !== chat.id);
+      refreshSignal();
+      setSession(restored); setMessages(detail.messages); setInput('');
+      setChatRecommendations(detail.recommendations); setRestoredRecommendations(detail.recommendations.length ? detail.recommendations : null);
+      setNotice(!detail.recommendations.length && !chatService.view(restored).question.key
+        ? '저장된 추천 상품이 없어 이전 대화의 조건으로 다시 추천해요.'
+        : '');
+      setRecommendation(null); setChatError('');
+      persistence.current.restoreKey('chat', JSON.stringify({ session: restored, messages: detail.messages, recommendations: detail.recommendations }));
+    } finally {
+      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+    }
   };
   useEffect(() => {
     let mounted = true;
@@ -1339,6 +1346,7 @@ function usePassState() {
       setSaved(records.saved); setRecent(records.recent);
       if ('migrationNotice' in records && records.migrationNotice) setConditionMigrationNotice(String(records.migrationNotice));
       setSession(records.session); setMessages(records.messages);
+      if ('recommendations' in records && Array.isArray(records.recommendations)) { setChatRecommendations(records.recommendations); setRestoredRecommendations(records.recommendations.length ? records.recommendations : null); }
       const restored = 'feedback' in records && Array.isArray(records.feedback) ? stampConversation(records.feedback as CardFeedback[], '') : [];
       cardFeedbackRef.current = restored; setCardFeedback(restored);
       guestSession.current = restored.findLast(f => f.kind === 'gift_preference')?.context?.scope ?? randomUUID();
@@ -1371,6 +1379,11 @@ function usePassState() {
     if (giftWrite) tasks.push(giftWrite);
     if (cloud.current) {
       const chatWrite = persistence.current.write('chat', chat, () => cloud.current!.saveChat(session, messages, chatRecommendations));
+      if (chatWrite) tasks.push(chatWrite);
+    }
+    if (!cloud.current && resumedGuestId.current) {
+      const id = resumedGuestId.current;
+      const chatWrite = persistence.current.write('chat', chat, () => historyRepository.archive({ id, at: new Date().toISOString(), title: chatTitle(messages), recipients: session.state.recipients, session, messages, recommendations: chatRecommendations, feedback: stampConversation(cardFeedbackRef.current, id) }));
       if (chatWrite) tasks.push(chatWrite);
     }
     if (tasks.length) Promise.all(tasks).then(() => {
@@ -1435,9 +1448,8 @@ function usePassState() {
     changeFeedbackEnabled,
     pastChats,
     rankingSignal,
-    openPastChat: async (chat: PastChat) => chat.messages
-      ? { messages: chat.messages, recommendations: chat.recommendations ?? [] }
-      : cloud.current ? cloud.current.loadConversation(chat.id) : { messages: [], recommendations: [] },
+    resumePastChat,
+    restoredRecommendations,
     deletePastChat: async (id: string) => {
       const repository = cloud.current;
       if (!repository) return;
@@ -1462,8 +1474,6 @@ function usePassState() {
     setRecipient,
     search,
     setSearch,
-    showSearch,
-    setShowSearch,
     filter,
     setFilter,
     showFilter,
@@ -1528,6 +1538,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   title: { fontFamily: f.bold, fontSize: 22, lineHeight: 31, color: c.text },
+  pageHeading: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14, gap: 2 },
+  pageTitle: { fontFamily: f.bold, fontSize: 27, lineHeight: 37, color: c.text },
+  actionText: { color: c.primary, fontFamily: f.bold, fontSize: 13 },
+  featureIcon: { width: 44, height: 44, backgroundColor: c.tint, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   iconButton: {
     width: 44,
     height: 44,
@@ -1585,14 +1599,6 @@ const s = StyleSheet.create({
   sourceLink: { color: c.primary, fontFamily: f.medium, fontSize: 14, paddingVertical: 8 },
   catalogBanner: { backgroundColor: '#FEF2F2', paddingVertical: 8, paddingHorizontal: 16 },
   catalogBannerText: { color: '#B91C1C', fontFamily: f.medium, fontSize: 13, textAlign: 'center' },
-  demoNote: {
-    fontFamily: f.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: c.muted,
-    marginHorizontal: 20,
-    marginTop: 12,
-  },
   homeHeader: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1654,36 +1660,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  eventIntro: { paddingHorizontal: 20, paddingBottom: 4 },
   eventBannerEmoji: { fontSize: 20 },
   eventBannerText: { fontFamily: f.medium, fontSize: 14, color: c.text },
-  eventForm: { marginHorizontal: 20, gap: 10 },
-  eventFormRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  eventInput: {
-    backgroundColor: c.white,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    color: c.text,
-    fontFamily: f.regular,
-    fontSize: 15,
-  },
-  eventDateInput: { width: 64, textAlign: 'center' },
-  eventError: { color: c.primary },
-  eventRow: {
-    marginHorizontal: 20,
-    marginBottom: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  eventName: { fontFamily: f.bold, fontSize: 15, color: c.text, marginBottom: 2 },
-  eventDelete: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   categoryGrid: {
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -1703,15 +1681,24 @@ const s = StyleSheet.create({
     borderColor: c.border,
     borderRadius: 12,
   },
-  emoji: { fontSize: 24, lineHeight: 30 },
+  categoryIcon: { height: 30, justifyContent: 'center' },
   categoryLabel: { fontFamily: f.medium, fontSize: 12, color: c.text },
+  accountSection: {
+    backgroundColor: c.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: c.border,
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingVertical: 14,
+  },
   segment: {
     marginHorizontal: 16,
     marginBottom: 10,
-    height: 44,
+    minHeight: 48,
     backgroundColor: c.segment,
     borderRadius: 12,
-    padding: 4,
+    padding: 3,
     flexDirection: 'row',
   },
   segmentItem: {
@@ -1720,7 +1707,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 9,
   },
-  segmentSelected: { backgroundColor: c.white },
+  segmentSelected: { backgroundColor: c.tint, borderWidth: 1, borderColor: c.primary },
   segmentText: { fontFamily: f.medium, fontSize: 14, color: c.muted },
   sectionHeader: {
     marginHorizontal: 16,
@@ -1730,19 +1717,15 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sort: { minHeight: 32, flexDirection: 'row', gap: 2, alignItems: 'center' },
-  searchInput: {
-    backgroundColor: c.white,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    color: c.text,
-    fontFamily: f.regular,
-    fontSize: 15,
-  },
+  sort: { minHeight: 44, flexDirection: 'row', gap: 4, alignItems: 'center' },
+  rankingToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 10 },
+  searchField: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, minHeight: 48, borderWidth: 1, borderColor: c.border, borderRadius: 12, backgroundColor: c.white },
+  searchText: { minWidth: 0, minHeight: 44, color: c.text, fontFamily: f.regular, fontSize: 14 },
+  filterButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: c.border, borderRadius: 12, backgroundColor: c.white },
+  filterReset: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderWidth: 1, borderColor: c.border, borderRadius: 12 },
+  filterActive: { backgroundColor: c.tint, borderColor: c.primary },
+  appliedFilters: { flexWrap: 'wrap', flexDirection: 'row', gap: 6, marginHorizontal: 16, marginBottom: 10 },
+  emptyCard: { backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 16, alignItems: 'center', padding: 14, marginHorizontal: 16 },
   navigation: {
     flexDirection: 'row',
     backgroundColor: c.white,
@@ -1768,6 +1751,7 @@ const s = StyleSheet.create({
     borderRadius: 2,
   },
   chatHeader: {
+    ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: c.white,
@@ -1813,7 +1797,11 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: c.border,
   },
-  chips: { paddingHorizontal: 16, gap: 8, userSelect: 'none' },
+  chips: {
+    paddingHorizontal: 16,
+    gap: 8,
+    ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
+  },
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1828,6 +1816,7 @@ const s = StyleSheet.create({
     color: c.text,
     fontFamily: f.regular,
     fontSize: 14,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'solid' as const, outlineWidth: 0, outlineColor: 'transparent' } : {}),
     maxHeight: 120,
     minHeight: 44,
   },
@@ -1849,6 +1838,7 @@ const s = StyleSheet.create({
   },
   attach: { width: 40, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.segment, flexShrink: 0 },
   inputShell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderWidth: 1, borderColor: c.border, borderRadius: 26, overflow: 'hidden' },
+  inputShellFocused: { borderColor: c.primary },
   attachmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
   attachmentChip: { borderWidth: 1, borderColor: c.border, backgroundColor: c.white, borderRadius: 12, padding: 10 },
   noMatches: { marginHorizontal: 16, padding: 16, backgroundColor: c.white, borderRadius: 16, gap: 12 },
@@ -1916,12 +1906,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  myIntro: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    gap: 12,
-    alignItems: 'center',
-  },
+  myIntro: { marginHorizontal: 16, padding: 14, gap: 12, backgroundColor: c.white, borderColor: c.border, borderWidth: 1, borderRadius: 20 },
+  recordLink: { flexDirection: 'row', minHeight: 44, gap: 8, alignItems: 'center', paddingHorizontal: 10, borderRadius: 11, backgroundColor: c.background },
   help: {
     paddingHorizontal: 20,
     fontFamily: f.regular,

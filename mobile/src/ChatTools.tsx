@@ -255,7 +255,10 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions', p
   </>;
 }
 const s = StyleSheet.create({
-  conditionCard: { marginHorizontal: 16, marginTop: 12, marginBottom: 4, borderWidth: 1, borderColor: c.border, borderRadius: 18, backgroundColor: c.white, overflow: 'hidden' },
+  conditionCard: {
+    marginHorizontal: 16, marginTop: 12, marginBottom: 4, borderWidth: 1, borderColor: c.border, borderRadius: 18, backgroundColor: c.white, overflow: 'hidden',
+    ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
+  },
   conditionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, minHeight: 48 },
   conditionTitle: { flex: 1, fontFamily: f.bold, fontSize: 16, color: c.text },
   summary: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 12, borderTopWidth: 1, borderColor: c.border },

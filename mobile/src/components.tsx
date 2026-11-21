@@ -159,9 +159,11 @@ export function Tile({
 export function SectionHeader({
   title,
   onMore,
+  moreLabel = '더보기',
 }: {
   title: string;
   onMore?: () => void;
+  moreLabel?: string;
 }) {
   return (
     <View style={s.section}>
@@ -169,11 +171,11 @@ export function SectionHeader({
       {onMore && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${title} 더보기`}
+          accessibilityLabel={`${title} ${moreLabel}`}
           onPress={onMore}
           style={s.more}
         >
-          <Text style={s.small}>더보기</Text>
+          <Text style={s.small}>{moreLabel}</Text>
           <ChevronRight size={14} color={c.muted} />
         </Pressable>
       )}
