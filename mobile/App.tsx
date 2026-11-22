@@ -126,10 +126,12 @@ export function AppContent({
   activeScreen,
   detailPage = false,
   resultPage = false,
+  surveyRecording = false,
 }: {
   activeScreen?: Screen;
   detailPage?: boolean;
   resultPage?: boolean;
+  surveyRecording?: boolean;
 }) {
   const state = useContext(PassContext);
   if (!state) throw new Error('PassProvider is required');
@@ -874,6 +876,17 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
+                  {!surveyRecording && agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
+                    <View style={s.advisorPanel}>
+                      <AgentPanel
+                        agents={recommendation.agents}
+                        disabled={disabledAdvisors}
+                        busy={chatPending}
+                        onToggle={toggleAdvisor}
+                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
+                      />
+                    </View>
+                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
@@ -891,7 +904,7 @@ export function AppContent({
                     ))}
                   </ScrollView>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
-                  <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />
+                  {!surveyRecording && <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />}
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={[s.inputShell, composerFocused && s.inputShellFocused]}>
