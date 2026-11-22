@@ -1,10 +1,11 @@
 // ③ select (no network, deterministic): pick price-diverse representatives per keyword (spec §5).
-// Usage: node scripts/catalog/web/select.mjs
+// Usage: node scripts/catalog/web/select.mjs [--no-photo-rule]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { photoChecker } from './images.mjs';
 import { coreTerms as sharedCoreTerms } from '../../../lib/item-terms.mjs';
-import { BLOCKED_TITLE_WORDS, CORE_TERMS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, loadSeeds } from './config.mjs';
+import { BLOCKED_TITLE_WORDS, CORE_TERMS, TERM_ALIASES, OUTLIER_RATIO, PATHS, PER_KEYWORD, SEED_SET, loadSeeds } from './config.mjs';
+import { CATEGORY_MAP } from './enrich.mjs';
 
 // Gift-set titles (seed keywords ending in 선물세트). Matches PR #17's gift_set flag on engine products.
 export const GIFT_SET_TITLE = /선물|세트|기프트|박스|set/i;
@@ -31,7 +32,9 @@ function median(values) {
 /** Returns { picked, excluded } for one keyword's parsed items (already in display order). */
 // hasPhoto (optional): photo rule. Products without a usable photo are skipped at pick time, so the next
 // ranked product with a photo takes the slot; the price median (rule 3) still uses every eligible item.
-export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_KEYWORD, hasPhoto = null }) {
+// blockedLeaves (optional): Naver leaf categories that are not gifts at all (category map exclude list). They are dropped
+// here, not only in enrich, so the freed slots go to the next ranked products. Held categories stay: they may be approved later.
+export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_KEYWORD, hasPhoto = null, blockedLeaves = [] }) {
   const excluded = [];
   const drop = (item, reason) => { excluded.push({ id: item.id, reason }); return false; };
   // search_rank counts organic results only (ads never get a rank).
@@ -43,6 +46,7 @@ export function selectForKeyword(items, { keyword, priceBands, perKeyword = PER_
     item.is_ad ? drop(item, 'ad')
       : !(item.price > 0) ? drop(item, 'no_price')
       : item.sold_out ? drop(item, 'sold_out')
+      : blockedLeaves.includes(item.category_path?.[0]) ? drop(item, 'excluded_category')
       : !isRelevant(item.title, keyword) ? drop(item, 'irrelevant')
       : true);
   // Rule 3: price outliers against this keyword's median.
@@ -92,12 +96,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { priceBands } = loadSeeds();
   // Photo rule: a photo copied/downloaded by images.mjs, or one a saved page holds. Run images.mjs, then
   // select.mjs again: the result is the same for the same files on disk.
-  const hasPhoto = photoChecker();
+  // --no-photo-rule: first pass of a new run. The saved pages hold only ~10 thumbnails each, so with the rule on,
+  // products whose photo has not been downloaded yet would be dropped before images.mjs could fetch them.
+  // Order: select --no-photo-rule → images.mjs → select (rule on, replaces any product whose photo failed).
+  // v1.2 keeps its original behaviour (its excluded leaves were applied in enrich); the extra run excludes at select time.
+  const blockedLeaves = SEED_SET === 'extra' ? Object.keys(CATEGORY_MAP.exclude_site_categories) : [];
+  const hasPhoto = process.argv.includes('--no-photo-rule') ? null : photoChecker();
   const replacements = [];
   const lines = readFileSync(PATHS.parsed, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   const keywords = lines.map(({ items, ...record }) => {
-    const { picked, excluded, median_price } = selectForKeyword(items, { keyword: record.keyword, priceBands, hasPhoto });
-    const without = selectForKeyword(items, { keyword: record.keyword, priceBands }).picked.map(p => p.id);
+    const { picked, excluded, median_price } = selectForKeyword(items, { keyword: record.keyword, priceBands, hasPhoto, blockedLeaves });
+    const without = selectForKeyword(items, { keyword: record.keyword, priceBands, blockedLeaves }).picked.map(p => p.id);
     const now = picked.map(p => p.id);
     const removed = without.filter(id => !now.includes(id)), added = now.filter(id => !without.includes(id));
     if (removed.length || added.length) replacements.push({ occasion: record.occasion, keyword: record.keyword, removed, added });

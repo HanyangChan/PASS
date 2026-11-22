@@ -10,8 +10,8 @@ import { selectForKeyword } from '../scripts/catalog/web/select.mjs';
 const web = JSON.parse(readFileSync(PATHS.products, 'utf8'));
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 '), Buffer.alloc(8)]);
 
-test('all 590 web products name their committed photo file only, never a hosted or seller address', () => {
-  assert.equal(web.length, 590);
+test('all 1125 web products name their committed photo file only, never a hosted or seller address', () => {
+  assert.equal(web.length, 1125); // 590 (v1.2) + 535 (v2-extra)
   for (const item of web) {
     assert.equal(item.image_file, `${item.id}.webp`, item.id);
     assert.ok(!('image_url' in item), item.id);
@@ -19,7 +19,7 @@ test('all 590 web products name their committed photo file only, never a hosted 
   }
 });
 
-// The photos are committed (supabase/seed/images-kr/), so this always runs: 590/590, no extras.
+// The photos are committed (supabase/seed/images-kr/), so this always runs: 1125/1125, no extras.
 test('supabase/seed/images-kr holds a WebP photo for every web product and nothing else', () => {
   const files = new Set(readdirSync(PATHS.images));
   const missing = web.filter(item => !files.has(item.image_file)).map(item => item.id);

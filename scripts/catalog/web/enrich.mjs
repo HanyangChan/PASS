@@ -1,13 +1,24 @@
 // ④ enrich (no network): selected.json → supabase/seed/products-kr.json (spec §4, §6).
 // Usage: node scripts/catalog/web/enrich.mjs
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { tagAllergens } from '../../../lib/allergens.mjs';
 import { CATEGORIES } from '../../../lib/catalog.mjs';
 import { arrivalDays, packagingFor, sweetnessFor } from '../demo-rules.mjs';
-import { PATHS, SITES, imageFile, path } from './config.mjs';
+import { PATHS, SEED_SET, SITES, imageFile } from './config.mjs';
 
 export const CATEGORY_MAP = JSON.parse(readFileSync(new URL('./category-map.v1.json', import.meta.url), 'utf8'));
+// The extra run adds its own approved leaf categories in category-map.v2-extra.json (a draft sits next to it as
+// category-map.v2-extra.draft.json until approved; the draft is never read). Entries only add to v1.
+const EXTRA_MAP = new URL('./category-map.v2-extra.json', import.meta.url);
+if (SEED_SET === 'extra' && existsSync(EXTRA_MAP)) {
+  const extra = JSON.parse(readFileSync(EXTRA_MAP, 'utf8'));
+  for (const key of ['by_site_category', 'exclude_site_categories', 'held_site_categories']) {
+    CATEGORY_MAP[key] = { ...CATEGORY_MAP[key], ...extra[key] };
+  }
+  CATEGORY_MAP.version = `${CATEGORY_MAP.version}+${extra.version}`;
+  CATEGORY_MAP.status = extra.status;
+}
 const EDIBLE = new Set(['food', 'snack', 'coffee_tea', 'health', 'liquor']);
 // Alcohol is tagged for holidays only, whichever seed found it (decision 2026-11-13).
 const occasionsFor = (category, occasions) => category === 'liquor' ? ['holiday'] : [...new Set(occasions)];
@@ -57,8 +68,11 @@ export function validate(item) {
   return issues;
 }
 
-export function enrich(keywords, { site = 'naver' } = {}) {
-  const byId = new Map(), held = [], unmapped = new Set(), excluded = [];
+// holdLiquor: the v1 rule tags alcohol for holidays only (decision 2026-11-13), which would silently drop every
+// new occasion tag from wine/champagne found by the extra seeds. Until that rule is decided for the new
+// occasions, extra-run alcohol is set aside in `heldLiquor` instead of entering the catalog.
+export function enrich(keywords, { site = 'naver', holdLiquor = SEED_SET === 'extra' } = {}) {
+  const byId = new Map(), held = [], heldLiquor = [], unmapped = new Set(), excluded = [];
   for (const entry of keywords) {
     for (const product of entry.picked) {
       const leaf = product.category_path?.[0] ?? null;
@@ -66,6 +80,7 @@ export function enrich(keywords, { site = 'naver' } = {}) {
       if (CATEGORY_MAP.held_site_categories[leaf]) { held.push({ id: product.id, keyword: entry.keyword, leaf, title: product.title }); continue; }
       const category = CATEGORY_MAP.by_site_category[leaf];
       if (!category) { unmapped.add(leaf); continue; }
+      if (holdLiquor && category === 'liquor') { heldLiquor.push({ id: product.id, keyword: entry.keyword, occasion: entry.occasion, leaf, title: product.title }); continue; }
       const existing = byId.get(product.id);
       if (existing) {
         // Same product under several seeds: merge occasion tags and keep the first record.
@@ -120,21 +135,21 @@ export function enrich(keywords, { site = 'naver' } = {}) {
   }
   const products = [...byId.values()];
   const invalid = products.map(item => [item.id, validate(item)]).filter(([, issues]) => issues.length);
-  return { products, held, excluded, unmapped: [...unmapped], invalid };
+  return { products, held, heldLiquor, excluded, unmapped: [...unmapped], invalid };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { keywords } = JSON.parse(readFileSync(PATHS.selected, 'utf8'));
-  const { products, held, excluded, unmapped, invalid } = enrich(keywords);
+  const { products, held, heldLiquor, excluded, unmapped, invalid } = enrich(keywords);
   if (unmapped.length || invalid.length) {
     console.error(JSON.stringify({ unmapped, invalid: invalid.slice(0, 20) }, null, 1));
-    console.error('category-map.v1.json에 없는 카테고리나 스키마 오류가 있어 products-kr.json을 쓰지 않았습니다.');
+    console.error('category map에 없는 카테고리나 스키마 오류가 있어 상품 파일을 쓰지 않았습니다.');
     process.exit(1);
   }
   writeFileSync(PATHS.products, JSON.stringify(products, null, 1) + '\n');
-  writeFileSync(path('data/catalog/web/enrich-held.json'), JSON.stringify({ held, excluded }, null, 1));
+  writeFileSync(PATHS.held, JSON.stringify({ held, excluded, held_liquor: heldLiquor }, null, 1));
   const count = key => Object.fromEntries(Object.entries(Object.groupBy(products, key)).map(([k, v]) => [k, v.length]));
-  console.log(JSON.stringify({ products: products.length, held: held.length, excluded: excluded.length,
+  console.log(JSON.stringify({ out: PATHS.products, products: products.length, held: held.length, held_liquor: heldLiquor.length, excluded: excluded.length,
     multi_occasion: products.filter(item => item.occasions.length > 1).length,
     by_category: count(item => item.category), flower_subtype: count(item => item.flower_subtype ?? '-') }));
 }
