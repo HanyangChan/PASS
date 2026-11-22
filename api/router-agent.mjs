@@ -49,7 +49,7 @@ export async function prototypeRouterTurn(input, products, {extract, apiKey, mod
   if (input.operation==='conditions' && input.clearIssues===false) issues=input.issues;
   // A missing allergy ingredient is blocking until an ingredient or explicit cancellation arrives.
   if (JSON.stringify(state.recipients)===JSON.stringify(before.recipients) && input.issues.some(q=>q.includes('성분')) && !/알레르기\s*(없|해제|취소)/.test(input.text??'') && JSON.stringify(state.excluded_ingredients)===JSON.stringify(before.excluded_ingredients)) issues=input.issues;
-  const turn=finishSingle(before,state,issues,products);
+  const turn=finishSingle(before,state,issues,products,ranking);
   let message=turn.message;
   if (output.kind==='comparison' && !issues.length) {
     const amount=output.evaluatedState.budget.amount_krw;

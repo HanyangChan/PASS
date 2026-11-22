@@ -4,18 +4,26 @@ import { chatAgentModes, type ChatAgentMode } from './chatAgentModes';
 import { colors as c, fonts as f } from './theme';
 
 const lastIndex = chatAgentModes.length - 1;
+const modeLabels = chatAgentModes.map(mode => mode.id).join(' ');
+const sliderLabel = `${modeLabels} 응답 방식`;
+const isWeb = Platform.OS === 'web';
+const thumbSize = 24;
+const halfThumb = thumbSize / 2;
+const stopSize = 6;
 
 type Props = { value: ChatAgentMode; onChange: (value: ChatAgentMode) => void; disabled: boolean; connected: boolean };
 export function AgentModeControl({ value, onChange, disabled, connected }: Props) {
   const [width, setWidth] = useState(0);
+  const [focused, setFocused] = useState(false);
   const index = chatAgentModes.findIndex(mode => mode.agent === value);
   const mode = chatAgentModes[index];
-  const span = Math.max(0, width - 24);
+  const span = Math.max(0, width - thumbSize);
+  const valueLabel = `${mode.id} ${mode.title}`;
   const pan = useMemo(() => {
     const selectAt = (x: number) => {
-      if (disabled || width <= 24) return;
-      const next = Math.round(Math.max(0, Math.min(1, (x - 12) / (width - 24))) * lastIndex);
-      onChange(chatAgentModes[next].agent);
+      if (disabled || span <= 0) return;
+      const position = Math.max(0, Math.min(1, (x - halfThumb) / span));
+      onChange(chatAgentModes[Math.round(position * lastIndex)].agent);
     };
     return PanResponder.create({
       onStartShouldSetPanResponder: () => !disabled,
@@ -24,46 +32,57 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
       onPanResponderMove: event => selectAt(event.nativeEvent.locationX),
       onPanResponderTerminationRequest: () => false,
     });
-  }, [disabled, width, onChange]);
+  }, [disabled, span, onChange]);
 
   return (
     <View style={[s.panel, disabled && s.disabled]}>
-      <View style={s.header}>
-        <Text accessibilityLiveRegion="polite" style={s.title}>{mode.id} · {mode.title}</Text>
-      </View>
+      <Text accessibilityLiveRegion="polite" style={s.title}>{mode.id} · {mode.title}</Text>
       <View
-        accessibilityRole="adjustable"
-        aria-valuemin={0}
-        aria-valuemax={lastIndex}
-        aria-valuenow={index}
-        aria-valuetext={`${mode.id} ${mode.title}`}
-        aria-disabled={disabled}
-        tabIndex={disabled ? -1 : 0}
-        accessibilityLabel="A B C D 응답 방식"
-        accessibilityValue={{ min: 0, max: lastIndex, now: index, text: `${mode.id} ${mode.title}` }}
-        accessibilityState={{ disabled }}
-        accessibilityActions={[{ name: 'increment', label: '다음 응답 방식' }, { name: 'decrement', label: '이전 응답 방식' }]}
-        onAccessibilityAction={event => {
-          if (disabled) return;
-          const next = Math.max(0, Math.min(lastIndex, index + (event.nativeEvent.actionName === 'increment' ? 1 : -1)));
-          onChange(chatAgentModes[next].agent);
-        }}
         onLayout={event => setWidth(event.nativeEvent.layout.width)}
         style={s.slider}
-        {...pan.panHandlers}
-        {...(Platform.OS === 'web' ? { onKeyDown: (event: { key: string; preventDefault: () => void }) => {
-          if (disabled) return;
-          const next = event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : ['ArrowRight', 'ArrowUp'].includes(event.key) ? Math.min(lastIndex, index + 1) : ['ArrowLeft', 'ArrowDown'].includes(event.key) ? Math.max(0, index - 1) : null;
-          if (next === null) return;
-          event.preventDefault();
-          onChange(chatAgentModes[next].agent);
-        } } : {})}
+        {...(!isWeb && {
+          accessibilityRole: 'adjustable',
+          accessibilityLabel: sliderLabel,
+          accessibilityValue: { min: 0, max: lastIndex, now: index, text: valueLabel },
+          accessibilityState: { disabled },
+          accessibilityActions: [{ name: 'increment', label: '다음 응답 방식' }, { name: 'decrement', label: '이전 응답 방식' }],
+          onAccessibilityAction: event => {
+            if (disabled) return;
+            const offset = event.nativeEvent.actionName === 'increment' ? 1 : -1;
+            const next = Math.max(0, Math.min(lastIndex, index + offset));
+            onChange(chatAgentModes[next].agent);
+          },
+          ...pan.panHandlers,
+        })}
       >
-        <View pointerEvents="none" style={s.track}>
-          <View style={[s.fill, { width: 12 + span * index / lastIndex }]} />
-          {chatAgentModes.map((item, i) => <View key={item.id} style={[s.stop, { left: 9 + span * i / lastIndex }, i <= index && s.filledStop]} />)}
+        <View style={s.track}>
+          <View style={[s.fill, { width: halfThumb + span * index / lastIndex }]} />
         </View>
-        <View pointerEvents="none" style={[s.thumb, { left: span * index / lastIndex }]} />
+        <View style={s.marks}>
+          {chatAgentModes.map((item, i) => (
+            <View
+              key={item.id}
+              style={[s.stop, { left: halfThumb - stopSize / 2 + span * i / lastIndex }, i <= index && s.filledStop]}
+            />
+          ))}
+          <View style={[s.thumb, { left: span * index / lastIndex }, focused && s.focusedThumb]} />
+        </View>
+        {isWeb && (
+          <input
+            type="range"
+            aria-label={sliderLabel}
+            aria-valuetext={valueLabel}
+            min={0}
+            max={lastIndex}
+            step={1}
+            value={index}
+            disabled={disabled}
+            onChange={event => onChange(chatAgentModes[event.currentTarget.valueAsNumber].agent)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            style={webInputStyle}
+          />
+        )}
       </View>
       <View style={s.labels}>
         {chatAgentModes.map(item => (
@@ -77,20 +96,49 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
   );
 }
 
+// The browser range owns pointer and keyboard interaction. The views underneath draw the shared track.
+const webInputStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  margin: 0,
+  opacity: 0,
+  touchAction: 'none',
+  cursor: 'pointer',
+};
+
+const sliderHeight = 36;
+const trackHeight = 18;
 const s = StyleSheet.create({
-  panel: { marginHorizontal: 24, marginTop: 4, marginBottom: 0, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: c.white, borderRadius: 12, borderWidth: 1, borderColor: c.border },
+  panel: {
+    marginHorizontal: 24,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: c.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    ...(isWeb ? { userSelect: 'none' } : {}),
+  },
   disabled: { opacity: 0.6 },
-  header: { alignItems: 'center' },
   title: { color: c.primary, fontFamily: f.medium, fontSize: 12, lineHeight: 18, textAlign: 'center' },
-  slider: { height: 44, justifyContent: 'center', marginHorizontal: 4 },
-  track: { height: 18, borderRadius: 12, backgroundColor: c.segment, overflow: 'hidden', justifyContent: 'center' },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary, borderRadius: 18 },
-  stop: { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: c.muted, opacity: 0.45 },
-  filledStop: { backgroundColor: c.white, opacity: 0.6 },
-  thumb: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: c.white, borderWidth: 1, borderColor: c.border, shadowColor: c.text, shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  labels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -12 },
-  labelButton: { minWidth: 44, minHeight: 24, alignItems: 'center', justifyContent: 'center' },
+  slider: { height: sliderHeight, justifyContent: 'center', marginHorizontal: 10 },
+  marks: { ...StyleSheet.absoluteFill, pointerEvents: 'none' },
+  track: { pointerEvents: 'none', height: trackHeight, borderRadius: trackHeight / 2, backgroundColor: c.segment, overflow: 'hidden' },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: trackHeight / 2, backgroundColor: c.primary },
+  stop: { position: 'absolute', top: (sliderHeight - stopSize) / 2, width: stopSize, height: stopSize, borderRadius: stopSize / 2, backgroundColor: c.muted, opacity: 0.45 },
+  filledStop: { backgroundColor: c.white, opacity: 0.65 },
+  thumb: {
+    position: 'absolute', top: (sliderHeight - thumbSize) / 2, width: thumbSize, height: thumbSize, borderRadius: halfThumb,
+    backgroundColor: c.white, borderWidth: 1, borderColor: c.border,
+    boxShadow: '0px 1px 3px #1B1A1924',
+  },
+  focusedThumb: { borderColor: c.primary, borderWidth: 2 },
+  labels: { flexDirection: 'row', justifyContent: 'space-between' },
+  labelButton: { minWidth: 44, minHeight: 26, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   label: { fontFamily: f.medium, fontSize: 11, color: c.muted },
-  selectedLabel: { color: c.primary },
+  selectedLabel: { color: c.primary, fontFamily: f.bold },
   hint: { color: c.muted, fontFamily: f.regular, fontSize: 11, lineHeight: 18, textAlign: 'center', marginTop: 2 },
 });

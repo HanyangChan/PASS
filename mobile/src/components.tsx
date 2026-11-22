@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Star, ChevronRight } from 'lucide-react-native';
 import CheckIcon from '../assets/figma/check.svg';
 import HeartIcon from '../assets/figma/heart.svg';
 import { colors as c, fonts as f } from './theme';
 import type { Gift } from './catalog';
+export const ProductImagesContext = createContext<ReadonlyMap<string, string>>(new Map());
 export const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
 export function Chip({
   label,
@@ -29,16 +30,18 @@ export function Chip({
 }
 export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
-  const failed = !!gift.image && failedUrl === gift.image;
+  const productImages = useContext(ProductImagesContext);
+  const image = productImages.get(gift.id) ?? gift.image;
+  const failed = !!image && failedUrl === image;
   return (
     <View style={[s.image, { width: size, height: size }]}>
-      {gift.image && !failed ? (
+      {image && !failed ? (
         <Image
           accessibilityLabel={gift.name}
-          source={{ uri: gift.image }}
+          source={{ uri: image }}
           style={{ width: size, height: size }}
           resizeMode="cover"
-          onError={() => setFailedUrl(gift.image)}
+          onError={() => setFailedUrl(image)}
         />
       ) : (
         // Product cards show photos only (no category icons); a missing or broken photo leaves a plain tile.
@@ -55,12 +58,14 @@ export function GiftCard({
   saved,
   onSave,
   onOpen,
+  actions,
 }: {
   gift: Gift;
   rank?: number;
   saved: boolean;
   onSave: () => void;
   onOpen: () => void;
+  actions?: React.ReactNode;
 }) {
   return (
     <View style={s.card}>
@@ -87,15 +92,18 @@ export function GiftCard({
           {gift.description}
         </Text>
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${gift.name} ${saved ? '찜 해제' : '찜하기'}`}
-        accessibilityState={{ selected: saved }}
-        onPress={onSave}
-        style={[s.heart, saved && s.selected]}
-      >
-        <HeartIcon color={saved ? c.primary : c.muted} />
-      </Pressable>
+      <View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${gift.name} ${saved ? '찜 해제' : '찜하기'}`}
+          accessibilityState={{ selected: saved }}
+          onPress={onSave}
+          style={[s.heart, saved && s.selected]}
+        >
+          <HeartIcon color={saved ? c.primary : c.muted} />
+        </Pressable>
+        {actions}
+      </View>
     </View>
   );
 }
@@ -156,9 +164,11 @@ export function Tile({
 export function SectionHeader({
   title,
   onMore,
+  moreLabel = '더보기',
 }: {
   title: string;
   onMore?: () => void;
+  moreLabel?: string;
 }) {
   return (
     <View style={s.section}>
@@ -166,11 +176,11 @@ export function SectionHeader({
       {onMore && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${title} 더보기`}
+          accessibilityLabel={`${title} ${moreLabel}`}
           onPress={onMore}
           style={s.more}
         >
-          <Text style={s.small}>더보기</Text>
+          <Text style={s.small}>{moreLabel}</Text>
           <ChevronRight size={14} color={c.muted} />
         </Pressable>
       )}

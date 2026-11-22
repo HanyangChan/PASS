@@ -54,6 +54,32 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       if ((result.data ?? []).length < 500) return rows;
     }
   }
+  async function readConversation(id: string) {
+    await assertOwner();
+    const chat = await client.from('conversations').select('conditions').eq('user_id', owner).eq('id', id).single();
+    check(chat.error);
+    const { _pass: meta, ...state } = chat.data?.conditions ?? {};
+    if (!validSession(state) || meta?.version !== 1 || !Array.isArray(meta.issues) || !meta.issues.every((v: unknown) => typeof v === 'string')) throw new Error('대화 기록 형식을 확인할 수 없어요.');
+    const normalized = normalizeConditions(state);
+    validateState(normalized.state);
+    const ids: unknown = meta?.committed === true ? meta.message_ids : null;
+    if (!Array.isArray(ids) || !ids.every(v => typeof v === 'string')) throw new Error('대화 기록 형식을 확인할 수 없어요.');
+    const found = new Map<string, { role: ChatMessage['role']; content: string; created_at: string }>();
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const result = await client.from('messages').select('id,role,content,created_at').eq('user_id', owner).eq('conversation_id', id).in('id', ids.slice(offset, offset + 100));
+      check(result.error);
+      for (const row of result.data ?? []) found.set(row.id, row);
+    }
+    await assertOwner();
+    const messages = ids.map(mid => {
+      const row = found.get(mid);
+      if (!row || !['user', 'assistant'].includes(row.role) || typeof row.content !== 'string') throw new Error('대화 기록 일부를 불러오지 못했어요.');
+      return { role: row.role, text: row.content };
+    });
+    return { messages, recommendations: decodeHistoryRecommendations(meta.recommendations),
+      session: { state: normalized.state, issues: meta.issues } as ChatSession,
+      feedback: decodeFeedback(meta.feedback), ids: ids as string[], times: ids.map(mid => found.get(mid)!.created_at) };
+  }
   return {
     close() { active = false; },
     currentId: () => conversationId,
@@ -71,25 +97,21 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
     },
     async loadConversation(id: string): Promise<PastChatDetail> {
       await queue;
-      await assertOwner();
-      const chat = await client.from('conversations').select('conditions').eq('user_id', owner).eq('id', id).single();
-      check(chat.error);
-      const meta = chat.data?.conditions?._pass;
-      const ids: unknown = meta?.committed === true ? meta.message_ids : null;
-      if (!Array.isArray(ids) || !ids.every(v => typeof v === 'string')) throw new Error('대화 기록 형식을 확인할 수 없어요.');
-      const found = new Map<string, { role: ChatMessage['role']; content: string }>();
-      for (let offset = 0; offset < ids.length; offset += 100) {
-        const result = await client.from('messages').select('id,role,content').eq('user_id', owner).eq('conversation_id', id).in('id', ids.slice(offset, offset + 100));
-        check(result.error);
-        for (const row of result.data ?? []) found.set(row.id, row);
-      }
-      await assertOwner();
-      const messages = ids.map(mid => {
-        const row = found.get(mid);
-        if (!row || !['user', 'assistant'].includes(row.role) || typeof row.content !== 'string') throw new Error('대화 기록 일부를 불러오지 못했어요.');
-        return { role: row.role, text: row.content };
+      const detail = await readConversation(id);
+      return { messages: detail.messages, recommendations: detail.recommendations };
+    },
+    async resumeConversation(id: string, signal?: AbortSignal): Promise<PastChatDetail> {
+      let detail!: Awaited<ReturnType<typeof readConversation>>;
+      await enqueue(async () => {
+        detail = await readConversation(id);
+        if (signal?.aborted) throw new Error('대화 불러오기가 취소됐어요.');
+        conversationId = id;
+        messageIds = [...detail.ids]; messageTimes = [...detail.times];
+        previousMessages = copy(detail.messages);
+        feedbackState = copy(detail.feedback); written = JSON.stringify(detail.feedback);
+        committed = { id, state: copy(detail.session.state), issues: [...detail.session.issues], ids: [...detail.ids], recommendations: copy(detail.recommendations) };
       });
-      return { messages, recommendations: decodeHistoryRecommendations(meta?.recommendations) };
+      return detail;
     },
     deleteConversation(id: string) {
       return enqueue(async () => {
@@ -146,7 +168,7 @@ export function createCloudRecords(client: SupabaseClient, owner: string, uuid: 
       previous = copy(records);
       previousMessages = copy(messages);
       feedbackState = copy(feedback); written = JSON.stringify(feedback);
-      return { ...records, session, messages, migrationNotice, feedback };
+      return { ...records, session, messages, migrationNotice, feedback, recommendations: committed?.recommendations ?? [] };
     },
     // Memory only, no request. The conversation id is stamped when a save is enqueued.
     setFeedback(value: CardFeedback[]) { feedbackState = copy(value); },

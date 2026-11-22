@@ -8,6 +8,10 @@ export function createSnapshotPersistence() {
       enqueued.clear(); versions.clear();
       for (const [key, value] of Object.entries(snapshots)) enqueued.set(key, value);
     },
+    restoreKey(key: string, snapshot: string) {
+      enqueued.set(key, snapshot);
+      versions.set(key, (versions.get(key) ?? 0) + 1);
+    },
     retry() { enqueued.clear(); },
     write(key: string, snapshot: string, operation: () => Promise<void>): Promise<void> | null {
       if (enqueued.get(key) === snapshot) return null;

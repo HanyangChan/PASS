@@ -5,6 +5,7 @@ import type { ChatAgentMode } from '../chatAgentModes';
 import type { AgentPayload } from '../AgentPanel';
 import type { recipientCalendar } from './personalization';
 import type { FeedbackSignal } from '../chatHistory.ts';
+type ServerChatAgentMode = ChatAgentMode | 'langgraph-advisors';
 type AdvisorContext = { disabled: string[]; calendar: ReturnType<typeof recipientCalendar> };
 type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
@@ -15,8 +16,10 @@ export function resolveChatUrl(value?: string) {
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))) throw new Error('추천 API는 HTTPS 주소여야 합니다.');
   return `${url.origin}/api/chat`;
 }
-export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, feedback: () => FeedbackSignal[] = () => []) {
-  async function request(body: object, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+export function createServerChatService(endpoint: string, auth: Auth, owner: string, fetcher: typeof fetch = fetch, feedback: () => FeedbackSignal[] = () => [], feedbackScope: () => string | null = () => null) {
+  async function request(body: object, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
+    const signals = structuredClone(feedback());
+    const scope = feedbackScope();
     const { data, error } = await auth.getSession();
     if (error || data.session?.user.id !== owner) throw new Error('다시 로그인해주세요.');
     const controller = new AbortController(); let timedOut = false;
@@ -26,8 +29,7 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 25000);
     try {
       const context = agentMode === 'langgraph-advisors' && agents ? { agents: { disabled: agents.disabled, calendar: agents.calendar } } : {};
-      const signals = feedback();
-      if (signals.length) Object.assign(context, { feedback: signals });
+      if (signals.length && scope) Object.assign(context, { feedback: signals, feedbackScope: scope });
       const response = await fetcher(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ ...body, agentMode, ...context }), signal: controller.signal });
       if (!response.ok) {
         const failure = await response.json().catch(() => null);
@@ -60,12 +62,12 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   return {
-    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+    send(session: ChatSession, text: string, history: ChatMessage[], source: 'typed' | 'quick_reply' = 'typed', signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
       return request({ operation: 'turn', session, text: text.trim(), history: history.slice(-6).map(message => ({ ...message, text: message.text.slice(0, 1200) })), source }, signal, agentMode, agents);
     },
-    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) {
+    updateConditions(session: ChatSession, patch: ConditionPatch, clearIssues = true, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) {
       return request({ operation: 'conditions', session, patch, clearIssues }, signal, agentMode, agents);
     },
-    view(session: ChatSession, signal?: AbortSignal, agentMode?: ChatAgentMode, agents?: AdvisorContext) { return request({ operation: 'view', session }, signal, agentMode, agents); },
+    view(session: ChatSession, signal?: AbortSignal, agentMode?: ServerChatAgentMode, agents?: AdvisorContext) { return request({ operation: 'view', session }, signal, agentMode, agents); },
   };
 }

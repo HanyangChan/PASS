@@ -13,6 +13,7 @@ import { createAgent as createFeedbackAgent } from '../baseline/agents/full-chat
 import { resolveLlm } from '../lib/llm-provider.mjs';
 import { LANGGRAPH_AGENT, prototypeLangGraphTurn, readAdvisorContext } from './langgraph-agent.mjs';
 import { parseConditions } from '../baseline/agents/a-router/parser.mjs';
+import { validProductFeedback } from '../lib/feedback.mjs';
 
 const selectableAgents = ['a-router', LANGGRAPH_AGENT, 'full-chat', 'full-chat-feedback-2'];
 
@@ -96,11 +97,13 @@ function defaultCatalog(fetcher) {
   };
 }
 const catalogLabel = env => { try { return catalogId(env.CATALOG_SOURCE); } catch { return 'invalid'; } };
-// Card feedback from the app: ids only, capped, never trusted beyond ranking weights.
-export function feedbackRanking(feedback) {
+// Bounded contextual observations; never trusted as conditions or catalog facts.
+export function feedbackRanking(feedback, scope) {
   if (feedback === undefined || feedback === null) return APP_RANKING;
   if (!Array.isArray(feedback) || feedback.length > 200 || feedback.some(f => !f || typeof f.giftId !== 'string' || !f.giftId || f.giftId.length > 200 || typeof f.helpful !== 'boolean')) throw new ApiError(400, 'invalid_request', '피드백 기록을 확인해주세요.');
-  return { ...APP_RANKING, feedback: { liked: feedback.filter(f => f.helpful).map(f => f.giftId), disliked: feedback.filter(f => !f.helpful).map(f => f.giftId) } };
+  if (scope !== undefined && (typeof scope !== 'string' || !scope || scope.length > 100) ||
+      feedback.some(f => f.kind === 'gift_preference' && !validProductFeedback(f))) throw new ApiError(400, 'invalid_request', '상품 평가의 상황을 확인해주세요.');
+  return { ...APP_RANKING, feedback: { records: feedback.filter(validProductFeedback), scope } };
 }
 export function recommendationView(session, products, ranking = APP_RANKING) {
   const state = engineState(session.state);
@@ -158,7 +161,7 @@ export function createApi({ fetcher = fetch, extract, catalog = defaultCatalog(f
         const raw = await readJson(request);
         if (raw?.agentMode !== undefined && !selectableAgents.includes(raw.agentMode)) throw new ApiError(400,'invalid_request','응답 방식을 확인해주세요.');
         const chatAgent = raw?.agentMode ?? env.CHAT_AGENT;
-        const ranking = feedbackRanking(raw?.feedback);
+        const ranking = feedbackRanking(raw?.feedback, raw?.feedbackScope);
         let llm;
         try { llm = resolveLlm(env, {extract,fetcher}); } catch { throw new ApiError(503,'configuration','LLM 연결 설정을 확인해주세요.'); }
         const fullChat=['full-chat','full-chat-feedback-1','full-chat-feedback-2'].includes(chatAgent);

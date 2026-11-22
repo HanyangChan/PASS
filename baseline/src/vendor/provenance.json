@@ -1,11 +1,12 @@
 {
-  "source": "PASS-auth/lib (shared budget and holiday ranking, tea/coffee preference and fragrance filter, card feedback weights, recipient gender, age, occasion and gift fit)",
+  "source": "PASS shared engine; app opt-in contextual feedback and strict gift request matching; named subtype and explicit age support",
   "sha256": {
     "allergens.mjs": "b04cc6d5ae8fd7f3f03212260a0c9a7d4feea3c63d7e1b6aabc2a0acb561e85c",
-    "catalog.mjs": "a30ead0d423db0950e89695477718727acc774db5942a36fe2b7af4d5907cb11",
+    "catalog.mjs": "77e326132ac0b96f575a606a0592e7efc82ffaeccd592fa9fa8d0a54096400dd",
     "counterfactual.mjs": "528d5918e6bc87a8a46ea391f4e9e0c50444b8196cb71e9850dbf5fdc046139f",
-    "engine.mjs": "ce20bb07bebd2c6f27f57b280fc6cb18e5c2dbadfed10b24a1b6d1ccfdd54cbd",
-    "ranking.mjs": "075d6e7dbb6717c51d87f79d48e386d881fae1ae3f6aa7e66920cfe60c6dcad4",
-    "fragrance.mjs": "98184bd94c91b88492d08669861ebba5911ef13c5aefa0ae76cd1e4b1584132e"
+    "engine.mjs": "5f01ca3d8bbb245847ec486b8a0fa9b3f95f1cdda4c8e497bfd1e23361211b15",
+    "ranking.mjs": "41d90c72d6f0e8db122cf8cb2fac3913659fe9aad485be70011e07293fc1d273",
+    "fragrance.mjs": "98184bd94c91b88492d08669861ebba5911ef13c5aefa0ae76cd1e4b1584132e",
+    "feedback.mjs": "5a303a0a96314d6469c83832f1158abc511724c30b14621584ddc29dba5c52b6"
   }
 }
