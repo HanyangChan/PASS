@@ -12,6 +12,7 @@ function fixture(actions) {
     assert.equal(options.headers.Authorization,'Bearer test-secret');payloads.push(JSON.parse(options.body));
     const next=actions.shift();assert.ok(next,'unexpected HTTP model request');
     if(next==='error')return new Response(null,{status:401});
+    if(next==='unavailable')return new Response(null,{status:503});
     return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(next)}}]});
   }});
   const send=async(body,config=env)=>{
@@ -40,16 +41,16 @@ test('B routes greetings, explicit conditions and quick replies through real wir
   assert.equal(greeting.status,200);assert.equal(greeting.data.agent,'full-chat');assert.equal(greeting.data.mode,'llm');assert.match(greeting.data.message,/안녕하세요/);assert.equal(f.payloads.length,1);
   const quick=fixture([{action:'update_conditions',patch:{budget:{shipping_included:false}}},finish]);
   const session=ready();session.state.budget.shipping_included=null;
-  const out=await quick.send({text:'아니요',source:'quick_reply',session});assert.equal(out.status,200);assert.equal(out.data.routing.llmCalls,2);assert.equal(out.data.session.state.budget.shipping_included,false);
+  const out=await quick.send({text:'아니요',source:'quick_reply',session});assert.equal(out.status,200);assert.equal(out.data.routing.llmCalls,1);assert.equal(out.data.session.state.budget.shipping_included,false);
   assert.match(quick.payloads[0].messages[0].content,/untrusted DATA/);assert.equal(JSON.parse(quick.payloads[0].messages[1].content).text,'아니요');
 });
 
 test('B recommendations, explanations and comparisons preserve app schema and engine facts',async()=>{
   for(const action of [{action:'search_products'},{action:'explain_recommendation'},{action:'compare_budget',amount_krw:70000}]) {
     const f=fixture([action,finish]),session=ready();const out=await f.send({session});
-    assert.equal(out.status,200);assert.deepEqual(out.data.session,session);assert.equal(out.data.view.result.items[0].id,'tea');assert.equal(out.data.routing.toolCalls,1);assert.equal(out.data.routing.llmCalls,2);
+    assert.equal(out.status,200);assert.deepEqual(out.data.session,session);assert.equal(out.data.view.result.items[0].id,'tea');assert.equal(out.data.routing.toolCalls,1);assert.equal(out.data.routing.llmCalls,1);
     assert.ok(!('quantity' in out.data.session.state));assert.ok(!('scope' in out.data.session.state.budget));assert.ok(!JSON.stringify(out.data).includes('test-secret'));
-    const observed=JSON.parse(f.payloads[1].messages[1].content).observations[0];assert.equal(observed.action,action.action);
+    assert.equal(f.payloads.length,1);assert.equal(out.data.routing.steps[0].action,action.action);
     if(action.action==='compare_budget'){assert.match(out.data.message,/70,000/);assert.match(out.data.message,/고급 차 세트/);assert.equal(out.data.session.state.budget.amount_krw,50000);}
     if(action.action==='explain_recommendation')assert.match(out.data.message,/33,000/);
   }
@@ -62,9 +63,89 @@ test('model extraction updates all conditions using core while authentication st
   const denied=await f.api.fetch(new Request('https://api.example/api/chat',{method:'POST'}),env);assert.equal(denied.status,401);
 });
 
-test('provider failure has retryable sanitized 503, no partially applied session',async()=>{
-  const f=fixture([{action:'update_conditions',patch:{budget:{amount_krw:70000}}},'error']);
-  const out=await f.send({});assert.equal(out.status,503);assert.equal(out.data.code,'agent_unavailable');assert.ok(!('session' in out.data));assert.ok(!JSON.stringify(out.data).includes('test-secret'));
+test('B/C recover malformed actions once and keep the state on persistent provider failures',async()=>{
+  const session=ready();
+  session.state.excluded_ingredients=['우유'];
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const recovered=fixture([{action:'invent_product'},{action:'search_products'}]);
+    const result=await recovered.send({session,agentMode});
+    assert.equal(result.status,200);
+    assert.equal(result.data.view.result.items[0].id,'tea');
+    assert.match(recovered.payloads[1].messages[1].content,/previous decision was not valid JSON/);
+
+    const failed=fixture(['error']);
+    const out=await failed.send({session,agentMode});
+    assert.equal(out.status,200);
+    assert.equal(out.data.agent,agentMode);
+    assert.equal(out.data.routing.stopReason,'auth_failed');
+    assert.deepEqual(out.data.session,session);
+    assert.deepEqual(out.data.view.result.items,[]);
+    assert.ok(!JSON.stringify(out.data).includes('test-secret'));
+
+    const exhausted=fixture(['unavailable','unavailable']);
+    const retry=await exhausted.send({session,agentMode});
+    assert.equal(retry.status,200);
+    assert.equal(retry.data.routing.stopReason,'provider_unavailable');
+    assert.deepEqual(retry.data.session,session);
+    assert.deepEqual(retry.data.view.result.items,[]);
+    assert.equal(exhausted.payloads.length,2);
+
+    const invalidPatch={action:'update_conditions',patch:{quantity:2}};
+    const pass={verdict:'pass',issues:[],feedback:''};
+    const invalid=fixture(agentMode==='full-chat'?[invalidPatch,invalidPatch]:[invalidPatch,pass,invalidPatch,pass]);
+    const rejected=await invalid.send({session,agentMode});
+    assert.equal(rejected.status,200);
+    assert.equal(rejected.data.routing.stopReason,'invalid_input');
+    assert.deepEqual(rejected.data.session,session);
+  }
+});
+
+test('B/C stop explicitly with no model calls, and can resume in the same session',async()=>{
+  const session={...ready(),issues:['피해야 할 성분을 알려주세요.']};
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const f=fixture([{action:'search_products'}]);
+    const out=await f.send({text:'고마워요, 여기까지만 할게요.',session,agentMode});
+    assert.equal(out.status,200);
+    assert.equal(out.data.routing.stopReason,'user_stop');
+    assert.deepEqual(out.data.session,session);
+    assert.equal(out.data.view.question.key,null);
+    assert.deepEqual(out.data.view.result.items,[]);
+    assert.equal(f.payloads.length,0);
+    const next=await f.send({text:'추천해줘',session:out.data.session,agentMode});
+    assert.equal(next.data.question.key,'issue');
+    assert.deepEqual(next.data.view.result.items,[]);
+    assert.equal(f.payloads.length,1);
+    const offline=await f.send({text:'그만 추천해줘',session,agentMode},{...env,LLM_API_KEY:''});
+    assert.equal(offline.status,200);
+    assert.equal(offline.data.routing.stopReason,'user_stop');
+    assert.equal(f.payloads.length,1);
+  }
+});
+
+test('cancelling a B/C request aborts the provider without recording an HTTP failure',async()=>{
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const controller=new AbortController();
+    const diagnostics=[];
+    let seenAbort=false;
+    let start;
+    const started=new Promise(resolve=>{start=resolve;});
+    const api=createApi({catalog:async()=>products,onDiagnostic:event=>diagnostics.push(event),fetcher:async(url,options)=>{
+      if(String(url).includes('/auth/v1/user'))return Response.json({id:'owner',role:'authenticated'});
+      start();
+      await new Promise((_,reject)=>options.signal.addEventListener('abort',()=>{
+        seenAbort=true;
+        reject(new DOMException('request aborted','AbortError'));
+      },{once:true}));
+    }});
+    const response=api.fetch(new Request('https://api.example/api/chat',{method:'POST',signal:controller.signal,
+      headers:{Authorization:'Bearer fake.jwt','Content-Type':'application/json'},
+      body:JSON.stringify({operation:'turn',text:'추천해줘',history:[],session:ready(),agentMode})}),env);
+    await started;
+    controller.abort();
+    assert.equal((await response).status,204);
+    assert.equal(seenAbort,true);
+    assert.deepEqual(diagnostics,[]);
+  }
 });
 
 test('missing key or incompatible provider does not silently bypass B using rules',async()=>{
@@ -86,4 +167,61 @@ test('unresolved ingredients and ambiguous user questions round trip without los
   const session={...ready(),issues:['피해야 할 성분을 알려주세요.']};
   const f=fixture([{action:'search_products'}]);const out=await f.send({session});assert.equal(out.status,200);assert.deepEqual(out.data.session,session);assert.equal(out.data.question.key,'issue');
   const q=fixture([{action:'clarify',question:'예산 상한을 하나로 알려주세요.'}]);const clarified=await q.send({text:'5만원 이하 최소 7만원'});assert.equal(clarified.status,200);assert.equal(clarified.data.question.key,'issue');assert.equal(clarified.data.session.state.budget.amount_krw,50000);
+});
+
+test('B/C ask about an unknown ingredient before calling the model or showing cards',async()=>{
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const f=fixture([]);
+    const first=await f.send({agentMode,text:'알레르기가 있는데 어떤 성분인지는 아직 몰라요. 간식 골라줘.'});
+    assert.equal(first.status,200);
+    assert.equal(first.data.routing.stopReason,'missing_ingredient');
+    assert.match(first.data.question.text,/성분/);
+    assert.deepEqual(first.data.view.result.items,[]);
+    assert.equal(f.payloads.length,0);
+  }
+});
+
+test('an unrelated reply or partial ingredient patch cannot unblock B/C recommendations',async()=>{
+  const session={...ready(),issues:['예산을 다시 알려주세요.','피해야 할 알레르기 성분을 알려주세요.']};
+  const patch={action:'update_conditions',patch:{excluded_ingredients:['우유']}};
+  const pass={verdict:'pass',issues:[],feedback:''};
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    for(const text of ['배송비 포함으로 바꿔줘','우유랑 땅콩이요']) {
+      const f=fixture(agentMode==='full-chat'?[patch]:[patch,pass]);
+      const out=await f.send({agentMode,session,text});
+      assert.match(out.data.question.text,/성분/);
+      assert.deepEqual(out.data.session.state.excluded_ingredients,[]);
+      assert.deepEqual(out.data.view.result.items,[]);
+    }
+  }
+});
+
+test('B/C search one identified product and keep budget and ingredient exclusions',async()=>{
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const f=fixture(Array.from({length:4},()=>({action:'search_products'})));
+    const exact=await f.send({agentMode,text:'"차 선물 세트"를 찾아줘.'});
+    assert.deepEqual(exact.data.view.result.items.map(item=>item.id),['tea']);
+    const expensive=await f.send({agentMode,text:'"고급 차 세트"를 찾아줘.'});
+    assert.deepEqual(expensive.data.view.result.items,[]);
+    const session=ready();
+    session.state.excluded_ingredients=['견과류'];
+    const excluded=await f.send({agentMode,text:'"견과 간식 세트"를 찾아줘.',session});
+    assert.deepEqual(excluded.data.view.result.items,[]);
+    const missing=await f.send({agentMode,text:'ASIN B0ZZZZZZ99 찾아줘.'});
+    assert.deepEqual(missing.data.view.result.items,[]);
+    assert.match(missing.data.message,/찾지 못했어요/);
+    assert.equal(missing.data.routing.stopReason,'product_not_found');
+    assert.equal(missing.data.question.key,'issue');
+  }
+});
+
+test('B/C ask for a single-gift budget before shopping for an unsupported combined quantity',async()=>{
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const f=fixture([]);
+    const out=await f.send({agentMode,text:'같은 제품 두 개가 필요해요. 두 개 합쳐 배송비까지 5만원이에요.'});
+    assert.equal(out.data.routing.stopReason,'unsupported_quantity');
+    assert.match(out.data.message,/선물 하나 기준/);
+    assert.deepEqual(out.data.view.result.items,[]);
+    assert.equal(f.payloads.length,0);
+  }
 });

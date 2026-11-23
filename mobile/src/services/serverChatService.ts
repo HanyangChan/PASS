@@ -1,11 +1,10 @@
 import { validateState } from '../../../lib/llm.mjs';
 import type { ChatSession, ChatMessage, ConditionPatch } from '../domain';
 import type { createLocalChatService } from './chatService';
-import type { ChatAgentMode } from '../chatAgentModes';
+import type { ServerChatAgentMode } from '../chatAgentModes';
 import type { AgentPayload } from '../AgentPanel';
 import type { recipientCalendar } from './personalization';
 import type { FeedbackSignal } from '../chatHistory.ts';
-type ServerChatAgentMode = ChatAgentMode | 'langgraph-advisors';
 type AdvisorContext = { disabled: string[]; calendar: ReturnType<typeof recipientCalendar> };
 type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
@@ -26,7 +25,8 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
     const abort = () => controller.abort();
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) controller.abort();
-    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 25000);
+    const timeoutMs = agentMode === 'full-chat' || agentMode === 'full-chat-feedback-2' ? 35000 : 25000;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
     try {
       const context = agentMode === 'langgraph-advisors' && agents ? { agents: { disabled: agents.disabled, calendar: agents.calendar } } : {};
       if (signals.length && scope) Object.assign(context, { feedback: signals, feedbackScope: scope });

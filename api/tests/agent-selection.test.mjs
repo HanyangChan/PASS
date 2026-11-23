@@ -19,7 +19,7 @@ function fixture() {
 }
 test('request agentMode selects the actual agent without changing the server default',async()=>{
  const f=fixture();
- for(const [mode,expectedCalls] of [['a-router',0],['full-chat',2],['full-chat-feedback-2',4]]) {
+ for(const [mode,expectedCalls] of [['a-router',0],['full-chat',1],['full-chat-feedback-2',1]]) {
   const before=f.calls();const response=await f.api.fetch(request({agentMode:mode}),env);const data=await response.json();
   assert.equal(response.status,200);assert.equal(data.agent,mode);assert.equal(data.routing.agent,mode);assert.equal(f.calls()-before,expectedCalls);assert.deepEqual(data.session,session());
  }

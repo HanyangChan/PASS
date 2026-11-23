@@ -63,7 +63,7 @@ import { CalendarScreen, ddayLabel, eventKindMeta } from './src/CalendarScreen';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
 import { AgentModeControl } from './src/AgentModeControl';
-import type { ChatAgentMode } from './src/chatAgentModes';
+import type { ServerChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
 import { useAuth } from './src/auth/AuthProvider';
@@ -158,6 +158,8 @@ export function AppContent({
     retrySave,
     recommendation,
     chatPending,
+    chatCanCancel,
+    cancelChat,
     agentMode,
     changeAgentMode,
     agentConnected,
@@ -271,10 +273,13 @@ export function AppContent({
     setEvents((old) => old.filter((e) => e.id !== id));
   const upcomingEvents = upcomingWithin(events, 7);
   const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
+  useEffect(() => {
+    if (!surveyRecording && agentMode === 'langgraph-advisors' && !chatPending) changeAgentMode('a-router');
+  }, [surveyRecording, agentMode, chatPending, changeAgentMode]);
   const toGift = (product: Parameters<typeof chatService.toGift>[0]): Gift =>
     chatService.toGift(product, session.state);
   const send = (text: string, source: 'typed' | 'quick_reply' = 'typed', fresh?: ChatSession) => {
-    if (!text.trim()) return;
+    if (!text.trim() || (!surveyRecording && agentMode === 'langgraph-advisors')) return;
     // Clear optimistically so a slow (e.g. LLM) round trip can't let further typing
     // pile onto the just-sent text; restore it only if the send actually fails.
     if (source === 'typed') setInput('');
@@ -876,17 +881,6 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
-                  {!surveyRecording && agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                    <View style={s.advisorPanel}>
-                      <AgentPanel
-                        agents={recommendation.agents}
-                        disabled={disabledAdvisors}
-                        busy={chatPending}
-                        onToggle={toggleAdvisor}
-                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                      />
-                    </View>
-                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
@@ -904,7 +898,7 @@ export function AppContent({
                     ))}
                   </ScrollView>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
-                  {!surveyRecording && <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />}
+                  {!surveyRecording && agentMode !== 'langgraph-advisors' && <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />}
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={[s.inputShell, composerFocused && s.inputShellFocused]}>
@@ -927,12 +921,13 @@ export function AppContent({
                     </View>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="메시지 보내기"
-                      disabled={chatPending || (!input.trim() && attachments.length === 0)}
-                      onPress={submitComposer}
-                      style={[s.send, !input.trim() && attachments.length === 0 && s.disabled]}
+                      accessibilityLabel={chatCanCancel ? '응답 중지' : '메시지 보내기'}
+                      disabled={!chatCanCancel && (chatPending || (!input.trim() && attachments.length === 0))}
+                      onPress={chatCanCancel ? cancelChat : submitComposer}
+                      style={[s.send, !chatCanCancel && !input.trim() && attachments.length === 0 && s.disabled]}
                     >
-                      <ArrowUp size={22} color={input.trim() || attachments.length ? c.white : c.muted} />
+                      {chatCanCancel ? <Text style={[s.small, { color: c.white }]}>중지</Text> :
+                        <ArrowUp size={22} color={input.trim() || attachments.length ? c.white : c.muted} />}
                     </Pressable>
                   </View>
                 </View>
@@ -1166,14 +1161,22 @@ function usePassState() {
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string } | null>(null);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ServerChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
-  const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
+  const [agentMode, setAgentMode] = useState<ServerChatAgentMode>('a-router');
   const [chatError, setChatError] = useState(chatConfigurationError);
   const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
   const cardFeedbackRef = useRef<CardFeedback[]>([]);
-  const chatFlight = useRef<{ revision: number; controller: AbortController | null }>({ revision: 0, controller: null });
-  const changeAgentMode = useCallback((next: ChatAgentMode) => {
+  const chatFlight = useRef<{ revision: number; controller: AbortController | null; cancellable?: { draft: string } }>({ revision: 0, controller: null });
+  const cancelChat = () => {
+    const { controller, cancellable, revision } = chatFlight.current;
+    if (!controller || !cancellable) return;
+    chatFlight.current = { revision: revision + 1, controller: null };
+    controller.abort();
+    setChatPending(false);
+    if (cancellable.draft) setInput(current => current || cancellable.draft);
+  };
+  const changeAgentMode = useCallback((next: ServerChatAgentMode) => {
     if (chatFlight.current.controller) return;
     setAgentMode(next);
     setChatError('');
@@ -1184,6 +1187,8 @@ function usePassState() {
     if (owner && chatConfigurationError) { setChatError(chatConfigurationError); return false; }
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
+    chatFlight.current.cancellable = operation === 'turn' && serverChat && (agentMode === 'full-chat' || agentMode === 'full-chat-feedback-2')
+      ? { draft: source === 'typed' ? text : '' } : undefined;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
     refreshSignal();
     try {
@@ -1221,7 +1226,7 @@ function usePassState() {
       setChatError((error as Error).message || '추천 요청에 실패했어요. 다시 보내주세요.');
       return false;
     } finally {
-      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; chatFlight.current.cancellable = undefined; setChatPending(false); }
     }
   };
   const changeFeedbackEnabled = async (enabled: boolean) => {
@@ -1305,7 +1310,8 @@ function usePassState() {
     archiveCurrentChat(cloud.current?.currentId() ?? null);
     resumedGuestId.current = null; setRestoredRecommendations(null);
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
-    chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
+    chatFlight.current.controller?.abort();
+    chatFlight.current = { revision: chatFlight.current.revision + 1, controller: null };
     setChatPending(false); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
     const next = chatService.createSession();
     setSession(next); setMessages([]);
@@ -1448,6 +1454,8 @@ function usePassState() {
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
     recommendation,
     chatPending,
+    chatCanCancel: chatPending && Boolean(chatFlight.current.cancellable),
+    cancelChat,
     agentMode,
     changeAgentMode,
     agentConnected: Boolean(serverChat),

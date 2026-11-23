@@ -5,3 +5,4 @@ export const chatAgentModes = [
 ] as const;
 
 export type ChatAgentMode = typeof chatAgentModes[number]['agent'];
+export type ServerChatAgentMode = ChatAgentMode | 'langgraph-advisors';

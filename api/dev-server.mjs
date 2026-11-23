@@ -79,6 +79,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const request = new Request(`http://127.0.0.1:${port}${req.url}`, { signal: controller.signal, method: req.method, headers: { ...req.headers, 'CF-Connecting-IP': req.socket.remoteAddress }, ...(req.method === 'GET' || req.method === 'HEAD' ? {} : { body: Readable.toWeb(req), duplex: 'half' }) });
     const response = await worker.fetch(request, env);
+    if (res.destroyed) return;
     res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer()));
   } catch { if(!res.destroyed){res.writeHead(503);res.end('API unavailable');} }
   finally {req.removeListener('aborted',aborted);res.removeListener('close',closed);}

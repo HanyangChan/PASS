@@ -7,6 +7,7 @@ const ready=()=>({...createSession('test'),state:{...createSession('test').state
 const sequence=(actions,seen=[])=>async input=>{seen.push(structuredClone(input));assert.ok(actions.length,'unexpected model call');return actions.shift();};
 const run=(agent,session=ready(),extra={})=>agent.runTurn({session,products,request:{kind:'message',expectedVersion:session.version,text:'추천해줘'},...extra});
 const finish={action:'respond',type:'result'};
+const compound={request:{kind:'message',expectedVersion:0,text:'조건을 적용하고 이전 조건과 비교해줘'}};
 
 test('every message, including greetings and quick-reply yes, goes to model first',async()=>{
   const seen=[];
@@ -14,14 +15,14 @@ test('every message, including greetings and quick-reply yes, goes to model firs
   assert.equal(out.kind,'conversation');assert.equal(out.routing.llmCalls,1);assert.equal(out.routing.toolCalls,0);assert.equal(seen[0].text,'안녕');
   const session=ready();session.state.budget.shipping_included=null;
   const reply=await run(createAgent({decide:sequence([{action:'update_conditions',patch:{budget:{shipping_included:false}}},finish])}),session,{request:{kind:'message',text:'아니요',expectedVersion:0},pendingQuestion:'예산에 배송비를 포함할까요?'});
-  assert.equal(reply.session.state.budget.shipping_included,false);assert.equal(reply.routing.llmCalls,2);
+  assert.equal(reply.session.state.budget.shipping_included,false);assert.equal(reply.routing.llmCalls,1);
 });
 
-test('model selects tool, observes engine facts, then selects finish',async()=>{
+test('simple recommendation completes as soon as the engine returns facts',async()=>{
   const seen=[];const session=ready(),before=structuredClone(session);
-  const out=await run(createAgent({decide:sequence([{action:'search_products'},finish],seen)}),session);
+  const out=await run(createAgent({decide:sequence([{action:'search_products'}],seen)}),session);
   assert.equal(out.result.cards[0].id,'tea');assert.equal(out.result.cards[0].budget_cost_krw,33000);
-  assert.equal(seen[1].observations[0].result.cards[0].id,'tea');assert.equal(out.routing.llmCalls,2);assert.equal(out.routing.toolCalls,1);assert.deepEqual(session,before);
+  assert.equal(seen.length,1);assert.equal(out.routing.llmCalls,1);assert.equal(out.routing.toolCalls,1);assert.deepEqual(session,before);
 });
 
 test('hypothetical comparison preserves state; explicit update uses shared engine',async()=>{
@@ -43,7 +44,7 @@ test('first recipient preserves prior conditions; recipient switch clears old pr
 
 test('clarification ends execution and rolls back any staged changes',async()=>{
   const session=ready();
-  const out=await run(createAgent({decide:sequence([{action:'update_conditions',patch:{budget:{amount_krw:70000}}},{action:'clarify',question:'누구의 취향인가요?'}])}),session);
+  const out=await run(createAgent({decide:sequence([{action:'update_conditions',patch:{budget:{amount_krw:70000}}},{action:'clarify',question:'누구의 취향인가요?'}])}),session,compound);
   assert.equal(out.kind,'question');assert.deepEqual(out.session,session);assert.equal(out.routing.llmCalls,2);
 });
 
@@ -72,11 +73,11 @@ test('explicit allergen cancellation and explicit condition editor can remove ex
 });
 
 test('repeated tool / shared call limits terminate and discard staged changes',async()=>{
-  const repeated=await run(createAgent({decide:sequence([{action:'search_products'},{action:'search_products'}])}));assert.equal(repeated.routing.stopReason,'no_progress');
+  const repeated=await run(createAgent({decide:sequence([{action:'search_products'},{action:'search_products'}])}),ready(),compound);assert.equal(repeated.routing.stopReason,'no_progress');
   const session=ready();
-  const limited=await run(createAgent({maxLlmCalls:1,decide:sequence([{action:'update_conditions',patch:{budget:{amount_krw:70000}}}])}),session);
+  const limited=await run(createAgent({maxLlmCalls:1,decide:sequence([{action:'update_conditions',patch:{budget:{amount_krw:70000}}}])}),session,compound);
   assert.equal(limited.routing.stopReason,'llm_limit');assert.deepEqual(limited.session,session);
-  const tools=await run(createAgent({maxToolCalls:1,decide:sequence([{action:'search_products'},{action:'compare_budget',amount_krw:70000}])}));assert.equal(tools.routing.stopReason,'tool_limit');
+  const tools=await run(createAgent({maxToolCalls:1,decide:sequence([{action:'search_products'},{action:'compare_budget',amount_krw:70000}])}),ready(),compound);assert.equal(tools.routing.stopReason,'tool_limit');
 });
 
 test('timeouts and cancellation stop even an uncooperative decision function',async()=>{
@@ -89,7 +90,7 @@ test('timeouts and cancellation stop even an uncooperative decision function',as
 test('provider failure after a successful tool cannot commit partial state',async()=>{
   const session=ready(),before=structuredClone(session);let calls=0;
   const decide=async()=>{if(calls++)throw Error('secret upstream detail');return {action:'update_conditions',patch:{budget:{amount_krw:70000}}};};
-  await assert.rejects(run(createAgent({decide}),session),e=>e.code==='agent_unavailable'&&!e.message.includes('secret'));assert.deepEqual(session,before);
+  await assert.rejects(run(createAgent({decide}),session,compound),e=>e.code==='agent_unavailable'&&!e.message.includes('secret'));assert.deepEqual(session,before);
 });
 
 test('fake products/free-text responses and stale sessions are rejected',async()=>{
@@ -128,12 +129,12 @@ test('unsupported scent category exclusions are rejected with feedback before ex
 test('confirming an unchanged budget can finish; repeating it without progress stops',async()=>{
   const action={action:'update_conditions',patch:{budget:{amount_krw:50000}}};
   const out=await run(createAgent({decide:sequence([action,finish])}));assert.equal(out.kind,'recommendation');assert.equal(out.session.version,0);
-  const repeated=await run(createAgent({decide:sequence([action,action])}));assert.equal(repeated.routing.stopReason,'no_progress');
+  const repeated=await run(createAgent({decide:sequence([action,action])}),ready(),compound);assert.equal(repeated.routing.stopReason,'no_progress');
 });
 
 test('model context exposes only single gift fields and does not retain resolved pending question',async()=>{
   const seen=[],session=ready();session.state.budget.shipping_included=null;
-  await run(createAgent({decide:sequence([{action:'update_conditions',patch:{budget:{shipping_included:false}}},finish],seen)}),session,{pendingQuestion:'예산에 배송비를 포함할까요?'});
+  await run(createAgent({decide:sequence([{action:'update_conditions',patch:{budget:{shipping_included:false}}},finish],seen)}),session,{...compound,pendingQuestion:'예산에 배송비를 포함할까요?'});
   assert.ok(!('scope' in seen[0].state.budget));assert.ok(!('quantity' in seen[0].state));assert.equal(seen[1].currentQuestion,null);assert.ok(!('scope' in seen[1].observations[0].evaluatedState.budget));
 });
 
@@ -144,5 +145,5 @@ test('concurrent runs do not share observations, counters or staged state',async
     return {action:'compare_budget',amount_krw:input.text.includes('7')?70000:40000};
   }});
   const [a,b]=await Promise.all([run(agent,ready(),{request:{kind:'message',text:'7만원이면?',expectedVersion:0}}),run(agent,ready(),{request:{kind:'message',text:'4만원이면?',expectedVersion:0}})]);
-  assert.equal(a.evaluatedState.budget.amount_krw,70000);assert.equal(b.evaluatedState.budget.amount_krw,40000);assert.equal(a.routing.llmCalls,2);assert.equal(b.routing.llmCalls,2);assert.equal(a.session.state.budget.amount_krw,50000);assert.equal(b.session.state.budget.amount_krw,50000);
+  assert.equal(a.evaluatedState.budget.amount_krw,70000);assert.equal(b.evaluatedState.budget.amount_krw,40000);assert.equal(a.routing.llmCalls,1);assert.equal(b.routing.llmCalls,1);assert.equal(a.session.state.budget.amount_krw,50000);assert.equal(b.session.state.budget.amount_krw,50000);
 });
