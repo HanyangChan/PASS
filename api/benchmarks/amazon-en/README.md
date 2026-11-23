@@ -15,15 +15,17 @@ node api/benchmarks/amazon-en/run.mjs --validate
 
 ## 본실험
 
-실호출에는 서버 `api/.dev.vars` 또는 프로세스 환경의 `LLM_API_KEY`와 OpenAI 호환 공급자 설정이 필요하다. 모델은 DeepSeek V4 Flash, 가격은 백만 토큰당 입력 $0.06·출력 $0.17을 사용한다. 캐시 입력에는 같은 입력 단가를 적용한다.
+실호출에는 서버 `api/.dev.vars` 또는 프로세스 환경의 `LLM_API_KEY`와 OpenAI 호환 공급자 설정이 필요하다. 기본 모델은 DeepSeek V4 Flash이며 백만 토큰당 입력 $0.06·출력 $0.17을 적용한다. GPT-5.6 Luna는 `--model gpt-5.6-luna`로 선택하며 백만 토큰당 입력 $0.20·출력 $1.20을 적용한다. 캐시 입력에는 같은 입력 단가를 적용한다.
 
 ```sh
 node api/benchmarks/amazon-en/run.mjs --mode BC --data data/amazon-en/bc
 node api/benchmarks/amazon-en/run.mjs --mode A --data data/amazon-en/a
 node api/benchmarks/amazon-en/report.mjs data/amazon-en/a data/amazon-en/bc --output data/amazon-en/report
+node api/benchmarks/amazon-en/run.mjs --model gpt-5.6-luna --mode AB --data data/amazon-en/luna-ab
+node api/benchmarks/amazon-en/report.mjs data/amazon-en/luna-ab
 ```
 
-`run.mjs`는 기본적으로 `ABC`를 실행한다. 각 경우에 `A`, `B`, `C`, `BC`, `ABC`를 지정할 수 있다. 앱 코드, 카탈로그, 시나리오, 채점 버전 및 실행기 변경을 메타데이터에 기록한다. 같은 서명의 중단된 실행은 저장된 행 다음부터 재개한다. 다른 수정본으로 시험할 때는 새 결과 폴더를 사용한다.
+`run.mjs`는 기본적으로 `ABC`를 실행한다. `A`, `B`, `C`, `AB`, `BC`, `ABC`를 지정할 수 있다. 앱 코드, 카탈로그, 시나리오, 채점 버전 및 실행기 변경을 메타데이터에 기록한다. 같은 서명의 중단된 실행은 저장된 행 다음부터 재개한다. 다른 수정본으로 시험할 때는 새 결과 폴더를 사용한다.
 
 ## 보관된 결과 집계
 
@@ -37,3 +39,11 @@ node api/benchmarks/amazon-en/report.mjs \
 ```
 
 보관 기록을 집계할 때 상품명과 알레르기 응답을 별도 파일로 검토하려면 기존 카탈로그에 대해 `--catalog-dir data/amazon-en/catalog`를 지정한다. 앱 코드나 채점 기준이 다른 실행의 결과는 함께 집계할 수 없다.
+
+[GPT-5.6 Luna A/B 보관 결과](../../../docs/verification/gpt-luna-amazon-en-2026-11-23/comparison.md)는 다음 명령으로 집계한다.
+
+```sh
+node api/benchmarks/amazon-en/report.mjs \
+  docs/verification/gpt-luna-amazon-en-2026-11-23 \
+  --output data/amazon-en/luna-archived-report
+```

@@ -17,15 +17,22 @@ const { values } = parseArgs({ options: {
   'catalog-dir': { type: 'string', default: 'data/amazon-en/catalog' },
   'config-root': { type: 'string' },
   mode: { type: 'string', default: 'ABC' },
+  model: { type: 'string', default: 'deepseek-v4-flash' },
   validate: { type: 'boolean', default: false },
   worktree: { type: 'boolean', default: false },
 } });
 const repetitions = 3;
 const day = '2026-11-30';
 const allModes = { A: 'a-router', B: 'full-chat', C: 'full-chat-feedback-2' };
-assert.match(values.mode, /^(?:A|B|C|BC|ABC)$/, 'mode must be A, B, C, BC or ABC');
+assert.match(values.mode, /^(?:A|B|C|AB|BC|ABC)$/, 'mode must be A, B, C, AB, BC or ABC');
 const modes = Object.fromEntries([...values.mode].map(mode => [mode, allModes[mode]]));
-const expectedModel = 'deepseek-v4-flash';
+const expectedModel = values.model;
+const modelRates = new Map([
+  ['deepseek-v4-flash', { INPUT: 0.06, CACHED_INPUT: 0.06, OUTPUT: 0.17 }],
+  ['gpt-5.6-luna', { INPUT: 0.20, CACHED_INPUT: 0.20, OUTPUT: 1.20 }],
+]);
+const rates = modelRates.get(expectedModel);
+assert.ok(rates, `unsupported model: ${expectedModel}`);
 const repo = resolve(values.repo);
 const git = (...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' }).trim();
 const baseline = git('rev-parse', 'HEAD');
@@ -57,7 +64,6 @@ const local = await loadLocalEnv({
   },
 });
 if (!values.validate) assert.ok(local.LLM_API_KEY, 'configure the compatible LLM provider before a live run');
-const rates = { INPUT: 0.06, CACHED_INPUT: 0.06, OUTPUT: 0.17 };
 
 const dataDir = resolve(values.data);
 const catalogDir = resolve(values['catalog-dir']);

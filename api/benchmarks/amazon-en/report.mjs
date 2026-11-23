@@ -5,13 +5,19 @@ import { createInterface } from 'node:readline';
 import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
+const modelNames = new Map([
+  ['deepseek-v4-flash', { title: 'DeepSeek', name: 'DeepSeek V4 Flash' }],
+  ['gpt-5.6-luna', { title: 'GPT-5.6 Luna', name: 'GPT-5.6 Luna' }],
+]);
+
 async function readRun(directory) {
   const lines = (await readFile(join(directory, 'runs.jsonl'), 'utf8')).trimEnd().split('\n');
   const meta = JSON.parse(lines.shift());
   const rows = lines.map(line => JSON.parse(line));
   const progress = JSON.parse(await readFile(join(directory, 'progress.json'), 'utf8'));
   assert.equal(progress.signature, meta.signature);
-  assert.equal(meta.model, 'deepseek-v4-flash');
+  assert.ok(modelNames.has(meta.model), `unsupported model: ${meta.model}`);
+  assert.equal(progress.model, meta.model);
   assert.equal(progress.status, 'complete');
   assert.equal(rows.length, progress.planned);
   return { directory, meta, rows, progress };
@@ -24,11 +30,12 @@ assert.ok(paths.length, 'provide one or more results directories');
 const directory = resolve(values.output ?? paths[0]);
 const runs = await Promise.all(paths.map(path => resolve(path)).map(readRun));
 const base = runs[0].meta;
+const model = modelNames.get(base.model);
 const catalogDir = values['catalog-dir'] ?? base.catalogDir;
 const modeMap = {};
 const summary = {};
 for (const run of runs) {
-  for (const field of ['baseline','sourceRevision','scoringVersion','day','rates','reasoning','aMode','repetitions','fixtures','ingredientEvidence']) {
+  for (const field of ['baseline','sourceRevision','scoringVersion','day','model','rates','reasoning','aMode','repetitions','fixtures','ingredientEvidence']) {
     assert.deepEqual(run.meta[field],base[field],field);
   }
   assert.equal(run.meta.catalog.catalog_sha256,base.catalog.catalog_sha256);
@@ -95,9 +102,11 @@ const modes = labels.map(label => {
   return { label, selected, attempts, usage, turns, exact, recommend, multiRows:scoredMultiRows, conditional, allergy, unclear, known, s, knownCost };
 });
 const qualified = turn => turn.score.answeredWithEligibleRecommendation;
+const inputRate = meta.rates.INPUT.toFixed(2);
+const outputRate = meta.rates.OUTPUT.toFixed(2);
 const entries = [
-  '# PASS DeepSeek 본실험 결과', '',
-  `DeepSeek V4 Flash · PASS 기준 커밋 \`${meta.baseline.slice(0, 7)}\` · 영문 Amazon 상품 ${meta.catalog.selected.toLocaleString('ko-KR')}개 · ${meta.fixtures.length}개 × 반복 ${meta.repetitions}회 × ${labels.join('/')} = ${rows.length.toLocaleString('ko-KR')}회`,
+  `# PASS ${model.title} 본실험 결과`, '',
+  `${model.name} · PASS 기준 커밋 \`${meta.baseline.slice(0, 7)}\` · 영문 Amazon 상품 ${meta.catalog.selected.toLocaleString('ko-KR')}개 · ${meta.fixtures.length}개 × 반복 ${meta.repetitions}회 × ${labels.join('/')} = ${rows.length.toLocaleString('ko-KR')}회`,
   ...(meta.sourceRevision?['', `실행 소스 해시 \`${meta.sourceRevision}\` · 채점 버전 ${meta.scoringVersion}`]:[]),
   '', '## 정확도·응답 시간·비용', '',
   '| 모드 | 정확 상품 Hit@1 / Hit@3 | 일반 추천 | 다중 턴 전체 성공 | 조건형·다중 턴 응답 | HTTP 오류 | API p50 / p95(초) | 추정 비용 |',
@@ -126,7 +135,7 @@ for (const m of modes) {
 const knownCost = sum(modes, m => m.knownCost);
 const allCostKnown = modes.every(m => m.s.usd !== null);
 entries.push('', `API 요청 ${sum(modes, m => m.turns.length).toLocaleString('ko-KR')}회 · 모델 시도 ${sum(modes, m => m.attempts.length).toLocaleString('ko-KR')}회 · ${allCostKnown ? '총 추정 비용' : '사용량이 확인된 요청의 비용 소계'} ${usd(knownCost)}`, '',
-  '비용은 사용자 첨부 단가인 백만 토큰당 입력 $0.06·출력 $0.17로 계산했다. 캐시 입력은 일반 입력과 동일한 단가를 적용했다. API 시간에는 오류, 메인 Worker 처리와 모델 왕복이 포함된다. 원격 DB, 앱 UI, 초기 카탈로그 로딩은 별도다.',
+  `비용은 사용자 첨부 단가인 백만 토큰당 입력 $${inputRate}·출력 $${outputRate}로 계산했다. 캐시 입력은 일반 입력과 동일한 단가를 적용했다. API 시간에는 오류, 메인 Worker 처리와 모델 왕복이 포함된다. 원격 DB, 앱 UI, 초기 카탈로그 로딩은 별도다.`,
   '', '## 시나리오 반복 간 일관성', '',
   '| 모드 | 정확 상품을 한 번 이상 Top 3에 반환 | 정확 상품을 세 번 모두 Top 3에 반환 | 질문 없이 조건 충족 응답 비율 |',
   '|---|---:|---:|---:|');
