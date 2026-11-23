@@ -17,3 +17,7 @@
 `npm run benchmark:feedback`은 B/피드백 최대 1회/최대 2회 모드를 같은 실행에서 비교한다. 기존 20개 과제는 회귀 확인용 1회씩, 새 문구 10개는 각 3회씩 실행한다. 전부 같은 모델과 reasoning=false를 사용한다. 검토 횟수 상한은 행동당 값이며, 2회 모드도 첫 검토가 통과하면 추가 검토를 하지 않는다. 피드백 모드의 전체 논리 호출 상한은 10회이고 기존 B는 6회다. 검토·수정을 포함한 실제 호출 수와 사용량도 측정한다.
 
 결과는 `docs/verification/feedback-tradeoff-2026-11-06-{regression,holdout}.json`과 요약 JSON에 저장한다. [실측 보고서](../../docs/verification/feedback-tradeoff-2026-11-06.md)를 참고한다. 같은 총 계산량에서 검토만의 효과를 분리한 실험은 아니며, 프롬프트 개선에 사용한 기존 과제와 새 문구 점수를 섞어 일반화 성능이라고 부르지 않는다.
+
+## 영문 Amazon 카탈로그 본실험
+
+영문 상품 30만 개에서 A/B/C의 정확 상품·조건형 추천·알레르기 처리·응답 시간·비용을 측정한다. [실행 방법](amazon-en/README.md) · [수정 후 DeepSeek 실험 기록](../../docs/verification/deepseek-amazon-en-2026-11-23/README.md)
