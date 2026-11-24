@@ -83,7 +83,7 @@ function narrowDetails(rows, text, phrase) {
   return narrowed.length ? narrowed : rows;
 }
 
-export function lookupIndexedCatalogItem(text, products) {
+export function lookupIndexedCatalogItem(text, products, {matchNameWords=false}={}) {
   if (!text) return null;
   const { asins, models, rows } = catalogIndex(products);
   if (alternatives.test(text)) return null;
@@ -92,11 +92,13 @@ export function lookupIndexedCatalogItem(text, products) {
   if (asin) return (asins.get(asin) ?? []).map(({ product }) => product);
   const quoted = text.match(/["“]([^"”\n]+)["”]/)?.[1];
   const codes = modelCodes(quoted ?? text);
-  if (!exactIntent.test(text) && !(lookupIntent.test(text) && (quoted || codes.length))) return null;
+  const explicitProduct=exactIntent.test(text) || (matchNameWords&&/이\s*(?:제품|상품)을?\s*고르고|(?:제품|상품)이?\s*있으면\s*보여|실물을\s*찾/.test(text));
+  if (!explicitProduct && !(lookupIntent.test(text) && (quoted || codes.length))) return null;
 
   const phrases = quoted ? [normalize(quoted)] : (text.match(/[A-Za-z][A-Za-z0-9'/-]*(?:[ \t]+[A-Za-z0-9'/-]+)*/g) ?? [])
     .map(normalize).filter(phrase => phrase.length >= 6 && phrase.includes(' '))
     .sort((a, b) => b.length - a.length);
+  if(matchNameWords && !quoted && !phrases.length && !codes.length) return null;
   if (quoted) {
     const exact = rows.filter(({ names }) => names.includes(phrases[0]));
     if (exact.length) return narrowDetails(exact, text, phrases[0]).map(({ product }) => product);
@@ -105,7 +107,7 @@ export function lookupIndexedCatalogItem(text, products) {
   if (hits.length) {
     const remaining = hits.slice(1).map(entries => new Set(entries));
     const candidates = hits[0].filter(row => remaining.every(entries => entries.has(row)));
-    return narrowDetails(candidates, text, phrases[0]).map(({ product }) => product);
+    if(candidates.length || !matchNameWords) return narrowDetails(candidates, text, phrases[0]).map(({ product }) => product);
   }
   for (const phrase of quoted ? [] : phrases) {
     const exact = rows.filter(({ names }) => names.includes(phrase));
@@ -114,6 +116,17 @@ export function lookupIndexedCatalogItem(text, products) {
   for (const phrase of phrases) {
     const partial = rows.filter(({ names }) => names.some(name => (' ' + name + ' ').includes(' ' + phrase + ' ')));
     if (partial.length) return narrowDetails(partial, text, phrase).map(({ product }) => product);
+  }
+  if(matchNameWords && explicitProduct) {
+    for (const phrase of phrases) {
+      const words=[...new Set(phrase.split(' '))].filter(word=>word.length>=2);
+      if(words.length<2 || !words.some(word=>/[a-z]{3}/.test(word))) continue;
+      const matches=rows.filter(({names})=>names.some(name=>{
+        const padded=' '+name+' ';
+        return words.every(word=>padded.includes(' '+word+' '));
+      }));
+      if(matches.length) return narrowDetails(matches,text,phrase).map(({product})=>product);
+    }
   }
   return [];
 }

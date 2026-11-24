@@ -3,6 +3,7 @@ import { SYSTEM } from '../full-chat/prompts.mjs';
 import { capabilityIssue } from '../full-chat/capabilities.mjs';
 import { createLlmFromEnv } from '../../llm/index.mjs';
 import { reviewReason } from './review-policy.mjs';
+import { verifiedShoppingPatch } from './verified-shopping.mjs';
 
 const CODES=['ownership','unsupported_change','missing_constraint','invalid_value','wrong_tool','premature_finish','wrong_response','unnecessary_question','other'];
 export function validReview(value) {
@@ -37,6 +38,13 @@ export function createAgent({env={},fetcher=fetch,maxReviews=1,maxCalls=10,actor
     if(input.request?.kind!=='message') {
       const out=await createBaseAgent({env,fetcher,...baseOptions,timeoutMs}).runTurn(input);
       return {...out,routing:annotate(out.routing)};
+    }
+    const verified=verifiedShoppingPatch(input);
+    if(verified) {
+      const request={kind:'patch',expectedVersion:input.request.expectedVersion,patch:verified};
+      const out=await createBaseAgent({env,fetcher,...baseOptions,timeoutMs}).runTurn({...input,request});
+      diagnostics.reviewSkips++;
+      return {...out,routing:annotate({...out.routing,stopReason:'verified_shopping_request'})};
     }
     let client;
     const completion=async(messages,validate,{signal})=>{

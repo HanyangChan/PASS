@@ -24,12 +24,17 @@ const conversation={
 export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,decide,agent,agentFactory=createAgent,ranking=APP_RANKING,...limits}={}) {
   const before=input.state;
   const isB=agentFactory===createAgent && (agent===undefined || agent==='full-chat');
+  const isC=agentFactory!==createAgent && /^full-chat-feedback-[12]$/.test(agent??'');
+  const reuseRanking=isB||isC;
   const timings={lookupMs:0,modelMs:0,rankingMs:0,rankingRuns:0,recommendationRuns:0,responseMs:0};
   const lookupStarted=performance.now();
-  const matches=input.operation==='turn'?(isB?lookupIndexedCatalogItem:lookupCatalogItem)(input.text,products):null;
+  const matches=input.operation!=='turn'?null:reuseRanking
+    ?lookupIndexedCatalogItem(input.text,products,{matchNameWords:isC})
+    :lookupCatalogItem(input.text,products);
   timings.lookupMs=performance.now()-lookupStarted;
   const candidates=matches===null?products:matches.length===1?matches:[];
-  const catalog=isB && candidates.every(p=>p.rating_count!=null)?candidates:candidates.map(p=>({...p,rating_count:p.rating_count??0}));
+  const rankingForTurn=isC&&matches?.length===1?{...ranking,giftAware:false,strictGiftPreferences:false}:ranking;
+  const catalog=reuseRanking && candidates.every(p=>p.rating_count!=null)?candidates:candidates.map(p=>({...p,rating_count:p.rating_count??0}));
   const rank=(items,state,options)=>{
     const started=performance.now();
     timings.rankingRuns++;
@@ -43,18 +48,20 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
       ?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))):value);
     if(!memo.has(key)) {
       timings.recommendationRuns++;
-      const result=rank(catalog,state,ranking);
+      const result=rank(catalog,state,rankingForTurn);
       memo.set(key,{...result,items:result.items.slice(0,3)});
     }
     return memo.get(key);
   };
   const session={...createSession('prototype-request'),state:engineState(before)};
-  const request={expectedVersion:0,...(input.operation==='turn'?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
+  const directLookup=isC&&matches!==null&&!input.issues.length&&
+    !/알레르|알러지|성분|피해야|배송|예산|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유/.test(input.text);
+  const request={expectedVersion:0,...(input.operation==='turn'&&!directLookup?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const pending=singleQuestion({state:before,issues:input.issues});
   let output;
   try {
     const pendingQuestion=input.issues.find(isIngredientQuestion)??input.issues[0]??(pending.key?pending.text:'');
-    output=await agentFactory({env,fetcher,decide,ranking,...limits,...(isB?{
+    output=await agentFactory({env,fetcher,decide,ranking:rankingForTurn,...limits,...(reuseRanking?{
       recommendProducts:reuseRecommendation,
       recordModelTime:ms=>{timings.modelMs+=ms;},
     }:{})}).runTurn({session,request,products:catalog,pendingQuestion,history:input.history??[],signal});
@@ -63,12 +70,12 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     if(input.operation!=='turn'||signal?.aborted||!(error instanceof FullChatError)||!recoverableModelErrors.has(reason))throw error;
     const message='이번 요청을 마치지 못했어요. 조건은 그대로예요. 다시 시도하거나 조건을 직접 바꿔주세요.';
     return {session:{state:before,issues:input.issues},changes:[],question:noQuestion,message,view:emptyView(noQuestion,message),
-      agent:agent??error.routing.agent,mode:error.routing.llmCalls?'llm':'rules',routing:{...error.routing,agent:agent??error.routing.agent,route:'fallback',stopReason:reason,...(isB?{timings}:{})}};
+      agent:agent??error.routing.agent,mode:error.routing.llmCalls?'llm':'rules',routing:{...error.routing,agent:agent??error.routing.agent,route:'fallback',stopReason:reason,...(reuseRanking?{timings}:{})}};
   }
   const responseStarted=performance.now();
   const rankingBeforeResponse=timings.rankingMs;
   const activeAgent=agent??output.routing.agent;
-  const routing={...output.routing,agent:activeAgent,...(isB?{timings}:{})};
+  const routing={...output.routing,agent:activeAgent,...(reuseRanking?{timings}:{})};
   if(output.kind==='closed') {
     const message='여기서 마칠게요.';
     return {session:{state:before,issues:input.issues},changes:[],question:noQuestion,message,view:emptyView(noQuestion,message),agent:activeAgent,mode:'rules',routing};
@@ -76,7 +83,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   const state=publicState(output.session.state);
   let issues=[];
   if(output.kind==='question') {
-    if(isB) {
+    if(reuseRanking) {
       if(requiredQuestion(output.session.state)!==output.question) issues=[output.question];
     } else {
       const missing=await coreTurn({session:output.session,products:catalog,request:{kind:'view',expectedVersion:output.session.version}});
@@ -85,7 +92,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   }
   if(input.operation==='conditions'&&input.clearIssues===false) issues=input.issues;
   if(output.kind==='conversation') issues=input.issues;
-  const turn=finishSingle(before,state,issues,candidates,ranking,isB?reuseRecommendation:recommend);
+  const turn=finishSingle(before,state,issues,candidates,rankingForTurn,reuseRanking?reuseRecommendation:recommend);
   let message=turn.message;
   if(output.kind==='conversation') message=conversation[output.responseType];
   else if(output.kind==='comparison') {
@@ -109,15 +116,15 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
       view=emptyView(question,message);
       routing.stopReason=matches.length?'ambiguous_product':'product_not_found';
       turn.question=question;
-    } else if (!isB) {
+    } else if (!reuseRanking) {
       const applied=engineState(state);
       view={question:turn.question,result:recommend(candidates,applied,ranking),comparison:budgetAlternatives(candidates,applied,ranking)};
     }
   }
-  if(isB && !view) {
+  if(reuseRanking && !view) {
     const applied=engineState(state);
     const result=reuseRecommendation(catalog,applied);
-    view={question:turn.question,result,comparison:budgetAlternatives(catalog,applied,ranking,{baseline:result,rank})};
+    view={question:turn.question,result,comparison:budgetAlternatives(catalog,applied,rankingForTurn,{baseline:result,rank})};
   }
   timings.responseMs=Math.max(0,performance.now()-responseStarted-(timings.rankingMs-rankingBeforeResponse));
   return {...turn,message,...(view?{view}:{}),mode:routing.llmCalls?'llm':'rules',agent:activeAgent,routing};

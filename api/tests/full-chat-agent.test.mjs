@@ -313,3 +313,35 @@ test('B switches to fashion accessories and applies the explicitly changed shipp
   assert.deepEqual(out.data.session.state.budget,{amount_krw:40000,shipping_included:true});
   assert.deepEqual(out.data.view.result.items.map(item=>item.id),['accessory']);
 });
+
+test('C locates separated product name words and still applies the price and ingredient filters',async()=>{
+  const item={...products[0],id:'tote',name:"Lavie Women's Betula Medium Tote Bag",category:'bag',allergens_declared:['우유']};
+  const f=fixture([],[...products,item]);
+  const text='카탈로그에서 Lavie Betula Medium 여성용 토트백 상품을 찾아줄래?';
+  const agentMode='full-chat-feedback-2';
+  const session=ready();
+  const found=await f.send({agentMode,text,session});
+  assert.equal(found.status,200);
+  assert.deepEqual(found.data.view.result.items.map(product=>product.id),['tote']);
+  assert.equal(found.data.routing.llmCalls,0);
+  const excluded=await f.send({agentMode,text,session:{...session,state:{...session.state,excluded_ingredients:['우유']}}});
+  assert.deepEqual(excluded.data.view.result.items,[]);
+  const overCap=await f.send({agentMode,text,session:{...session,state:{...session.state,budget:{amount_krw:30000,shipping_included:true}}}});
+  assert.deepEqual(overCap.data.view.result.items,[]);
+  assert.equal(f.payloads.length,0);
+});
+
+test('C applies a complete recommendation request without asking for already supplied conditions',async()=>{
+  const speaker={...products[0],id:'speaker',name:'휴대용 블루투스 스피커',category:'audio',price_krw:22000};
+  const f=fixture([],[...products,speaker]);
+  const response=await f.send({agentMode:'full-chat-feedback-2',session:{state:singleInitial(),issues:[]},
+    text:'받는 사람은 연인이고 원하는 건 음향기기입니다. 배송 포함 예산은 3만 원까지예요.'});
+  assert.equal(response.status,200);
+  assert.deepEqual(response.data.session.state.recipients,['연인']);
+  assert.deepEqual(response.data.session.state.preferences,['category:audio']);
+  assert.deepEqual(response.data.session.state.budget,{amount_krw:30000,shipping_included:true});
+  assert.deepEqual(response.data.view.result.items.map(product=>product.id),['speaker']);
+  assert.equal(response.data.question.key,null);
+  assert.equal(response.data.routing.llmCalls,0);
+  assert.equal(response.data.routing.stopReason,'verified_shopping_request');
+});
