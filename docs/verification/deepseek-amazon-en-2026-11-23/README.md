@@ -18,6 +18,7 @@ PASS의 A/B/C가 영문 상품을 추천하는 정확도, 알레르기 제외 �
 | GitHub 정리 | 기존 원격 브랜치 35개를 정리하고, `main`에서 직접 추적되지 않는 브랜치 팁 13개를 `archive/branches/…` 태그에 보존했다. 수정 코드는 `codex/pass-deepseek-bc-reliability`의 커밋 `52736b2`에 게시했다. |
 | 실험 브랜치 이름 변경 | 전체 비교 실험을 반영해 `codex/pass-amazon-en-abc-benchmark`로 이름을 바꿨다. |
 | GPT-5.6 Luna 수정 후 실험 | 같은 120개 시나리오와 채점 버전 2로 A/B의 실행 순서를 번갈아 총 720회를 순차 실행했다. 성분 미상 27건에서 A는 카드 27건, B는 카드 0건을 반환했다. [수정 후 GPT A/B 결과](../gpt-luna-amazon-en-2026-11-23/comparison.md) |
+| GPT-5.6 Luna B 개선 및 재실험 | 모델 번호 조회와 명시 조건 처리를 보강하고 동일한 조건의 추천 결과를 재사용했다. 상품 조회·모델 호출·순위 계산·응답 구성 시간을 기록했다. 기존 120개 시나리오로 개선 B를 360회 실행했다. [B 전후 비교](../gpt-luna-b-upgrade-2026-11-24/before-after.md) |
 
 ## 평가 조건
 
@@ -32,6 +33,7 @@ PASS의 A/B/C가 영문 상품을 추천하는 정확도, 알레르기 제외 �
 - [수정 후 A 실행별 기록](a/runs.jsonl)과 [집계](a/progress.json)
 - [수정 후 B/C 실행별 기록](bc/runs.jsonl)과 [집계](bc/progress.json)
 - [수정 후 GPT-5.6 Luna A/B 결과](../gpt-luna-amazon-en-2026-11-23/comparison.md)
+- [GPT-5.6 Luna B 업그레이드 전후 비교](../gpt-luna-b-upgrade-2026-11-24/before-after.md)
 - [고정 시나리오](../../../api/benchmarks/amazon-en/fixtures.mjs)와 [재현 방법](../../../api/benchmarks/amazon-en/README.md)
 - [B 동작](../../../baseline/agents/full-chat/index.mjs), [C 검토](../../../baseline/agents/full-chat-feedback/index.mjs), [상품 조회](../../../api/catalog-item-lookup.mjs), [API 응답 처리](../../../api/full-chat-agent.mjs)
 
