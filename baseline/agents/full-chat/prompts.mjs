@@ -33,3 +33,5 @@ Allowed preferences: ${PREFERENCE_TAGS.join(', ')}. Allowed categories: ${CATEGO
 Tea preference needs category:coffee_tea AND type:tea; coffee needs category:coffee_tea AND type:coffee.
 Remember demo prices/stock/delivery and name-derived allergen information are not live transaction guarantees.
 Budget/time limits are shared across the whole turn. Return a final action promptly after sufficient results.`;
+
+export const B_SYSTEM = SYSTEM + '\nAn explicit recipient label such as 연인, 친구, or 동료 is sufficient for shopping. When the request has a usable budget and product type, apply the explicit budget, shipping and product category together. Ask about recipient details only when needed to fulfill the request. Use digital for 디지털기기, and audio when the request explicitly asks for 이어폰, 헤드폰, or 스피커.';

@@ -82,18 +82,24 @@ function inputOf(raw, shoppingText) {
 // apiBase is this API's own address: web photos are served from it at /catalog-images/.
 function defaultCatalog(fetcher) {
   let rows = null;
+  const snapshots = new Map();
   return async (env, { apiBase } = {}) => {
     const source = catalogSource(env.CATALOG_SOURCE);
     const today = todayKst();
-    const lists = [];
+    let sourceRows = null;
     if (source !== 'web') {
       rows ??= cachedCatalog(() => fetchCatalog({ url: env.SUPABASE_URL, key: env.SUPABASE_PUBLISHABLE_KEY, fetcher }));
-      const amazon = (await rows()).map(row => toEngineProduct(row, today));
-      if (source === 'amazon') return amazon;
-      lists.push(amazon);
+      sourceRows = await rows();
     }
+    const base=source==='amazon'?null:apiBase;
+    const previous=snapshots.get(source);
+    if(previous?.today===today && previous.sourceRows===sourceRows && previous.base===base) return previous.products;
+    const lists = [];
+    if (sourceRows) lists.push(sourceRows.map(row => toEngineProduct(row, today)));
     if (source !== 'amazon') lists.push(webCatalog.map(item => fromWebItem(item, today, { apiBase })));
-    return mergeCatalogs(...lists);
+    const products=source==='amazon'?lists[0]:mergeCatalogs(...lists);
+    snapshots.set(source,{today,base,sourceRows,products});
+    return products;
   };
 }
 const catalogLabel = env => { try { return catalogId(env.CATALOG_SOURCE); } catch { return 'invalid'; } };

@@ -5,9 +5,9 @@ import { singleInitial } from '../../lib/single-gift.mjs';
 import { products } from '../../baseline/examples/catalog.mjs';
 const env={CHAT_AGENT:'full-chat',LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'test-secret',LLM_BASE_URL:'https://llm.example',LLM_MODEL:'test-model',SUPABASE_URL:'https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test',IP_LIMITER:{limit:async()=>({success:true})},USER_LIMITER:{limit:async()=>({success:true})}};
 const ready=()=>({state:{...singleInitial(),recipients:['어머니'],budget:{amount_krw:50000,shipping_included:true}},issues:[]});
-function fixture(actions) {
+function fixture(actions, catalog=products) {
   const payloads=[];
-  const api=createApi({catalog:async()=>products,fetcher:async(url,options)=>{
+  const api=createApi({catalog:async()=>catalog,fetcher:async(url,options)=>{
     if(String(url).includes('/auth/v1/user'))return Response.json({id:'owner',role:'authenticated'});
     assert.equal(options.headers.Authorization,'Bearer test-secret');payloads.push(JSON.parse(options.body));
     const next=actions.shift();assert.ok(next,'unexpected HTTP model request');
@@ -224,4 +224,54 @@ test('B/C ask for a single-gift budget before shopping for an unsupported combin
     assert.deepEqual(out.data.view.result.items,[]);
     assert.equal(f.payloads.length,0);
   }
+});
+
+test('B resolves a separated model number, narrows variants, and asks instead of substituting on a miss',async()=>{
+  const white={...products[0],id:'amz-B01BKEZYBY',name:"SWISSTYLE Analog White Dial Women's Watch-SS-703W-703B",category:'watch'};
+  const black={...white,id:'amz-B01BKEZYBZ',name:"SWISSTYLE Analog Black Dial Women's Watch-SS-703W-703B"};
+  const f=fixture(Array.from({length:4},()=>({action:'search_products'})),[...products,white,black]);
+  const exact=await f.send({text:'SWISSTYLE SS-703W-703B 흰색 다이얼 시계 제품이 있으면 보여줘.'});
+  assert.deepEqual(exact.data.view.result.items.map(item=>item.id),[white.id]);
+  const asin=await f.send({text:'ASIN B01BKEZYBZ 상품을 찾아줘.'});
+  assert.deepEqual(asin.data.view.result.items.map(item=>item.id),[black.id]);
+  const ambiguous=await f.send({text:'SWISSTYLE SS-703W-703B 시계와 같은 모델을 찾아주세요.'});
+  assert.equal(ambiguous.data.routing.stopReason,'ambiguous_product');
+  assert.deepEqual(ambiguous.data.view.result.items,[]);
+  const missing=await f.send({text:'카탈로그에서 Acme Lunar Series 상품을 찾아주세요.'});
+  assert.equal(missing.data.routing.stopReason,'product_not_found');
+  assert.deepEqual(missing.data.view.result.items,[]);
+});
+
+test('B uses explicit shopping conditions when a model asks for optional recipient details',async()=>{
+  const watch={...products[0],id:'watch',name:'손목시계',category:'watch',price_krw:21000};
+  const f=fixture([{action:'clarify',question:'선물 받는 분은 남성, 여성 중 어느 쪽인가요?'}],[...products,watch]);
+  const out=await f.send({
+    text:'택배비까지 내고 3만 원 안에 사려고 합니다. 연인에게 줄 만한 손목시계가 있을까요?',
+    session:{state:singleInitial(),issues:[]},
+  });
+  assert.equal(out.status,200);
+  assert.equal(out.data.question.key,null);
+  assert.deepEqual(out.data.session.state.recipients,['연인']);
+  assert.deepEqual(out.data.session.state.budget,{amount_krw:30000,shipping_included:true});
+  assert.deepEqual(out.data.view.result.items.map(item=>item.id),['watch']);
+  assert.equal(f.payloads.length,1);
+  const timings=out.data.routing.timings;
+  for(const key of ['lookupMs','modelMs','rankingMs','responseMs']) assert.ok(Number.isFinite(timings[key])&&timings[key]>=0);
+  assert.equal(timings.recommendationRuns,1);
+});
+
+test('B carries a digital category through a delivery change despite a conflicting model category',async()=>{
+  const audio={...products[0],id:'audio',name:'휴대용 스피커',category:'audio',rating_count:1000};
+  const digital={...products[0],id:'digital',name:'디지털 카메라',category:'digital'};
+  const f=fixture([
+    {action:'update_conditions',patch:{preferences:['category:audio']}},
+    {action:'update_conditions',patch:{delivery_by:'2026-12-06'}},
+  ],[...products,audio,digital]);
+  const first=await f.send({text:'친구에게 줄 디지털기기 선물을 찾습니다. 배송비 포함 8만 원 한도로 골라주세요.'});
+  assert.deepEqual(first.data.session.state.preferences,['category:digital']);
+  assert.deepEqual(first.data.view.result.items.map(item=>item.id),['digital']);
+  const second=await f.send({text:'나머지 조건은 그대로 두고 2026년 12월 3일까지 도착할 상품으로 변경해 주세요.',session:first.data.session});
+  assert.equal(second.data.session.state.delivery_by,'2026-12-03');
+  assert.deepEqual(second.data.session.state.preferences,['category:digital']);
+  assert.deepEqual(second.data.view.result.items.map(item=>item.id),['digital']);
 });

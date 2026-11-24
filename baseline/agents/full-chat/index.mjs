@@ -4,8 +4,9 @@ import { CATEGORIES, PREFERENCE_TAGS } from '../../src/vendor/catalog.mjs';
 import { ALLERGEN_NAMES, mentionedAllergens } from '../../src/vendor/allergens.mjs';
 import { FRAGRANCE_TAG } from '../../src/vendor/fragrance.mjs';
 import { createLlmFromEnv } from '../../llm/index.mjs';
-import { SYSTEM } from './prompts.mjs';
+import { B_SYSTEM } from './prompts.mjs';
 import { capabilityIssue } from './capabilities.mjs';
+import { explicitShoppingConditions, applyExplicitConditions } from './explicit-conditions.mjs';
 
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
@@ -46,7 +47,7 @@ function promptState(state) {
   const {scope,...publicBudget}=budget;
   return {...structuredClone(rest),budget:structuredClone(publicBudget)};
 }
-function requiredQuestion(state) {
+export function requiredQuestion(state) {
   if(!state.recipients.length)return '받는 사람을 알려주세요.';
   if(state.budget.amount_krw===null)return '예산 상한을 알려주세요.';
   if(!state.quantity)return '선물 수량을 알려주세요.';
@@ -90,7 +91,7 @@ function preparePatch(state, patch, userText) {
 }
 
 /** B: a single model-driven action/observation loop; no rule intent router or critic. */
-export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCalls=5,timeoutMs=20000,ranking}={}) {
+export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCalls=5,timeoutMs=20000,ranking,recommendProducts,recordModelTime}={}) {
   for (const [value,max] of [[maxLlmCalls,10],[maxToolCalls,5],[timeoutMs,30000]]) if (!Number.isSafeInteger(value)||value<1||value>max) throw new TypeError('Invalid full-chat limit');
   if (decide!==undefined && typeof decide!=='function') throw new TypeError('Invalid decision function');
   return {id:'full-chat',async runTurn({session,request,products,history=[],pendingQuestion='',signal}) {
@@ -102,7 +103,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
     const routing={agent:'full-chat',route:'agent',llmCalls:0,toolCalls:0,httpAttempts:0,usage:{prompt_tokens:0,completion_tokens:0,total_tokens:0},steps:[]};
     if (request.kind!=='message') {
       const patch=request.kind==='patch'?preparePatch(session.state,request.patch,null):undefined;
-      const out=await coreTurn({session,products,ranking,request:{...request,...(patch?{patch}:{})}});
+      const out=await coreTurn({session,products,ranking,recommendProducts,request:{...request,...(patch?{patch}:{})}});
       if (isIngredientQuestion(pendingQuestion) && !Object.hasOwn(patch??{},'excluded_ingredients') && same(out.session.state.recipients,session.state.recipients)) return {...out,kind:'question',question:pendingQuestion,routing:{...routing,route:'host'}};
       return {...out,routing:{...routing,route:'host'}};
     }
@@ -117,7 +118,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         const llm=createLlmFromEnv(env,{fetcher:(...args)=>{routing.httpAttempts++;return fetcher(...args);}});
         if (!llm.configured) throw Error();
         choose=async (input,{signal}) => {
-          const result=await llm.completeJson({messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify(input)}],responseFormat:env.LLM_RESPONSE_FORMAT||'json_object',validate:validAction,maxTokens:900,signal,...(env.LLM_REASONING_ENABLED==='true'?{reasoningEnabled:true}:env.LLM_REASONING_ENABLED==='false'||llm.model.startsWith('deepseek-')?{reasoningEnabled:false}:{})});
+          const result=await llm.completeJson({messages:[{role:'system',content:B_SYSTEM},{role:'user',content:JSON.stringify(input)}],responseFormat:env.LLM_RESPONSE_FORMAT||'json_object',validate:validAction,maxTokens:900,signal,...(env.LLM_REASONING_ENABLED==='true'?{reasoningEnabled:true}:env.LLM_REASONING_ENABLED==='false'||llm.model.startsWith('deepseek-')?{reasoningEnabled:false}:{})});
           for(const key of Object.keys(routing.usage))routing.usage[key]+=result.usage[key]??0;
           return result.data;
         };
@@ -134,6 +135,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
     const execute=async()=>{
       let staged=structuredClone(session), last=null, capabilityFeedback=null;
       let ingredientBlocked=isIngredientQuestion(pendingQuestion);
+      const explicit=explicitShoppingConditions(request.text,session.state);
       let repaired=false;
       const observations=[],seen=new Set();
       const complete=(limitations=[])=>({...last,session:staged,limitations,routing:{...routing,intent:last.kind==='comparison'?'compare_budget':last.intent??'recommend',stopReason:'complete'}});
@@ -149,6 +151,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         routing.llmCalls++;
         const context={text:request.text,history:structuredClone(history),state:promptState(staged.state),currentQuestion:ingredientBlocked?pendingQuestion:observations.length?requiredQuestion(staged.state):pendingQuestion||requiredQuestion(staged.state),observations:structuredClone(observations),...(capabilityFeedback?{capabilityFeedback}:{}),remaining:{llmCalls:maxLlmCalls-routing.llmCalls,toolCalls:maxToolCalls-routing.toolCalls}};
         let decision;
+        const modelStarted=performance.now();
         try {
           decision=await choose(context,{signal:controller.signal});
           if(!validAction(decision))throw new FullChatError('invalid_response',routing);
@@ -156,8 +159,11 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
           if(error?.code!=='invalid_response' || controller.signal.aborted)throw error;
           repair('invalid_response','The previous decision was not valid JSON for a listed action. Return one valid action only.');
           continue;
+        } finally {
+          recordModelTime?.(performance.now()-modelStarted);
         }
         if(controller.signal.aborted) throw new FullChatError('aborted',routing);
+        if(!ingredientBlocked && !observations.length) decision=applyExplicitConditions(decision,explicit,staged.state);
         routing.steps.push({action:decision.action,...(decision.type?{type:decision.type}:{})});
         capabilityFeedback=capabilityIssue(context,decision);
         if(capabilityFeedback) continue;
@@ -190,7 +196,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         }
         seen.add(signature);routing.toolCalls++;
         if(action==='update_conditions') {
-          const out=await coreTurn({session:staged,products,ranking,request:{kind:'patch',expectedVersion:staged.version,patch}});
+          const out=await coreTurn({session:staged,products,ranking,recommendProducts,request:{kind:'patch',expectedVersion:staged.version,patch}});
           const named=ingredientBlocked?namedIngredients(request.text):[];
           const ingredientsResolved=patch.excluded_ingredients && named.length>0 &&
             named.every(ingredient=>out.session.state.excluded_ingredients.includes(ingredient));
@@ -199,7 +205,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
           staged=out.session;last=out;
         } else {
           if(ingredientBlocked) return {session:structuredClone(session),kind:'question',question:pendingQuestion,trace:[],routing};
-          last=await coreTurn({session:staged,products,ranking,request:{kind:action==='compare_budget'?'what_if_budget':'view',expectedVersion:staged.version,...(action==='compare_budget'?{amount_krw:decision.amount_krw}:{})}});
+          last=await coreTurn({session:staged,products,ranking,recommendProducts,request:{kind:action==='compare_budget'?'what_if_budget':'view',expectedVersion:staged.version,...(action==='compare_budget'?{amount_krw:decision.amount_krw}:{})}});
           if(action==='explain_recommendation') last={...last,intent:'explain'};
         }
         if(ingredientBlocked) return {session:structuredClone(session),kind:'question',question:pendingQuestion,trace:[],routing:{...routing,stopReason:'missing_ingredient'}};

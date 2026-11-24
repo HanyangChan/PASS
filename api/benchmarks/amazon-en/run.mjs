@@ -182,6 +182,7 @@ async function run(task, agent, repeat) {
       steps: data.routing?.steps ?? [],
       review: data.routing?.feedback?.reviews ?? [],
       toolCalls: data.routing?.toolCalls ?? 0,
+      timings: data.routing?.timings,
       question: data.question ?? null, score: scoreTurn(spec, data, invalidApiResponse ? 502 : response.status, ids, byId, ingredientEvidence),
       llmCalls: data.routing?.llmCalls ?? 0, attempts: turnAttempts, usd: cost(turnAttempts),
     });
