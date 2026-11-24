@@ -1,5 +1,7 @@
 # PASS 영문 Amazon 실험 작업 기록
 
+[DeepSeek·GPT A·B·C 최종 비교표](../c-result-audit-2026-11-24/abc-results.md)
+
 PASS의 A/B/C가 영문 상품을 추천하는 정확도, 알레르기 제외 조건 처리, API 응답 시간, 모델 사용 비용을 비교했다. 수정본에서 DeepSeek V4 Flash로 측정한 결과를 보존한다. 같은 기준에서 B와 C의 추천 성과는 같았고, B의 응답 시간과 비용이 더 낮았다. [수정 후 전체 결과](comparison.md)
 
 ## 작업 흐름
