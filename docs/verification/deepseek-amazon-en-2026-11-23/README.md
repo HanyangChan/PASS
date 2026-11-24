@@ -22,6 +22,7 @@ PASS의 A/B/C가 영문 상품을 추천하는 정확도, 알레르기 제외 �
 | DeepSeek V4 Flash A 개선 및 재실험 | 명확한 조건과 ASIN 조회를 규칙으로 처리하고, 모델 해석은 변경 필드만 받도록 줄였다. 최종 추천을 재사용하고 성분 확인이 필요하면 카드를 보류했다. 기존 120개 시나리오로 개선 A를 360회 실행했다. [A 전후 비교](../deepseek-a-upgrade-2026-11-24/before-after.md) |
 | DeepSeek V4 Flash B/C 개선 및 재실험 | B의 상품군 전환과 조건 보존을 보강하고, C는 서버가 확인할 수 있는 단순 변경의 검토를 생략하도록 했다. 같은 120개 시나리오를 B와 C에서 각각 3회씩 번갈아 실행했다. [A/B/C 전후 비교](../deepseek-abc-upgrade-2026-11-24/before-after.md) |
 | GPT-5.6 Luna 전체 재실험 | 최신 A/B/C를 동일 세션에서 번갈아 실행했다. 총 1,080회, API 요청 1,350건이다. 이전 GPT A/B 및 같은 시나리오의 최신 DeepSeek 결과와 비교했다. [GPT A/B/C 전체 비교](../gpt-luna-abc-2026-11-24/abc-comparison.md) |
+| DeepSeek·GPT C 정확 상품 개선 | C에서 상품명과 모델 번호를 확인하는 경로를 확대하고, 명확한 일반 추천 조건을 서버에서 바로 적용했다. 같은 120개 시나리오에서 모델별로 360회 검증했다. [C 모델별 전후 비교](../c-quality-2026-11-24/c-comparison.md) |
 
 ## 평가 조건
 
@@ -40,6 +41,7 @@ PASS의 A/B/C가 영문 상품을 추천하는 정확도, 알레르기 제외 �
 - [DeepSeek V4 Flash A 업그레이드 전후 비교](../deepseek-a-upgrade-2026-11-24/before-after.md)
 - [DeepSeek V4 Flash A/B/C 개선 전후 비교](../deepseek-abc-upgrade-2026-11-24/before-after.md)
 - [GPT-5.6 Luna A/B/C 전체 비교](../gpt-luna-abc-2026-11-24/abc-comparison.md)
+- [DeepSeek·GPT C 정확 상품과 일반 추천 개선](../c-quality-2026-11-24/c-comparison.md)
 - [고정 시나리오](../../../api/benchmarks/amazon-en/fixtures.mjs)와 [재현 방법](../../../api/benchmarks/amazon-en/README.md)
 - [B 동작](../../../baseline/agents/full-chat/index.mjs), [C 검토](../../../baseline/agents/full-chat-feedback/index.mjs), [상품 조회](../../../api/catalog-item-lookup.mjs), [API 응답 처리](../../../api/full-chat-agent.mjs)
 
