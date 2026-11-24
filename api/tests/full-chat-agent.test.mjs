@@ -275,3 +275,41 @@ test('B carries a digital category through a delivery change despite a conflicti
   assert.deepEqual(second.data.session.state.preferences,['category:digital']);
   assert.deepEqual(second.data.view.result.items.map(item=>item.id),['digital']);
 });
+
+test('B replaces the prior category and preserves cost and exclusions on a category-only change',async()=>{
+  const jewelry={...products[0],id:'jewelry',name:'은 목걸이',category:'jewelry',rating_count:1000};
+  const snack={...products[0],id:'snack-safe',name:'쌀 과자',category:'snack'};
+  const f=fixture([
+    {action:'update_conditions',patch:{preferences:['category:snack']}},
+    {action:'update_conditions',patch:{preferences:['category:jewelry'],budget:{amount_krw:90000,shipping_included:false},excluded_categories:[]}},
+  ],[jewelry,snack]);
+  const session=ready();
+  session.state.preferences=['category:jewelry','avoid_fragrance'];
+  session.state.excluded_categories=['kitchen'];
+  session.state.excluded_ingredients=['우유'];
+
+  for(const recipient of ['어머니','친구']) {
+    const current={...session,state:{...session.state,recipients:[recipient]}};
+    const out=await f.send({session:current,text:'처음 찾던 주얼리 대신 간식으로 바꿔 줘. 배송 포함 예산은 그대로야.'});
+    assert.equal(out.status,200);
+    assert.deepEqual(out.data.session.state,{...current.state,preferences:['avoid_fragrance','category:snack']});
+    assert.deepEqual(out.data.view.result.items.map(item=>item.id),['snack-safe']);
+  }
+});
+
+test('B switches to fashion accessories and applies the explicitly changed shipping-inclusive cap',async()=>{
+  const accessory={...products[0],id:'accessory',name:'가죽 지갑',category:'accessory',price_krw:36000};
+  const tooExpensive={...accessory,id:'over-cap',price_krw:39000};
+  const kitchen={...products[0],id:'kitchen',name:'머그컵',category:'kitchen',rating_count:1000};
+  const f=fixture([
+    {action:'update_conditions',patch:{preferences:['category:kitchen'],budget:{amount_krw:40000}}},
+  ],[accessory,tooExpensive,kitchen]);
+  const session=ready();
+  session.state.preferences=['category:beauty'];
+  session.state.budget.shipping_included=false;
+  const out=await f.send({session,text:'생각이 바뀌어서 패션소품으로 보고 싶어. 택배비를 넣어 4만 원까지만 쓸게.'});
+  assert.equal(out.status,200);
+  assert.deepEqual(out.data.session.state.preferences,['category:accessory']);
+  assert.deepEqual(out.data.session.state.budget,{amount_krw:40000,shipping_included:true});
+  assert.deepEqual(out.data.view.result.items.map(item=>item.id),['accessory']);
+});

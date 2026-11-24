@@ -41,6 +41,43 @@ test('read-only search completes without reviewer calls',async()=>{
  assert.equal(out.routing.stopReason,'complete');assert.equal(out.routing.feedback.reviewCalls,0);
 });
 
+test('explicit shipping and deadline changes use server validation without a review',async()=>{
+ const noReview=()=>{throw Error('unexpected review');};
+ const shipping=await run(createAgent({actor:seq([{action:'update_conditions',patch:{budget:{shipping_included:false}}}]),reviewer:noReview}),
+   {request:{kind:'message',expectedVersion:0,text:'배송비 별도로 바꿔줘'}});
+ assert.equal(shipping.session.state.budget.shipping_included,false);
+ assert.equal(shipping.routing.feedback.reviewSkips,1);
+ const deadline=await run(createAgent({actor:seq([{action:'update_conditions',patch:{delivery_by:'2026-12-03'}}]),reviewer:noReview}),
+   {request:{kind:'message',expectedVersion:0,text:'2026년 12월 3일까지 도착할 상품으로 변경해 주세요.'}});
+ assert.equal(deadline.session.state.delivery_by,'2026-12-03');
+ assert.equal(deadline.routing.feedback.reviewCalls,0);
+});
+
+test('recipient changes are reviewed and an unapproved final revision keeps staged state',async()=>{
+ const session=ready();session.state.excluded_ingredients=['우유'];
+ const switchToFriend={action:'update_conditions',patch:{recipients:['친구']}};
+ const options={session,request:{kind:'message',expectedVersion:0,text:'이번에는 친구에게 줄 선물로 바꿔줘.'}};
+ const accepted=await run(createAgent({actor:seq([switchToFriend]),reviewer:seq([pass])}),options);
+ assert.deepEqual(accepted.session.state.recipients,['친구']);
+ assert.equal(accepted.routing.feedback.reviews[0].reason,'recipient_change');
+ const rejected=await run(createAgent({actor:seq([switchToFriend,switchToFriend]),reviewer:seq([revise('missing_constraint','Check which conditions are safe to reset.')])}),options);
+ assert.deepEqual(rejected.session,session);
+ assert.equal(rejected.routing.stopReason,'review_limit');
+ assert.equal(rejected.routing.feedback.reviewCalls,1);
+});
+
+test('a plain search cannot bypass a rejected review of an allergy request',async()=>{
+ const session=ready();
+ const search={action:'search_products'};
+ const out=await run(createAgent({actor:seq([search,search]),reviewer:seq([revise('missing_constraint','The explicit milk exclusion must be applied first.')])}),
+   {session,request:{kind:'message',expectedVersion:0,text:'우유 알레르기가 있어요. 우유는 빼고 선물을 골라주세요.'}});
+ assert.equal(out.kind,'question');
+ assert.equal(out.routing.stopReason,'review_limit');
+ assert.equal(out.routing.feedback.reviews[0].reason,'allergy_constraint');
+ assert.equal(out.routing.toolCalls,0);
+ assert.deepEqual(out.session,session);
+});
+
 test('ownership feedback returns to actor before executing unsupported patch',async()=>{
  const actor=seq([{action:'update_conditions',patch:{preferences:['type:coffee','category:coffee_tea']}},{action:'clarify',question:'받는 분의 취향인가요?'}]);
  const out=await run(createAgent({actor,reviewer:async()=>revise('ownership','Clarify the owner of this preference.')}));

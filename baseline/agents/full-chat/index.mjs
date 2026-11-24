@@ -150,10 +150,11 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         if(controller.signal.aborted) throw new FullChatError('aborted',routing);
         routing.llmCalls++;
         const context={text:request.text,history:structuredClone(history),state:promptState(staged.state),currentQuestion:ingredientBlocked?pendingQuestion:observations.length?requiredQuestion(staged.state):pendingQuestion||requiredQuestion(staged.state),observations:structuredClone(observations),...(capabilityFeedback?{capabilityFeedback}:{}),remaining:{llmCalls:maxLlmCalls-routing.llmCalls,toolCalls:maxToolCalls-routing.toolCalls}};
+        const normalizeAction=action=>!ingredientBlocked&&!observations.length?applyExplicitConditions(action,explicit,staged.state):action;
         let decision;
         const modelStarted=performance.now();
         try {
-          decision=await choose(context,{signal:controller.signal});
+          decision=await choose(context,{signal:controller.signal,normalizeAction});
           if(!validAction(decision))throw new FullChatError('invalid_response',routing);
         } catch(error) {
           if(error?.code!=='invalid_response' || controller.signal.aborted)throw error;
@@ -163,7 +164,7 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
           recordModelTime?.(performance.now()-modelStarted);
         }
         if(controller.signal.aborted) throw new FullChatError('aborted',routing);
-        if(!ingredientBlocked && !observations.length) decision=applyExplicitConditions(decision,explicit,staged.state);
+        decision=normalizeAction(decision);
         routing.steps.push({action:decision.action,...(decision.type?{type:decision.type}:{})});
         capabilityFeedback=capabilityIssue(context,decision);
         if(capabilityFeedback) continue;
