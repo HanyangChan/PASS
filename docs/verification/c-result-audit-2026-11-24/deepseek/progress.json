@@ -1,0 +1,53 @@
+{
+  "signature": "086dfb7c91e5ad008f83f9ae1d70a3c533c1ae861507e0cc00134e79ef45132e",
+  "startedAt": "2026-11-24T11:36:09.811Z",
+  "updatedAt": "2026-11-24T11:57:49.315Z",
+  "model": "deepseek-v4-flash",
+  "status": "complete",
+  "completed": 360,
+  "planned": 360,
+  "summary": {
+    "C": {
+      "tasks": 360,
+      "requests": 450,
+      "httpErrors": 0,
+      "invalidApiResponses": 0,
+      "gracefulFallbacks": 0,
+      "unsupportedQuantityCases": 18,
+      "quantityLimitExplained": 18,
+      "requestLatencyMs": {
+        "median": 2297.2483749999956,
+        "p95": 7330.81695899996
+      },
+      "cumulativeTaskLatencyMs": {
+        "median": 2558.302082999995,
+        "p95": 7829.849958000006
+      },
+      "exactCases": 90,
+      "hit1": 0.6666666666666666,
+      "hit3": 0.6666666666666666,
+      "eligibleItemShare": 1,
+      "conditionalRequests": 252,
+      "conditionalAnswered": 252,
+      "recommendationSuccess": 1,
+      "allergyCases": 90,
+      "knownIngredientCases": 63,
+      "ingredientStoredCases": 63,
+      "clarificationCases": 27,
+      "clarificationCards": 0,
+      "knownViolationCases": 0,
+      "unverifiedFoodCases": 18,
+      "allergyClarificationRate": 1,
+      "httpAttempts": 1019,
+      "llmCalls": 1019,
+      "usageReports": 1018,
+      "reportedInputTokens": 850020,
+      "reportedOutputTokens": 10989,
+      "reportedCachedInputTokens": 250368,
+      "knownUsd": 0.052869329999999645,
+      "usd": null,
+      "usdPer100Tasks": null,
+      "usdPerSuccessfulRecommendation": 0.0001663324324324331
+    }
+  }
+}
