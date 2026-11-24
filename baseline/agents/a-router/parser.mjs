@@ -9,11 +9,11 @@ const categories = [
   ['coffee_tea','커피|홍차|녹차|전통차|(?<![가-힣])차(?=[를을는은도가이로와랑나]|보다|[\\s,.!?]|$)'], ['snack','과자|간식|초콜릿|쿠키|한과|디저트|사탕|젤리|(?<![가-힣])단\\s*(?:것|거|걸)(?=\\s*좋아)'],
   ['health','건강식품|영양제|비타민|유산균|홍삼|(?<![가-힣])건강(?!\\s*식품)'],
   ['food','과일|(?<!건강)식품|음식|기름|오일|고기|한우'], ['beauty','향수|화장품|스킨케어|로션|뷰티(?:\\s*상품)?(?:\\s*전체)?|피부\\s*관리'],
-  ['makeup','메이크업|립스틱|섀도|틴트'], ['fitness','운동|헬스|요가|피트니스|등산|골프|러닝'],
+  ['makeup','메이크업|립스틱|섀도|틴트'], ['fitness','운동용품|운동|헬스|요가|피트니스|등산|골프|러닝'],
   ['audio','이어폰|헤드폰|헤드셋|스피커|음악|음향기기'], ['jewelry','주얼리|목걸이|팔찌|귀걸이|반지|보석'],
-  ['watch','시계'], ['bag','가방|백팩|핸드백|크로스백'], ['accessory','지갑|선글라스|벨트|모자|넥타이|스카프|패션\\s*소품'],
+  ['watch','손목시계|시계'], ['bag','가방|백팩|핸드백|크로스백'], ['accessory','지갑|선글라스|벨트|모자|넥타이|스카프|패션\\s*소품'],
   ['toy','장난감|완구|인형|레고|보드게임'],
-  ['kitchen','주방용품|주방|요리|그릇|텀블러'], ['decor','인테리어|장식|향초|무드등|홈데코'],
+  ['kitchen','주방용품|주방|요리|그릇|텀블러'], ['decor','인테리어\\s*소품|인테리어|장식|향초|무드등|홈데코'],
   ['personal_care','면도기|드라이기|전동칫솔|생활가전'],
   ['flower','꽃다발|꽃바구니|생화|화분|(?<![가-힣])꽃'], ['stationery','문구|필기구|볼펜|만년필|(?<![가-힣])펜'],
   ['digital','전자기기|디지털기기|카메라|보조배터리'], ['liquor','전통주|와인|주류|막걸리|(?<![가-힣])술'],
@@ -88,12 +88,13 @@ export function moneyValues(text) {
 function tidy(text) {
   return text
     .replace(/택배비|배송료|운송료/g,'배송비')
+    .replace(/상품값(?:과|에)\s*배송비\s*(?:합쳐|더해서)|배송비(?:를|까지)\s*(?:더해도|내고|넣어|포함(?!\s*(?:하지|안))(?:해서)?)/g,'배송비 포함')
     .replace(/배송(?=\s*(?:포함|불포함|미포함|별도|제외|따로|까지|합쳐))/g,'배송비')
     .replace(/배송비(?:는|은)?\s*(?:별도(?:로)?|따로)\s*(?:낼게요?|계산해(?:요)?)/g,'배송비 별도')
     .replace(new RegExp(`(?:우리|저희)\\s*(?=${RECIPIENTS})`,'g'),'')
-    .replace(new RegExp(`(${RECIPIENTS})(?:야|예요|이에요|입니다)(?=[\\s,.!?]|$)`,'g'),'$1')
+    .replace(new RegExp(`(${RECIPIENTS})(?:야|예요|이에요|입니다|이고)(?=[\\s,.!?]|$)`,'g'),'$1')
     .replace(new RegExp(`받는\\s*(?:사람|분)(?:은|는)?\\s*(?=${RECIPIENTS})`,'g'),'')
-    .replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))\s*안에서/g,'$1 이하')
+    .replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))(?:을|를)?\s*(?:안에서|안에|한도로|넘지\s*않는|까지만)/g,'$1 이하')
     .replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))(?:을|를)?\s*넘기면\s*안\s*돼/g,'$1 이하')
     .replace(new RegExp(`(${ALL_WORDS})(?:보다는|보다)\\s*(${ALL_WORDS})`,'g'),'$1 말고 $2')
     .replace(/(?:엄마|어머니|어머님)\s*(?:랑|이랑|하고|와|과|,)?\s*(?:아빠|아버지|아버님)|(?:아빠|아버지|아버님)\s*(?:랑|이랑|하고|와|과|,)?\s*(?:엄마|어머니|어머님)|양가\s*부모님/g,'부모님')
@@ -103,8 +104,19 @@ function tidy(text) {
     .replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))\s*(?:(?:내외|안팎|언저리|쯤|대)(?:에서|로|으로)?|선(?:에서|으로)(?![가-힣]))/g,'$1');
 }
 
-export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
+export function parseConditions(text, state, { pendingQuestion = '', singleGift = false } = {}) {
+  if (/알레르기|알러지/.test(text) && /(?:성분|재료|뭘\s*피하는지)[^,.!?]{0,24}(?:몰라|모르|미확인|확인하지\s*못|듣지\s*못|안\s*알려|확인\s*전)/.test(text)) {
+    return question('피해야 할 알레르기 성분을 알려주세요.');
+  }
   let rest=tidy(normalizeMoney(text)).trim();
+  if (singleGift && !/(?:개|세트)\s*(?:합계|합쳐)|(?:복수|여러)\s*(?:개|세트)/.test(rest)) {
+    rest=rest.replace(/결제\s*총액(?:을|은|이|이란)?/g,'예산');
+  }
+  rest=rest.replace(/^(?:나머지\s*)?조건(?:은|는)?\s*그대로\s*두고\s*/,'')
+    .replace(/^(?:처음|아까|이전(?:에)?)\s*찾던\s*[^,.!?]+?\s+대신\s+(?=.*(?:으로|로)\s*(?:바꿔|변경))/,'')
+    .replace(new RegExp('(?:줄|드릴)\\s+(?=(?:'+WISH_WORDS+'))','g'),'')
+    .replace(/원하는\s*건\s*/,'')
+    .replace(/(?:배송비\s*포함\s*)?예산(?:은|는)?\s*그대로(?:야|예요|에요|입니다)?(?=[.!?\s]|$)/g,'');
   rest=rest.replace(new RegExp(`^(?:그거|그건|이거)\\s*말고\\s*(?=${RECIPIENTS})`),'');
   rest=rest.replace(/(\d+(?:\.\d+)?\s*(?:만\s*원|천\s*원|원))(?:은|는)?\s*그대로(?:\s*두고)?/g,'$1 ');
   // A named previous recipient followed by an explicit "this time" contrast is history,
@@ -245,7 +257,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   }
   // A bare product word is what they want: "이어폰 같은 거", "장난감", "목걸이 같은 액세서리" (first word wins).
   for (const [category,words] of categories) {
-    take(new RegExp(`(${WISH_LIST})?(?<![가-힣])(${wishWords(category,words)})(?:(?:\\s*(?:같은|종류(?:의)?|쪽(?:으로)?|류(?:의)?|계열(?:의)?)(?:\\s*(?:거|것|걸|건|제품|상품|선물|[가-힣]{1,6}))?)|(?:\\s*(?:이나|나|이면|면)\\s*(?:좋겠어(?:요)?|좋아(?:요)?|괜찮아(?:요)?))|(?:\\s*(?:선물\\s*세트|선물|제품|상품|세트))(?:으로|로)?|(?:으로|로))?(?=$|[\\s,.!?])`,'g'),(_,list,word)=>{
+    take(new RegExp(`(${WISH_LIST})?(?<![가-힣])(${wishWords(category,words)})(?:(?:\\s*(?:같은|종류(?:의)?|쪽(?:으로)?|류(?:의)?|계열(?:의)?)(?:\\s*(?:거|것|걸|건|제품|상품|선물|[가-힣]{1,6}))?)|(?:\\s*(?:이나|나|이면|면)\\s*(?:좋겠어(?:요)?|좋아(?:요)?|괜찮아(?:요)?))|(?:\\s*(?:선물\\s*세트|선물|제품|상품|세트))(?:으로|로)?|(?:으로|로))?(?:은|는|이|가|을|를)?(?=$|[\\s,.!?])`,'g'),(_,list,word)=>{
       for (const [cat,w] of [...wordsIn(list,true),[category,word]]) if (!(patch.excluded_categories??state.excluded_categories).includes(cat)) like(cat,w);
     });
   }
@@ -256,6 +268,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
   take(/포장\s*상관없어/g,()=>{patch.packaging=null;});
   take(/(\d{4})[-년]\s*(\d{1,2})[-월]\s*(\d{1,2})(?:일)?(?:까지)?/g,(_,y,m,d)=>{patch.delivery_by=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;});
   take(/배송일\s*조건\s*취소/g,()=>{patch.delivery_by=null;});
+  rest=rest.replace(/(?:선물)?(?:을|를)?\s*(?:찾습니다|찾는\s*중(?:이야|이에요|입니다)?|찾고\s*있(?:습니다|어요))|(?:줄|드릴)\s*만한|(?:을|를)?\s*선물할\s*거(?:예요|에요|야)|있을까요|후보(?:를)?|한도(?:로)?|이하로|사려고\s*합니다|골라\s*주세요|도착할|변경해\s*주세요|같은\s*종류로|상한만|줄일게|생각이\s*바뀌어서|보고\s*싶어|쓸게|원하는\s*건|이고|입니다|까지예요|맞추고\s*싶어/g,' ');
   // Only recognized filler may disappear. Unconsumed text triggers the LLM/clarification route.
   rest=rest.replace(/(?:줄|드릴|할)\s*(?:거야|거예요|거에요|건데|게요)|안쪽(?:으로)?|안으로|내로|미만|정도|해\s*주세요|(?:(?:드릴|줄|드리는|주는)\s+)?선물(?:로)?|추천해주세요|추천해줘|추천|골라줘|찾아줘|상품|예산(?:은|이)?|이하|이내|상한|으로|에게|한테|께|그리고|해줘|주세요|해주세요|변경(?:해\s*(?:줘|주세요))?|(?:바꿔|줄여|낮춰|올려|늘려|맞춰)\s*(?:줘|주세요)|수정|까지|부탁(?:해요|해|드려요|드립니다)|(?:사려|하려|드리려|주려)(?:고|는데)|찾고\s*있어|찾는\s*중|고민\s*중|뭐가\s*좋을까|뭐\s*사지|어떤\s*게\s*좋을까|해\s*줘|요/g,'').replace(/[\s,.!?~]/g,'');
   // Words that carry no condition once the rest was understood: activity verbs after a product word
@@ -268,7 +281,7 @@ export function parseConditions(text, state, { pendingQuestion = '' } = {}) {
     if (!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==patch.delivery_by) return question('실제 수령 마감일을 YYYY-MM-DD 형식으로 알려주세요.');
   }
   if (patch.quantity!==undefined && (!Number.isSafeInteger(patch.quantity)||patch.quantity<1||patch.quantity>1000)) return question('수량을 1개 이상으로 알려주세요.');
-  if(selectedCategories.size&&/(?:으로|로)\s*(?:바꿔|변경)|말고|보다는/.test(text)) {
+  if(selectedCategories.size&&/(?:으로|로)\s*(?:바꿔|변경|보고\s*싶)|말고|보다는/.test(text)) {
     const typeCategory={'type:tea':'coffee_tea','type:coffee':'coffee_tea','type:writing':'stationery','type:bouquet':'flower'};
     patch.preferences=patch.preferences.filter(p=>p.startsWith('category:')?selectedCategories.has(p.slice(9)):typeCategory[p]?selectedCategories.has(typeCategory[p]):true);
   }

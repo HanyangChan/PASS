@@ -13,7 +13,7 @@ test('a-router calls the selected platform only for unresolved messages',async()
   if(String(url).includes('/auth/v1/user')) return Response.json({id:'owner',role:'authenticated'});
   calls++;assert.equal(url,'https://llm.ai.hy.miwork.ai/chat/completions');assert.equal(options.headers.Authorization,'Bearer platform-test-key');
   const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-v4-flash');assert.match(payload.messages[0].content,/recipient-attributed/);
-  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({state:{...state(),preferences:['category:coffee_tea']},question:null})}}]});
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({patch:{preferences:['category:coffee_tea']},question:null})}}]});
  }});
  const clear=await api.fetch(request('예산 7만원으로 바꿔줘'),env());assert.equal(clear.status,200);assert.equal(calls,0);
  const response=await api.fetch(request('센스 있는 선물'),env());assert.equal(response.status,200);

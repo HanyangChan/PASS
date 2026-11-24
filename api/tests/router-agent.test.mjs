@@ -19,11 +19,12 @@ test('A accepts mixed scent/food conditions before shipping and defaults DeepSee
  const instance=api({fetcher:async(url,options)=>{
   if(String(url).includes('/auth/v1/user'))return verified();
   wire.push(JSON.parse(options.body));
-  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({state:ready().state,question:null})}}]});
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({patch:{},question:null})}}]});
  }});
  const config={...env(),LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'synthetic',LLM_MODEL:'deepseek-v4-flash'};
  assert.equal((await send(body({session:ready(),text:'실용적인 선물을 골라줘'}),config,instance)).status,200);
  assert.deepEqual(wire[0].reasoning,{enabled:false});
+ assert.match(wire[0].messages[0].content,/changed fields only/);
  await send(body({session:ready(),text:'실용적인 선물을 골라줘'}),{...config,LLM_REASONING_ENABLED:'true'},instance);
  assert.deepEqual(wire[1].reasoning,{enabled:true});
 });
@@ -63,8 +64,35 @@ test('shipping replies, allergen corrections and ambiguity round-trip using exis
  const session=ready();session.state.budget.shipping_included=null;
  const no=await send(body({session,text:'아니요',source:'quick_reply'}));assert.equal(no.data.mode,'rules_fast');assert.equal(no.data.session.state.budget.shipping_included,false);
  const unknown=await send(body({session:ready(),text:'알레르기가 있어요'}));assert.equal(unknown.data.question.key,'issue');assert.match(unknown.data.question.text,/성분/);
+ assert.deepEqual(unknown.data.view.result.items,[]);
  const unrelated=await send(body({session:unknown.data.session,text:'예산 7만원'}));assert.equal(unrelated.data.question.key,'issue');assert.match(unrelated.data.question.text,/성분/);
  const ingredient=await send(body({session:unknown.data.session,text:'우유'}));assert.deepEqual(ingredient.data.session.state.excluded_ingredients,['우유']);assert.equal(ingredient.data.question.key,null);
+});
+
+test('A handles an explicit shopping request and ASIN without a model, reusing the current rank',async()=>{
+ const named={...products[0],id:'amz-B01BKEZYBY',name:'Basic Watch',category:'watch'};
+ const instance=api({catalog:async()=>[...products,named],extract:async()=>{throw Error('unexpected model');}});
+ const config={...env(),GEMINI_API_KEY:'synthetic'};
+ const shopping=await send(body({text:'친구에게 줄 손목시계 선물을 찾습니다. 배송비 포함 5만 원 한도로 골라주세요.'}),config,instance);
+ assert.equal(shopping.status,200);
+ assert.deepEqual(shopping.data.session.state.preferences,['category:watch']);
+ assert.equal(shopping.data.routing.llmCalls,0);
+ assert.equal(shopping.data.routing.timings.recommendationRuns,1);
+ const changed=await send(body({session:shopping.data.session,text:'생각이 바뀌어서 패션소품으로 보고 싶어. 택배비를 넣어 4만 원까지만 쓸게.'}),config,instance);
+ assert.equal(changed.status,200);
+ assert.deepEqual(changed.data.session.state.preferences,['category:accessory']);
+ assert.equal(changed.data.routing.llmCalls,0);
+ const total=await send(body({text:'결제 총액을 7만 원 안으로 맞추고 싶어. 배송비까지 포함해서 어머니 줄 가방 추천해줘.'}),config,instance);
+ assert.equal(total.status,200);
+ assert.deepEqual(total.data.session.state.budget,{amount_krw:70000,shipping_included:true});
+ assert.deepEqual(total.data.session.state.preferences,['category:bag']);
+ const exact=await send(body({text:'ASIN B01BKEZYBY 상품 찾아줘.',session:ready()}),config,instance);
+ assert.equal(exact.status,200);
+ assert.equal(exact.data.routing.llmCalls,0);
+ assert.deepEqual(exact.data.view.result.items.map(item=>item.id),[named.id]);
+ const absent=await send(body({text:'ASIN B01BKEZYBZ 찾아줘.',session:ready()}),config,instance);
+ assert.equal(absent.data.routing.stopReason,'product_not_found');
+ assert.deepEqual(absent.data.view.result.items,[]);
 });
 
 test('only unresolved text invokes the existing server model adapter with attribution instructions',async()=>{
@@ -100,6 +128,10 @@ test('an unresolved allergy blocks chat recommendations, comparisons and explana
  for(const text of ['추천해줘','왜 추천했어?','예산 7만원이면?']) {
   const out=await send(body({session,text}));assert.equal(out.data.question.key,'issue');assert.match(out.data.message,/성분/);assert.ok(!out.data.message.includes('고급 차 세트'));
  }
+ const competing=await send(body({session:ready(),text:'부모님 드릴 먹을 거 추천해줘. 아버지는 알레르기가 있지만 뭘 피하는지는 아직 몰라.'}));
+ assert.match(competing.data.question.text,/성분/);
+ assert.deepEqual(competing.data.view.result.items,[]);
+ assert.equal(competing.data.routing.llmCalls,0);
 });
 
 test('actual Gemini wire adapter receives server-only attribution policy and returns validated conditions',async()=>{

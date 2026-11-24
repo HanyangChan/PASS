@@ -4,7 +4,7 @@ import { parseRules } from './parser.mjs';
 export { createSession, BaselineError } from './contracts.mjs';
 export { budgetAlternatives } from './vendor/counterfactual.mjs';
 
-function missing(s) {
+export function missingCondition(s) {
   if (!s.recipients.length) return '받는 사람을 알려주세요.';
   if (s.budget.amount_krw === null) return '예산 상한을 알려주세요.';
   if (!s.quantity) return '선물 수량을 알려주세요.';
@@ -60,7 +60,7 @@ export async function runTurn({session,request,products,interpret,ranking,recomm
     if (!Number.isSafeInteger(request.amount_krw) || request.amount_krw <= 0) throw new BaselineError('invalid_request');
     state=checkedPatch(state,{budget:{amount_krw:request.amount_krw}});
   }
-  const question=questions[0] || missing(state);
+  const question=questions[0] || missingCondition(state);
   if (question) return {session:next,kind:'question',question,trace};
   const result=resultFor(products,state,ranking,recommendProducts);
   trace.push({stage:'engine',status:result.status},{stage:'verify',status:'passed'});
