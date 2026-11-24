@@ -12,14 +12,15 @@ function fixture() {
   if(String(url).includes('/auth/v1/user'))return Response.json({id:'owner',role:'authenticated'});
   calls++;
   const messages=JSON.parse(options.body).messages,context=JSON.parse(messages[1].content);
-  const result=messages[0].content.includes('action reviewer')?{verdict:'pass',issues:[],feedback:''}:context.observations.length?{action:'respond',type:'result'}:{action:'search_products'};
+  const system=messages[0].content;
+  const result=system.includes('You independently review')?{flags:[]}:system.includes('action reviewer')?{verdict:'pass',issues:[],feedback:''}:context.observations.length?{action:'respond',type:'result'}:{action:'search_products'};
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(result)}}]});
  }});
  return {api,calls:()=>calls};
 }
 test('request agentMode selects the actual agent without changing the server default',async()=>{
  const f=fixture();
- for(const [mode,expectedCalls] of [['a-router',0],['full-chat',1],['full-chat-feedback-2',1]]) {
+ for(const [mode,expectedCalls] of [['a-router',0],['full-chat',1],['full-chat-feedback-2',3]]) {
   const before=f.calls();const response=await f.api.fetch(request({agentMode:mode}),env);const data=await response.json();
   assert.equal(response.status,200);assert.equal(data.agent,mode);assert.equal(data.routing.agent,mode);assert.equal(f.calls()-before,expectedCalls);assert.deepEqual(data.session,session());
  }

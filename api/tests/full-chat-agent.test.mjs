@@ -5,11 +5,19 @@ import { singleInitial } from '../../lib/single-gift.mjs';
 import { products } from '../../baseline/examples/catalog.mjs';
 const env={CHAT_AGENT:'full-chat',LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'test-secret',LLM_BASE_URL:'https://llm.example',LLM_MODEL:'test-model',SUPABASE_URL:'https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test',IP_LIMITER:{limit:async()=>({success:true})},USER_LIMITER:{limit:async()=>({success:true})}};
 const ready=()=>({state:{...singleInitial(),recipients:['어머니'],budget:{amount_krw:50000,shipping_included:true}},issues:[]});
-function fixture(actions, catalog=products) {
+function fixture(actions, catalog=products, auditReplies=[]) {
   const payloads=[];
+  const auditPayloads=[];
   const api=createApi({catalog:async()=>catalog,fetcher:async(url,options)=>{
     if(String(url).includes('/auth/v1/user'))return Response.json({id:'owner',role:'authenticated'});
-    assert.equal(options.headers.Authorization,'Bearer test-secret');payloads.push(JSON.parse(options.body));
+    assert.equal(options.headers.Authorization,'Bearer test-secret');
+    const payload=JSON.parse(options.body);
+    if(/You independently review/.test(payload.messages[0].content)) {
+      auditPayloads.push(payload);
+      const content=JSON.stringify(auditReplies.shift()??{flags:[]});
+      return Response.json({choices:[{finish_reason:'stop',message:{content}}]});
+    }
+    payloads.push(payload);
     const next=actions.shift();assert.ok(next,'unexpected HTTP model request');
     if(next==='error')return new Response(null,{status:401});
     if(next==='unavailable')return new Response(null,{status:503});
@@ -19,7 +27,7 @@ function fixture(actions, catalog=products) {
     const response=await api.fetch(new Request('https://api.example/api/chat',{method:'POST',headers:{Authorization:'Bearer fake.jwt','Content-Type':'application/json'},body:JSON.stringify({operation:'turn',text:'추천해줘',history:[],session:ready(),...body})}),config);
     return {status:response.status,data:await response.json()};
   };
-  return {api,send,payloads};
+  return {api,send,payloads,auditPayloads};
 }
 const finish={action:'respond',type:'result'};
 
@@ -323,7 +331,8 @@ test('C locates separated product name words and still applies the price and ing
   const found=await f.send({agentMode,text,session});
   assert.equal(found.status,200);
   assert.deepEqual(found.data.view.result.items.map(product=>product.id),['tote']);
-  assert.equal(found.data.routing.llmCalls,0);
+  assert.equal(found.data.routing.llmCalls,2);
+  assert.equal(found.data.routing.resultAudit.status,'complete');
   const excluded=await f.send({agentMode,text,session:{...session,state:{...session.state,excluded_ingredients:['우유']}}});
   assert.deepEqual(excluded.data.view.result.items,[]);
   const overCap=await f.send({agentMode,text,session:{...session,state:{...session.state,budget:{amount_krw:30000,shipping_included:true}}}});
@@ -342,6 +351,23 @@ test('C applies a complete recommendation request without asking for already sup
   assert.deepEqual(response.data.session.state.budget,{amount_krw:30000,shipping_included:true});
   assert.deepEqual(response.data.view.result.items.map(product=>product.id),['speaker']);
   assert.equal(response.data.question.key,null);
-  assert.equal(response.data.routing.llmCalls,0);
+  assert.equal(response.data.routing.llmCalls,2);
+  assert.equal(f.auditPayloads.length,2);
   assert.equal(response.data.routing.stopReason,'verified_shopping_request');
+});
+
+test('C removes an audited color mismatch with catalog evidence and retains an unsupported flag',async()=>{
+  const item={...products[0],id:'tote',name:'Lavie Black Betula Medium Tote Bag',category:'bag'};
+  const text='카탈로그에서 Lavie Betula Medium 흰색 토트백을 찾아줘.';
+  const agentMode='full-chat-feedback-2';
+  const f=fixture([],[item],[{flags:['exact_identity']},{flags:[{id:'tote',reason:'variant_color'}]}]);
+  const out=await f.send({agentMode,text});
+  assert.equal(out.status,200);
+  assert.deepEqual(out.data.view.result.items,[]);
+  assert.equal(out.data.routing.resultAudit.removedCards,1);
+  assert.deepEqual(JSON.parse(f.auditPayloads[1].messages[1].content).request_checks,['exact_identity']);
+  const invalid=fixture([],[item],[{flags:[]},{flags:[{id:'tote',reason:'over_budget'}]}]);
+  const kept=await invalid.send({agentMode,text});
+  assert.deepEqual(kept.data.view.result.items.map(item=>item.id),['tote']);
+  assert.equal(kept.data.routing.resultAudit.removedCards,0);
 });

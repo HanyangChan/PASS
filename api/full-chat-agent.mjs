@@ -5,6 +5,7 @@ import { APP_RANKING, rankProducts, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
 import { lookupCatalogItem, lookupIndexedCatalogItem } from './catalog-item-lookup.mjs';
+import { auditCResult } from './c-result-audit.mjs';
 export { FullChatError, isEndRequest } from '../baseline/agents/full-chat/index.mjs';
 
 const recoverableModelErrors=new Set(['invalid_input','invalid_response','timeout','network_error','auth_failed','quota_exceeded','endpoint_or_model_not_found','provider_unavailable','request_rejected']);
@@ -22,6 +23,7 @@ const conversation={
   acknowledge:'네, 이어서 궁금한 점이나 바꾸고 싶은 선물 조건을 알려주세요.',
 };
 export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,decide,agent,agentFactory=createAgent,ranking=APP_RANKING,...limits}={}) {
+  const started=performance.now();
   const before=input.state;
   const isB=agentFactory===createAgent && (agent===undefined || agent==='full-chat');
   const isC=agentFactory!==createAgent && /^full-chat-feedback-[12]$/.test(agent??'');
@@ -127,5 +129,28 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     view={question:turn.question,result,comparison:budgetAlternatives(catalog,applied,rankingForTurn,{baseline:result,rank})};
   }
   timings.responseMs=Math.max(0,performance.now()-responseStarted-(timings.rankingMs-rankingBeforeResponse));
+  const remainingMs=Math.floor((limits.timeoutMs??20000)-(performance.now()-started));
+  if(agent==='full-chat-feedback-2'&&input.operation==='turn'&&!blocked&&view&&
+      (output.kind==='recommendation'||matches!==null)&&routing.llmCalls+2<=(limits.maxCalls??10)&&remainingMs>0) {
+    const auditStarted=performance.now();
+    const {info,items}=await auditCResult({env,fetcher,signal,timeoutMs:remainingMs,input,state,view,matches});
+    timings.modelMs+=performance.now()-auditStarted;
+    routing.resultAudit=info;
+    routing.llmCalls+=info.calls;
+    routing.httpAttempts+=info.httpAttempts;
+    for(const key of Object.keys(info.usage)) routing.usage[key]=(routing.usage[key]??0)+info.usage[key];
+    if(info.confirmedRequestConflict && view.result.items.length) {
+      message='추천에 적용된 조건을 다시 확인해야 해요. 예산이나 배송 조건을 확인해 주세요.';
+      const question={key:'issue',text:message,choices:[]};
+      return {session:{state:before,issues:[...input.issues,message]},changes:[],question,message,view:emptyView(question,message),
+        agent:activeAgent,mode:'llm',routing:{...routing,stopReason:'result_condition_mismatch'}};
+    }
+    if(info.removedCards) {
+      // Hide the old budget alternatives as they refer to the pre-audit candidate cards.
+      if(!items.length) message='요청과 상품 정보가 일치하는 후보를 확인하지 못했어요.';
+      view={...emptyView(turn.question,message),
+        result:{...view.result,...(!items.length?{status:'no_match',message}:{}),items}};
+    }
+  }
   return {...turn,message,...(view?{view}:{}),mode:routing.llmCalls?'llm':'rules',agent:activeAgent,routing};
 }

@@ -25,9 +25,9 @@ test('C rechecks a corrected allergen removal and counts both review calls',asyn
  ];
  const api=createApi({catalog:async()=>products,fetcher:async(url,options)=>{
   if(String(url).includes('/auth/v1/user'))return Response.json({id:'synthetic',role:'authenticated'});
-  const reply=actions.shift();
-  assert.ok(reply);
   const payload=JSON.parse(options.body);
+  const reply=payload.messages[0].content.includes('You independently review')?{flags:[]}:actions.shift();
+  assert.ok(reply);
   if(reply.verdict)assert.match(payload.messages[0].content,/action reviewer/);
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(reply)}}],usage:{prompt_tokens:10,completion_tokens:2,total_tokens:12}});
  }});
@@ -36,7 +36,7 @@ test('C rechecks a corrected allergen removal and counts both review calls',asyn
  const data=await response.json();
  assert.equal(response.status,200);
  assert.deepEqual(data.session.state.excluded_ingredients,['땅콩']);
- assert.equal(data.routing.httpAttempts,4);
- assert.equal(data.routing.usage.total_tokens,48);
+ assert.equal(data.routing.httpAttempts,6);
+ assert.equal(data.routing.usage.total_tokens,72);
  assert.deepEqual(data.routing.feedback.reviews.map(review=>review.reason),['allergy_constraint','allergy_constraint']);
 });
