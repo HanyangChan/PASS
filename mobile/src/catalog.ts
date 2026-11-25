@@ -36,8 +36,25 @@ function interleave(sorted: EngineProduct[], cats: string[] | null, limit = 100)
     for (const g of groups) if (i < g.length && out.length < limit) out.push(g[i]);
   return out;
 }
+// Amazon and Naver review counts sit on different scales (median about 1,500 vs 400), so each product
+// is ranked by its review-count percentile within its own catalog. Both catalogs then compete evenly.
+const catalogOf = (p: EngineProduct) => (p.id.startsWith('naver_') ? 'web' : 'amazon');
+function byPopularity(products: EngineProduct[]): EngineProduct[] {
+  const groups = new Map<string, EngineProduct[]>();
+  for (const p of products) {
+    const key = catalogOf(p);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  const score = new Map<string, number>();
+  for (const group of groups.values()) {
+    group.sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
+    group.forEach((p, i) => score.set(p.id, 1 - i / group.length));
+  }
+  return [...products].sort((a, b) => score.get(b.id)! - score.get(a.id)! || a.id.localeCompare(b.id));
+}
 export function rankGifts(products: EngineProduct[]): Record<string, Gift[]> {
-  const sorted = [...products].sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
+  const sorted = byPopularity(products);
   return Object.fromEntries(Object.entries(recipientCategories).map(([label, cats]) => [label, interleave(sorted, cats).map(giftFromProduct)]));
 }
 
@@ -55,6 +72,5 @@ export function selectGifts(products: EngineProduct[], { recipient = '전체', s
   if (sort !== '인기순') return matching.sort((a, b) =>
     (sort === '낮은 가격순' ? a.price_krw - b.price_krw : b.price_krw - a.price_krw) || a.id.localeCompare(b.id),
   ).slice(0, 100).map(giftFromProduct);
-  matching.sort((a, b) => (b.rating_count ?? 0) - (a.rating_count ?? 0) || a.id.localeCompare(b.id));
-  return interleave(matching, null).map(giftFromProduct);
+  return interleave(byPopularity(matching), null).map(giftFromProduct);
 }

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { chatAgentModes, type ChatAgentMode } from './chatAgentModes';
 import { colors as c, fonts as f } from './theme';
 
@@ -96,6 +97,32 @@ export function AgentModeControl({ value, onChange, disabled, connected }: Props
   );
 }
 
+// Folds the A/B/C slider away like the 선물 조건 panel, so the chat keeps its room.
+export function AgentModeToggle({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="응답 방식 펼치기 또는 접기"
+      accessibilityState={{ expanded }}
+      onPress={onToggle}
+      hitSlop={8}
+      style={s.toggle}
+    >
+      {expanded ? <ChevronDown size={18} color={c.muted} /> : <ChevronUp size={18} color={c.muted} />}
+    </Pressable>
+  );
+}
+
+// One small line under the composer while the slider is folded; tapping it opens the slider again.
+export function AgentModeStatus({ value, onExpand }: { value: ChatAgentMode; onExpand: () => void }) {
+  const mode = chatAgentModes.find(item => item.agent === value) ?? chatAgentModes[0];
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`응답 방식 ${mode.id} ${mode.title}, 펼치기`} onPress={onExpand} style={s.status}>
+      <Text style={s.statusText}>응답 방식 <Text style={s.statusMode}>{mode.id} · {mode.title}</Text></Text>
+    </Pressable>
+  );
+}
+
 // The browser range owns pointer and keyboard interaction. The views underneath draw the shared track.
 const webInputStyle: React.CSSProperties = {
   position: 'absolute',
@@ -140,5 +167,9 @@ const s = StyleSheet.create({
   labelButton: { minWidth: 44, minHeight: 26, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   label: { fontFamily: f.medium, fontSize: 11, color: c.muted },
   selectedLabel: { color: c.primary, fontFamily: f.bold },
+  toggle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  status: { alignSelf: 'center', paddingTop: 6, paddingHorizontal: 8 },
+  statusText: { color: c.muted, fontFamily: f.regular, fontSize: 11, lineHeight: 16 },
+  statusMode: { color: c.primary, fontFamily: f.medium },
   hint: { color: c.muted, fontFamily: f.regular, fontSize: 11, lineHeight: 18, textAlign: 'center', marginTop: 2 },
 });
