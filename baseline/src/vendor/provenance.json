@@ -2,7 +2,7 @@
   "source": "PASS shared engine; app opt-in contextual feedback and strict gift request matching; named subtype and explicit age support",
   "sha256": {
     "allergens.mjs": "b04cc6d5ae8fd7f3f03212260a0c9a7d4feea3c63d7e1b6aabc2a0acb561e85c",
-    "catalog.mjs": "77e326132ac0b96f575a606a0592e7efc82ffaeccd592fa9fa8d0a54096400dd",
+    "catalog.mjs": "c3252ebc63dc6344f06ffc52d31414c27686a62661bcdf748be54d7895c71541",
     "counterfactual.mjs": "528d5918e6bc87a8a46ea391f4e9e0c50444b8196cb71e9850dbf5fdc046139f",
     "engine.mjs": "5f01ca3d8bbb245847ec486b8a0fa9b3f95f1cdda4c8e497bfd1e23361211b15",
     "ranking.mjs": "41d90c72d6f0e8db122cf8cb2fac3913659fe9aad485be70011e07293fc1d273",
