@@ -1,12 +1,8 @@
 # PASS — Personalized AI Shopping System
 
-Expo / React Native 기반 iOS·Android 선물 추천 앱입니다. 웹에서도 같은 모바일 화면과 서비스를 사용합니다.
-
-[PASS 웹 앱](https://temporary-prompt-sable-s15js3l.vercel.app) · [추천 API 상태](https://pass-recommendation-api.a73342776.workers.dev/health)
-
-[실행 가이드](docs/getting-started.md) · [프로젝트 구조](docs/project-structure.md) · [배포 가이드](docs/deployment.md)
-
 ## 아키텍처
+
+아래는 프로젝트의 초기 설계와 구조도입니다. 본실험에서 실행한 A·B·C는 [실험 방법](#실험-방법)에 정리했습니다.
 
 [현재 운영 구조와 배포 설정](docs/architecture.md) · [구조도](https://temporary-prompt-sable-s15js3l.vercel.app/architecture.svg)
 
@@ -90,69 +86,67 @@ flowchart TB
 
 비교의 핵심은 **LLM 호출 유무가 아니라 실행 제어 주체**입니다. 두 안은 같은 상품 DB·조건 검증·추천 엔진·예산 비교 기능을 공유하는 것을 목표로 합니다. LLM Agent 모드와 두 안의 비교 실험은 아직 구현하지 않았으며, 비용·속도·정확도·설명 이해도 차이는 구현 후 측정합니다.
 
-## 수령인별 기억과 구매 이력
+## 실험 방법
 
-### 카드의 상황별 상품 평가
+### 데이터와 시나리오
 
-추천 카드의 기존 **👍/👎** 버튼은 이 상황에 상품이 맞는지 평가합니다. 이 상품 평가만 같은 대화·같은 조건에서 비슷하게 맞는 후보의 순서를 조정합니다. 현재 명시한 품목·선호와 상황 적합도가 과거 평가보다 우선하며 카테고리 전체를 가산하지 않습니다. 수령인·기념일·선호·예산·제외 등 조건이 달라지거나 새 대화를 시작하면 이전 상황의 평가는 적용하지 않습니다.
+- Amazon 영문 상품명은 원문을 사용했다. 유효한 ASIN을 중복 제거한 뒤 원본 대분류 비율에 맞춰 **300,000개**를 선택했다. 고정 시드는 `pass-amazon-en-v1`이다. 가격·배송·재고 조건에는 실험용 합성값을 사용했다. [데이터 출처](https://www.kaggle.com/datasets/lokeshparab/amazon-products-dataset)
+- 정확 상품 검색, 일반 추천, 알레르기 제외, 다중 턴 대화를 **각 30개**, 총 **120개**의 한국어 시나리오로 구성했다. 같은 모델·모드에서 각 시나리오를 3회 반복해 **360회**, 다중 턴을 포함해 **API 요청 450건**을 집계했다. [고정 시나리오](api/benchmarks/amazon-en/fixtures.mjs)
+- 실제 PASS Worker 채팅 경로를 합성 인증·세션과 로컬 카탈로그로 실행했다. API p50·p95에는 Worker 처리 시간과 모델 왕복 시간이 포함된다. 최종 C와 A·B는 별도 세션에서 측정했다.
 
-평가 당시 조건과 출처별 상품 키를 저장합니다. 같은 상품의 같은 평가를 다시 누르면 취소되며, 마이페이지의 **지난 피드백 반영** 스위치로 적용을 끌 수 있습니다. 설정은 기기에 계정별로 저장하며, 채팅 하단에는 별도 스위치를 표시하지 않습니다. 기존 형식의 설명 평가는 보존하지만 상품 선호로 변환하지 않습니다. 현재 수령인 고유 ID가 없으므로 이름이 같다는 이유로 다른 대화의 인물을 연결하지 않습니다. 계정의 현재 대화를 복원하면 그 대화의 평가도 복원합니다.
+### 비교 모드
 
-재현·검증: `node --experimental-strip-types scripts/verify-context-feedback.mjs`. 운영 계정 대신 고정 카탈로그·가짜 인증을 사용합니다. [수정 및 검증 계획](docs/superpowers/plans/2026-11-16-context-feedback-validation.md).
+| 모드 | 실행 방식 |
+|---|---|
+| A · 규칙 우선 | 규칙으로 조건을 적용하고, 해석이 필요한 요청만 모델에 보낸다. |
+| B · 풀 에이전트 | 모델이 조건 변경이나 조회 등의 다음 행동을 선택하고, 공통 엔진이 결과를 검증한다. |
+| C · 피드백 에이전트 | 필요한 행동을 검토하고, 최종 응답에서 요청 조건과 상품 근거를 순서대로 검증한다. |
 
-### 새 문장과 상품 적합성 후속 평가
+모든 모드는 같은 카탈로그와 채점 기준을 사용했다. 정확 상품은 확인 질문 없이 반환된 첫 카드(Top 1)와 상위 세 카드(Top 3)의 ASIN으로 판정했다. 일반 추천은 적용된 예산·배송·상품군 등 조건에 맞는 카드가 하나 이상 있고 확인 질문 없이 응답했을 때 성공으로 집계했다. 다중 턴 전체 성공은 지원 범위에 있는 72건에서 모든 턴의 성공을 뜻한다. 알레르기는 명시 성분 저장과 성분 미상 확인 질문·카드 보류를 각각 집계했다. [채점 코드](api/benchmarks/amazon-en/scoring.mjs)
 
-앱은 현재 명시한 상품군·종류에 맞는 후보만 보여주며, 3개를 채우려고 다른 종류를 끼워 넣지 않습니다. 꽃다발·필기구·차와 커피를 구분하고, 후보가 부족하면 적은 수를 보여주거나 없다고 안내합니다. 이런 경우의 버튼은 예산·상품 종류를 직접 입력하도록 돕고 기존 제외 조건은 자동 해제하지 않습니다.
+### 재현
 
-배송료·택배비, 명시적인 이전 예산 정정, 이전/현재 수령인 전환 등의 표현을 보완했습니다. 개발에 없던 문장은 입력과 기대값을 먼저 고정해 평가하고, 실제 상품은 별도 LLM 기준으로 검토했습니다. 평가자는 현재 코딩 어시스턴트와 같으며 독립 외부 모델이나 사람 평가를 뜻하지 않습니다. 상세 결과는 [후속 평가 보고서](docs/verification/unseen-and-llm-gift-review-2026-11-16.md)를 참고하세요.
-
-기존 수령인 기억과 구매 이력은 기기 내 계정별 기록으로 보존하며 분석에서만 별도로 조회합니다. AI 추천 화면에서는 이력 관리와 저장 기능을 숨겼으며 추천에는 현재 대화의 조건을 사용합니다. [보존 범위와 분석 경로](docs/personalization.md)를 참고하세요.
-
-## 에이전트 공통 베이스라인
-
-다섯 아키텍처가 공유하는 실행 가능한 추천 코어는 [`baseline/`](baseline/README.md)에 있다. 조건·세션·버전 검증, 질문, 고정 PASS 엔진, 원본 상태를 바꾸지 않는 예산 비교, 결과 제약 검증과 템플릿 응답을 제공한다. `a-router`는 설정으로 현재 앱 API에 연결했고 다른 에이전트의 연결은 후속 작업이며, 각 아키텍처는 같은 공통 코어에서 확장한다.
+저장소 루트에서 Python 3.11 이상과 Node.js 22.13 이상을 사용한다. 두 `--mode ABC` 명령은 실제 모델을 호출한다. [데이터 준비 및 서버 설정](api/benchmarks/amazon-en/README.md)
 
 ```sh
-npm --prefix baseline test
-npm --prefix baseline run demo
+python3 api/benchmarks/amazon-en/prepare.py data/amazon-products-dataset.zip data/amazon-en/catalog
+node api/benchmarks/amazon-en/run.mjs --validate
+node api/benchmarks/amazon-en/run.mjs --mode ABC --model deepseek-v4-flash --data data/amazon-en/deepseek-abc
+node api/benchmarks/amazon-en/run.mjs --mode ABC --model gpt-5.6-luna --data data/amazon-en/gpt-abc
 ```
 
-[다섯 설계의 공통 범위와 확장 경계](baseline/docs/common-scope.md) · [현재 프로토타입 PRD](PRD.md)
+## 실험 결과
 
-이전 버전·연구 자료·과거 평가 산출물은 정리했다. 음성인식, 카메라·앨범·파일 선택, 로그인과 개인화 구현은 유지한다. 첨부 기능은 파일명 표시까지이며 실제 서버 업로드·내용 분석은 아직 제공하지 않는다.
+### DeepSeek V4 Flash A·B·C
 
-## 플랫폼 LLM 시험
+| 지표 | A | B | C |
+|---|---:|---:|---:|
+| 정확 상품 Top 1 / Top 3 | 3/90 · 3/90 | 27/90 · 27/90 | 60/90 · 60/90 |
+| 일반 추천 성공 | 90/90 | 90/90 | 90/90 |
+| 다중 턴 전체 성공 | 72/72 | 72/72 | 72/72 |
+| 명시한 알레르기 성분 저장 | 54/63 | 63/63 | 63/63 |
+| 성분 미상일 때 확인 질문 | 27/27 | 27/27 | 27/27 |
+| 성분 미상일 때 추천 카드 반환 | 0/27 | 0/27 | 0/27 |
+| API 응답 시간 p50 / p95 | 0.66초 / 4.51초 | 1.51초 / 4.48초 | 2.30초 / 7.33초 |
+| HTTP 오류 | 0/450 | 0/450 | 0/450 |
+| 모델 호출 | 162 | 405 | 1019 |
+| 추정 비용 | $0.008705 | $0.044292 | $0.052869 (확인분) |
 
-A안 Router는 OpenAI 호환 플랫폼의 `deepseek-v4-flash`를 지원한다. 서버 `api/.dev.vars`에 플랫폼 키를 설정하고 `npm run smoke:llm`으로 실제 연결을 시험한다. 명확한 조건은 규칙으로 처리하고 모호한 발화에만 모델을 호출한다. [설정 및 실제 시험 결과](docs/llm-platform.md).
+### GPT-5.6 Luna A·B·C
 
-LLM 연결부만 공통으로 사용할 때는 [`baseline/llm/`](baseline/llm/README.md)를 가져오면 됩니다. 공통 main에는 이 독립 모듈만 추가했으며 Router·조건 추출 프롬프트는 각 에이전트에서 구성합니다.
+| 지표 | A | B | C |
+|---|---:|---:|---:|
+| 정확 상품 Top 1 / Top 3 | 3/90 · 3/90 | 27/90 · 27/90 | 60/90 · 60/90 |
+| 일반 추천 성공 | 90/90 | 90/90 | 90/90 |
+| 다중 턴 전체 성공 | 72/72 | 72/72 | 72/72 |
+| 명시한 알레르기 성분 저장 | 51/63 | 54/63 | 58/63 |
+| 성분 미상일 때 확인 질문 | 27/27 | 27/27 | 27/27 |
+| 성분 미상일 때 추천 카드 반환 | 0/27 | 0/27 | 0/27 |
+| API 응답 시간 p50 / p95 | 0.69초 / 4.74초 | 1.80초 / 4.75초 | 2.71초 / 7.57초 |
+| HTTP 오류 | 1/450 | 0/450 | 0/450 |
+| 모델 호출 | 162 | 405 | 1020 |
+| 추정 비용 | $0.030501 | $0.149942 | $0.184559 |
 
-A안의 Supervisor·전문 서브 에이전트·종합 판단 초기 구현을 추가했습니다. `A_ROUTER_LLM_MODE=subagents`로 시험하고, 설정을 생략하면 기존 `single`을 유지합니다. [실행·진단 안내](baseline/agents/a-router/README.md).
+비용은 사용자 제공 요율을 적용했다. 백만 토큰당 DeepSeek는 입력 $0.06·출력 $0.17, GPT는 입력 $0.20·출력 $1.20이다. DeepSeek C의 비용 확인분에는 사용량을 받지 못한 검증 호출 1건이 빠져 있다.
 
-## PR 로컬 검토
-
-Node 22.13 이상에서 저장소 루트의 `npm run setup` → `npm run setup:local` → `npm run dev:api` 순으로 실행합니다. 웹은 다른 터미널에서 `npm --prefix mobile run web -- --port 8766`으로 시작합니다. A 규칙 모드가 기본이며 서버 채팅은 Supabase 로그인이 필요합니다. C/D에는 서버 LLM 키가 추가로 필요합니다. B는 규칙과 자문을 실행하고, 서버 키가 있으면 어려운 귀속 판단에 모델을 사용합니다. 기존 환경 파일은 덮어쓰지 않습니다. [설정·포트·CORS·상태 확인 안내](api/README.md#로컬-시험)를 참고하세요.
-
-## 상품 카탈로그 선택 (`CATALOG_SOURCE`)
-
-A~D 네 모드는 모두 API가 한 번 불러온 같은 상품 목록을 쓴다. 이 목록은 `CATALOG_SOURCE`로 고른다. 기본값은 `amazon`이라 설정하지 않으면 지금과 같다.
-
-| 값 | 상품 |
-|---|---|
-| `amazon`(기본) | Supabase의 아마존(Kaggle) 카탈로그 |
-| `web` | 네이버 쇼핑에서 모은 한국 선물 카탈로그 `supabase/seed/products-kr.json`(명절·생일·수험·꽃, 590개) |
-| `both` | 둘을 합친 목록(같은 상품만 중복 제거) |
-
-웹 데모·실험에서 `web`을 켜는 방법은 둘 중 하나다.
-
-- `api/.dev.vars`에 `CATALOG_SOURCE=web` 한 줄을 넣고 `npm run dev:api`
-- 한 번만: `CATALOG_SOURCE=web npm run dev:api`
-
-배포한 Worker에서는 `npx wrangler deploy --var CATALOG_SOURCE:web`(api 폴더)로 켠다.
-
-앱의 선물 랭킹 화면과 게스트 채팅도 같은 카탈로그를 쓴다. 앱은 시작할 때 채팅 서버(`EXPO_PUBLIC_CHAT_API_URL`)의 `/health`에서 `catalog` 값을 읽어 따라가므로 서버 쪽 설정 하나만 바꾸면 된다. 서버에 닿지 않으면 `mobile/.env.local`의 `EXPO_PUBLIC_CATALOG_SOURCE`(기본 `amazon`)를 쓴다. `/health`의 `catalog` 값이 `naver-web-v1`이면 웹 카탈로그가 켜진 것이다. 웹 카탈로그 카드는 실제 상품 사진을 보여준다. 사진은 팀 공유용으로 `supabase/seed/images-kr/`에 커밋되어 있어 pull만 하면 뜨고, 채팅 서버가 `/catalog-images/<파일>`로 내려준다(로컬 API와 배포 Worker static assets 모두, 논문 캡처에는 사용하지 않음). 사진을 다시 준비할 때는 `node scripts/catalog/web/images.mjs`. 배송비는 네이버 목록의 기본 배송비이고, 도착일·재고·포장은 아마존 카탈로그와 같은 규칙으로 만든 데모 값이다. 품목 필터(`ITEM_FILTER=on`, 기본 `off`)를 켜면, 사용자가 말한 품목(예: "카네이션", "한우")의 상품이 3개 이상일 때 그 상품만 남긴 목록으로 A~D 모든 모드가 추천한다. 점수 계산과 LLM 호출은 그대로다.
-- 대화 중 품목이 바뀌면 가장 최근에 말한 품목을 따른다. "카네이션 말고 장미"처럼 말고·빼고·제외가 붙은 품목은 쓰지 않는다.
-- 한 글자 품목(배·김·꿀·떡·쌀)은 띄어 쓴 단어로만 인정한다. 그래서 배송·김치·떡볶이는 품목으로 읽지 않는다.
-- 현재 품목은 응답의 `session.item_filter`에, 적용 결과는 `itemFilter`에 담긴다. 켜는 방법은 `CATALOG_SOURCE`와 같다(`api/.dev.vars` 또는 `ITEM_FILTER=on npm run dev:api`).
-
-카탈로그 비교 결과는 [docs/catalog-kr/comparison.md](docs/catalog-kr/comparison.md), 수집 보고서는 [docs/catalog-kr/report.md](docs/catalog-kr/report.md)에 있다.
+[최종 표와 원본 실행 기록](docs/verification/c-result-audit-2026-11-24/abc-results.md)
