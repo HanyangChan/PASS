@@ -53,8 +53,9 @@ test('the app catalog follows the chat server CATALOG_SOURCE, then the app setti
   assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: health('amazon-kaggle-v1+naver-web-v1'), fallback: 'amazon' }), 'both');
   const offline = async () => { throw new TypeError('offline'); };
   assert.equal(await resolveCatalogSource({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), 'web');
-  assert.equal(await resolveCatalogSource({ fallback: 'naver' }), 'amazon');
-  assert.equal(await resolveCatalogSource({}), 'amazon');
+  assert.equal(await resolveCatalogSource({ fallback: 'naver' }), 'both');
+  assert.equal(await resolveCatalogSource({}), 'both');
+  assert.equal(await resolveCatalogSource({ fallback: 'amazon' }), 'amazon');
   const { resolveCatalog } = await import('../src/services/catalogSource.ts');
   assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788/', fetcher: health('naver-web-v1') }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });
   assert.deepEqual(await resolveCatalog({ chatApiUrl: 'http://127.0.0.1:8788', fetcher: offline, fallback: 'web' }), { source: 'web', apiBase: 'http://127.0.0.1:8788' });

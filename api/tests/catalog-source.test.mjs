@@ -24,11 +24,14 @@ const chat = async (api, extra, text) => (await api.fetch(new Request('https://a
   body: JSON.stringify({ operation: 'turn', session: { state: singleInitial(), issues: [] }, text, history: [] }),
 }), env(extra))).json();
 
-test('CATALOG_SOURCE defaults to the Amazon catalog', async () => {
+test('CATALOG_SOURCE defaults to both catalogs; amazon keeps the Amazon-only list', async () => {
   const { fetcher, calls } = fakeSupabase();
   const result = await health(createApi({ fetcher }), {});
-  assert.equal(result.products, amazonRows.length);
-  assert.equal(result.catalog, 'amazon-kaggle-v1');
+  assert.equal(result.products, amazonRows.length + web.length);
+  assert.equal(result.catalog, 'amazon-kaggle-v1+naver-web-v1');
+  const amazonOnly = await health(createApi({ fetcher }), { CATALOG_SOURCE: 'amazon' });
+  assert.equal(amazonOnly.products, amazonRows.length);
+  assert.equal(amazonOnly.catalog, 'amazon-kaggle-v1');
   assert.ok(calls.some(url => url.includes('/rest/v1/products')));
 });
 
@@ -36,7 +39,7 @@ test('Amazon-only mode preserves distinct listings with the same name and brand'
   const first = { ...amazonRows[0], brand: 'Demo' };
   const second = { ...first, id: amazonRows[1].id, source_url: amazonRows[1].source_url };
   const { fetcher } = fakeSupabase([first, second]);
-  for (const extra of [{}, { CATALOG_SOURCE: 'amazon' }]) {
+  for (const extra of [{ CATALOG_SOURCE: 'amazon' }]) {
     assert.equal((await health(createApi({ fetcher }), extra)).products, 2);
   }
 });

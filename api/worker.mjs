@@ -78,7 +78,7 @@ function inputOf(raw, shoppingText) {
   } catch { throw new ApiError(400, 'invalid_request', '입력 형식을 확인해주세요.'); }
 }
 // Rows are cached per isolate for 10 minutes; demo arrival dates are recomputed per request day.
-// CATALOG_SOURCE=amazon (default) | web | both picks the product list every chat mode receives.
+// CATALOG_SOURCE=amazon | web | both (default) picks the product list every chat mode receives.
 // apiBase is this API's own address: web photos are served from it at /catalog-images/.
 function defaultCatalog(fetcher) {
   let rows = null;
