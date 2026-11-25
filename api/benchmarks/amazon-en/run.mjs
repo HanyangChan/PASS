@@ -7,8 +7,9 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
-import { tasks, ingredientEvidence } from './fixtures.mjs';
+import { tasks as regressionTasks, ingredientEvidence as regressionEvidence } from './fixtures.mjs';
 import { scoreTurn } from './scoring.mjs';
+import { validateHoldout } from './holdout.mjs';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const { values } = parseArgs({ options: {
@@ -16,6 +17,7 @@ const { values } = parseArgs({ options: {
   data: { type: 'string', default: 'data/amazon-en/run' },
   'catalog-dir': { type: 'string', default: 'data/amazon-en/catalog' },
   'config-root': { type: 'string' },
+  'holdout-file': { type: 'string' },
   mode: { type: 'string', default: 'ABC' },
   model: { type: 'string', default: 'deepseek-v4-flash' },
   validate: { type: 'boolean', default: false },
@@ -36,6 +38,15 @@ assert.ok(rates, `unsupported model: ${expectedModel}`);
 const repo = resolve(values.repo);
 const git = (...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' }).trim();
 const baseline = git('rev-parse', 'HEAD');
+const holdoutFile=values['holdout-file'];
+const evaluationSet=holdoutFile?'holdout':'regression';
+const {tasks,ingredientEvidence}=holdoutFile
+  ?validateHoldout(JSON.parse(await readFile(resolve(holdoutFile),'utf8')),regressionTasks,regressionEvidence,baseline)
+  :{tasks:regressionTasks,ingredientEvidence:regressionEvidence};
+if(holdoutFile) {
+  assert.ok(!values.worktree,'holdout runs require a frozen Git revision');
+  assert.ok(resolve(values.data).startsWith(resolve(repoRoot,'data')+'/'),'holdout journals must stay in the ignored data directory');
+}
 const sourceRoots=['api','baseline','lib','scripts/catalog','supabase/seed'];
 const runtimeFiles=git('ls-files','--others','--exclude-standard','--',...sourceRoots)
   .split('\n').filter(name=>/\.(?:mjs|cjs|js|json)$/.test(name));
@@ -49,6 +60,7 @@ for (const file of runtimeFiles) sourceHash.update('\0'+file+'\0').update(await 
 const sourceRevision=sourceHash.digest('hex');
 const methodHash=createHash('sha256')
   .update(await readFile(new URL('./run.mjs',import.meta.url)))
+  .update(await readFile(new URL('./holdout.mjs',import.meta.url)))
   .update(await readFile(new URL('./scoring.mjs',import.meta.url))).digest('hex');
 const loadModule = path => import(pathToFileURL(join(repo, path)).href);
 const [{ createApi }, { toEngineProduct }, { imageUrl, toRow }, { singleInitial }, { loadLocalEnv }] = await Promise.all([
@@ -90,7 +102,7 @@ assert.equal(byId.size, products.length, 'duplicate catalog ID');
 assert.equal(products.length, 300000);
 assert.equal(manifest.catalog_sha256, '70ab2f30b179efae0807dd6441f1c13881a0deb7a694f05db0bb0c8eee3b478c');
 for (const id of [...tasks.flatMap(task => task.steps.flatMap(step => step.expectedIds ?? [])), ...Object.keys(ingredientEvidence)]) {
-  assert.ok(byId.has(id), `fixture product missing: ${id}`);
+  assert.ok(byId.has(id), 'a target or evidence product is missing from the catalog');
 }
 
 const limiter = { limit: async () => ({ success: true }) };
@@ -251,10 +263,11 @@ const metadata = {
   catalog: { ...manifest }, catalogDir, reasoning: local.LLM_REASONING_ENABLED ?? null,
   aMode: local.A_ROUTER_LLM_MODE,
   fixtures: tasks, ingredientEvidence,
+  evaluationSet,
 };
 const signature = createHash('sha256').update(JSON.stringify(metadata)).digest('hex');
 if (values.validate) {
-  console.log(JSON.stringify({ signature, tasks: tasks.length, products: products.length,
+  console.log(JSON.stringify({ signature, evaluationSet, tasks: tasks.length, products: products.length,
     scenarios: tasks.length * repetitions * Object.keys(modes).length, model: expectedModel, modes, sourceRevision, scoringVersion: 2, methodHash, loadMs }, null, 2));
   process.exit(0);
 }

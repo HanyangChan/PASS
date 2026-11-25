@@ -115,7 +115,9 @@ node api/benchmarks/amazon-en/run.mjs --mode ABC --model deepseek-v4-flash --dat
 node api/benchmarks/amazon-en/run.mjs --mode ABC --model gpt-5.6-luna --data data/amazon-en/gpt-abc
 ```
 
-## 실험 결과
+## 회귀 평가 결과
+
+아래 표는 개발 중 개선에 사용한 고정 120개 시나리오를 다시 평가한 결과다. 세 번의 반복은 동일 문장의 응답 일관성을 측정한다. 미공개 문장과 상품을 사용한 일반화 성능은 별도 평가에서 확인한다. [비공개 평가 방법](api/benchmarks/amazon-en/README.md#비공개-평가)
 
 ### DeepSeek V4 Flash A·B·C
 
