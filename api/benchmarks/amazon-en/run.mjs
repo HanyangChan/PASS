@@ -180,13 +180,17 @@ async function run(task, agent, repeat) {
     const decoded = await response.json().catch(()=>null);
     const data = decoded && typeof decoded === 'object' && !Array.isArray(decoded) ? decoded : {};
     const invalidApiResponse = response.ok && (!data.session?.state || !Array.isArray(data.view?.result?.items)
-      || !data.question || data.agent !== agent || data.view.result.items.some(item=>typeof item?.id!=='string'));
+      || !data.question || data.agent !== agent || data.view.result.items.some(item=>typeof item?.id!=='string')
+      || (data.view.candidateItems!==undefined && (!data.question.key || data.view.result.items.length ||
+        !Array.isArray(data.view.candidateItems) || data.view.candidateItems.length>3 ||
+        data.view.candidateItems.some(item=>typeof item?.id!=='string'))));
     const latencyMs = performance.now() - start;
     const ids = !response.ok || invalidApiResponse ? [] : data.view.result.items.slice(0, 3).map(item => item?.id).filter(id => typeof id==='string');
+    const candidateIds = !response.ok || invalidApiResponse ? [] : (data.view.candidateItems ?? []).map(item => item.id);
     const turnAttempts = attempts.slice(previous);
     turns.push({
       status: response.status, agent: data.agent ?? null, errorCode: data.code ?? null, route: data.routing?.route ?? null, routingFailure: data.routing?.failureCode ?? null, stopReason: data.routing?.stopReason ?? null,
-      latencyMs, ids, invalidApiResponse, response: data.message ?? data.error ?? null, notice: data.view?.result?.notice ?? null,
+      latencyMs, ids, candidateIds, invalidApiResponse, response: data.message ?? data.error ?? null, notice: data.view?.result?.notice ?? null,
       appliedConditions: invalidApiResponse || !response.ok ? null : {
         budget: data.session.state.budget, deliveryBy: data.session.state.delivery_by,
         excludedIngredients: data.session.state.excluded_ingredients,
@@ -196,7 +200,7 @@ async function run(task, agent, repeat) {
       toolCalls: data.routing?.toolCalls ?? 0,
       timings: data.routing?.timings,
       resultAudit: data.routing?.resultAudit,
-      question: data.question ?? null, score: scoreTurn(spec, data, invalidApiResponse ? 502 : response.status, ids, byId, ingredientEvidence),
+      question: data.question ?? null, score: scoreTurn(spec, data, invalidApiResponse ? 502 : response.status, ids, byId, ingredientEvidence,candidateIds),
       llmCalls: data.routing?.llmCalls ?? 0, attempts: turnAttempts, usd: cost(turnAttempts),
     });
     if (response.ok && !invalidApiResponse) session = data.session;
@@ -235,6 +239,9 @@ function summarize(rows) {
     cumulativeTaskLatencyMs: percentiles(rows.map(row => sum(row.turns, turn => turn.latencyMs))),
     exactCases: exact.length, hit1: rate(exact.filter(turn => turn.score.hit1).length, exact.length),
     hit3: rate(exact.filter(turn => turn.score.hit3).length, exact.length),
+    candidatePreviews: exact.filter(turn => turn.score.candidatePreview).length,
+    candidateHits: exact.filter(turn => turn.score.candidateHit3).length,
+    visibleHit3: rate(exact.filter(turn => turn.score.visibleHit3).length, exact.length),
     eligibleItemShare: rate(sum(recommendations, t => t.score.eligibleItems), sum(recommendations, t => t.score.recommendedItems)),
     conditionalRequests: recommendations.length,
     conditionalAnswered: recommendations.filter(t => t.score.answeredWithEligibleRecommendation).length,

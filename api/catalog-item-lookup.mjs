@@ -130,3 +130,40 @@ export function lookupIndexedCatalogItem(text, products, {matchNameWords=false}=
   }
   return [];
 }
+
+export function lookupRankedCatalogItem(text, products) {
+  if (!text || alternatives.test(text)) return null;
+  const quoted = text.match(/["“]([^"”\n]+)["”]/)?.[1];
+  const asksForProduct = lookupIntent.test(text) || exactIntent.test(text) || /검색해|조회해/.test(text);
+  const lookupText = asksForProduct && !lookupIntent.test(text) ? `${text} 찾아줘` : text;
+  const matches = lookupIndexedCatalogItem(lookupText, products, {matchNameWords:true});
+  if (!asksForProduct) return matches;
+  if (/\bASIN\s*[:#]?\s*[A-Z0-9]{10}\b|\/dp\/[A-Z0-9]{10}\b|\bB[A-Z0-9]{9}\b/i.test(text)) return matches;
+
+  // Keep punctuation inside English titles and compare complete normalized phrases.
+  const query = normalize(quoted ?? (text.match(/[A-Za-z][^가-힣]*/g) ?? [])
+    .map(value=>value.trim()).sort((a,b)=>b.length-a.length)[0]);
+  if (query.split(' ').length < 3) return matches;
+  const phrase = ` ${query} `;
+  const catalog = catalogIndex(products);
+  const exact = [];
+  const partial = [];
+  for (const row of catalog.rows) {
+    const length = Math.max(0, ...row.names.filter(name=>name.length>=12 &&
+      (quoted ? name===query : phrase.includes(` ${name} `))).map(name=>name.length));
+    if (length) exact.push({row,length});
+    else if (row.names.some(name=>` ${name} `.includes(phrase))) partial.push(row);
+  }
+  if (exact.length) {
+    // The most specific complete title wins over a shorter title embedded inside it.
+    const longest = exact.reduce((length, entry)=>Math.max(length,entry.length),0);
+    return narrowDetails(exact.filter(entry=>entry.length===longest).map(entry=>entry.row), text, query)
+      .map(({product})=>product).sort((a,b)=>a.id.localeCompare(b.id));
+  }
+  if (partial.length) {
+    return narrowDetails(partial, text, query).sort((a,b)=>
+      Math.min(...a.names.map(name=>name.length))-Math.min(...b.names.map(name=>name.length)) ||
+      a.product.id.localeCompare(b.product.id)).map(({product})=>product);
+  }
+  return matches?.sort((a,b)=>a.id.localeCompare(b.id)) ?? null;
+}

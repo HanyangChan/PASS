@@ -4,7 +4,7 @@ import { engineState, publicState, finishSingle, singleQuestion } from '../lib/s
 import { APP_RANKING, rankProducts, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
-import { lookupCatalogItem, lookupIndexedCatalogItem } from './catalog-item-lookup.mjs';
+import { lookupCatalogItem, lookupRankedCatalogItem } from './catalog-item-lookup.mjs';
 import { auditCResult } from './c-result-audit.mjs';
 export { FullChatError, isEndRequest } from '../baseline/agents/full-chat/index.mjs';
 
@@ -15,6 +15,7 @@ const emptyView=(question,message)=>({
   comparison:{status:'no_alternative',alternatives:[],message:''},
 });
 const noQuestion={key:null,text:'',choices:[]};
+const requiresInterpretation=/알레르|알러지|성분|피해야|배송|예산|오늘까지|내일까지|이하|이내|미만|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유|\b(?:allerg\w*|ingredient\w*|shipping|delivery|budget|explain)\b/i;
 
 const conversation={
   greeting:'안녕하세요! 받는 분과 예산을 알려주시면 선물을 함께 골라드릴게요.',
@@ -31,11 +32,11 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   const timings={lookupMs:0,modelMs:0,rankingMs:0,rankingRuns:0,recommendationRuns:0,responseMs:0};
   const lookupStarted=performance.now();
   const matches=input.operation!=='turn'?null:reuseRanking
-    ?lookupIndexedCatalogItem(input.text,products,{matchNameWords:isC})
+    ?lookupRankedCatalogItem(input.text,products)
     :lookupCatalogItem(input.text,products);
   timings.lookupMs=performance.now()-lookupStarted;
   const candidates=matches===null?products:matches.length===1?matches:[];
-  const rankingForTurn=isC&&matches?.length===1?{...ranking,giftAware:false,strictGiftPreferences:false}:ranking;
+  const rankingForTurn=reuseRanking&&matches?.length===1?{...ranking,giftAware:false,strictGiftPreferences:false}:ranking;
   const catalog=reuseRanking && candidates.every(p=>p.rating_count!=null)?candidates:candidates.map(p=>({...p,rating_count:p.rating_count??0}));
   const rank=(items,state,options)=>{
     const started=performance.now();
@@ -56,8 +57,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     return memo.get(key);
   };
   const session={...createSession('prototype-request'),state:engineState(before)};
-  const directLookup=isC&&matches!==null&&!input.issues.length&&
-    !/알레르|알러지|성분|피해야|배송|예산|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유/.test(input.text);
+  const directLookup=reuseRanking&&matches!==null&&!input.issues.length&&!requiresInterpretation.test(input.text);
   const request={expectedVersion:0,...(input.operation==='turn'&&!directLookup?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const pending=singleQuestion({state:before,issues:input.issues});
   let output;
@@ -116,6 +116,16 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
       message=matches.length?'같은 이름의 상품이 여럿 있어요. 색상이나 정확한 ASIN을 알려주세요.':'카탈로그에서 이 상품을 찾지 못했어요. 정확한 모델명이나 ASIN을 알려주세요.';
       const question={key:'issue',text:message,choices:[]};
       view=emptyView(question,message);
+      if (directLookup && matches.length && !state.excluded_ingredients.length) {
+        const eligible=rank(matches,engineState(state),{...ranking,giftAware:false,strictGiftPreferences:false});
+        const byId=new Map(eligible.items.map(item=>[item.id,item]));
+        const candidateItems=matches.map(item=>byId.get(item.id)).filter(Boolean).slice(0,3);
+        if (candidateItems.length) {
+          message='어떤 상품을 찾으셨나요? 아래 후보에서 고르거나 색상·모델명을 알려주세요.';
+          question.text=message;
+          view={...emptyView(question,message),candidateItems};
+        }
+      }
       routing.stopReason=matches.length?'ambiguous_product':'product_not_found';
       turn.question=question;
     } else if (!reuseRanking) {

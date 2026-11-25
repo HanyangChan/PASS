@@ -79,7 +79,7 @@ import { createCloudRecords } from './src/services/cloudRecords';
 import { createSnapshotPersistence } from './src/services/snapshotPersistence';
 import { supabase } from './src/auth/client';
 import { randomUUID } from 'expo-crypto';
-import { createServerChatService, resolveChatUrl } from './src/services/serverChatService';
+import { createServerChatService, resolveChatUrl, type ChatView } from './src/services/serverChatService';
 import { daysUntil, upcomingWithin } from './src/services/calendarDates';
 import type { ChatSession, ChatMessage, EngineProduct, CalendarEvent, CalendarEventKind } from './src/domain';
 import {
@@ -272,7 +272,8 @@ export function AppContent({
   const removeEvent = (id: string) =>
     setEvents((old) => old.filter((e) => e.id !== id));
   const upcomingEvents = upcomingWithin(events, 7);
-  const { question, result, comparison } = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
+  const view: ChatView = recommendation?.key === JSON.stringify(session) ? recommendation.view : chatService.view(session);
+  const { question, result, comparison, candidateItems = [] } = view;
   useEffect(() => {
     if (!surveyRecording && agentMode === 'langgraph-advisors' && !chatPending) changeAgentMode('a-router');
   }, [surveyRecording, agentMode, chatPending, changeAgentMode]);
@@ -881,6 +882,26 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
+                  {restoredRecommendations === null && question.key && candidateItems.length > 0 && (
+                    <View>
+                      <SectionHeader title="상품 확인 후보" />
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chatCards}>
+                        {candidateItems.map(p => {
+                          const gift = toGift(p);
+                          const asin = /^amz-([a-z0-9]{10})$/i.exec(gift.id)?.[1];
+                          return <View key={gift.id} style={s.chatCard}>
+                            <View style={s.chatCardHero}><GiftImage gift={gift}/></View>
+                            <View style={s.chatCardBody}>
+                              <Text numberOfLines={3} style={s.sectionTitle}>{gift.name}</Text>
+                              <Text style={s.chatCardPrice}>{won(gift.price)}</Text>
+                              <Button label="이 상품 확인" onPress={() => send(asin ?
+                                `ASIN ${asin} 찾아줘` : `"${gift.name.replace(/["“”]/g, '')}" 찾아줘`, 'quick_reply')}/>
+                            </View>
+                          </View>;
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
@@ -1161,7 +1182,7 @@ function usePassState() {
     [allSaved, setAllSaved] = useState(false),
     [allRecent, setAllRecent] = useState(false);
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current) : null, [owner]);
-  const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ServerChatAgentMode; mode: string } | null>(null);
+  const [recommendation, setRecommendation] = useState<{ key: string; view: ChatView; agentMode: ServerChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
   const [agentMode, setAgentMode] = useState<ServerChatAgentMode>('a-router');
   const [chatError, setChatError] = useState(chatConfigurationError);

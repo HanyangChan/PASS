@@ -245,9 +245,35 @@ test('B resolves a separated model number, narrows variants, and asks instead of
   const ambiguous=await f.send({text:'SWISSTYLE SS-703W-703B 시계와 같은 모델을 찾아주세요.'});
   assert.equal(ambiguous.data.routing.stopReason,'ambiguous_product');
   assert.deepEqual(ambiguous.data.view.result.items,[]);
+  assert.deepEqual(ambiguous.data.view.candidateItems.map(item=>item.id),[white.id,black.id]);
   const missing=await f.send({text:'카탈로그에서 Acme Lunar Series 상품을 찾아주세요.'});
   assert.equal(missing.data.routing.stopReason,'product_not_found');
   assert.deepEqual(missing.data.view.result.items,[]);
+});
+
+test('B/C preview eligible name variants and confirm the selected ASIN',async()=>{
+  const variants=[
+    ['B000000001','Blue',29000],['B000000002','Grey',25000],['B000000003','Red',27000],
+    ['B000000004','Green',28000],['B000000005','Black',150000],
+  ].map(([asin,color,price_krw])=>({...products[0],id:`amz-${asin}`,
+    name:`North Ridge Travel Mug, ${color}`,price_krw,category:'kitchen'}));
+  for(const agentMode of ['full-chat','full-chat-feedback-2']) {
+    const f=fixture([],variants);
+    const query='"North Ridge Travel Mug" 제품을 찾아주세요.';
+    const preview=await f.send({agentMode,text:query});
+    assert.equal(preview.data.question.key,'issue');
+    assert.deepEqual(preview.data.view.result.items,[]);
+    assert.deepEqual(preview.data.view.candidateItems.map(item=>item.id),
+      [variants[2].id,variants[0].id,variants[1].id]);
+    const chosen=await f.send({agentMode,text:'ASIN B000000002 찾아줘',session:preview.data.session});
+    assert.equal(chosen.data.question.key,null);
+    assert.deepEqual(chosen.data.view.result.items.map(item=>item.id),[variants[1].id]);
+    assert.equal(chosen.data.view.candidateItems,undefined);
+    const session=ready();
+    session.state.excluded_ingredients=['우유'];
+    const conservative=await f.send({agentMode,text:query,session});
+    assert.equal(conservative.data.view.candidateItems,undefined);
+  }
 });
 
 test('B uses explicit shopping conditions when a model asks for optional recipient details',async()=>{

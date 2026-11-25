@@ -6,7 +6,12 @@ import type { AgentPayload } from '../AgentPanel';
 import type { recipientCalendar } from './personalization';
 import type { FeedbackSignal } from '../chatHistory.ts';
 type AdvisorContext = { disabled: string[]; calendar: ReturnType<typeof recipientCalendar> };
-type View = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
+type LocalView = ReturnType<ReturnType<typeof createLocalChatService>['view']>;
+export type ChatView = LocalView & { candidateItems?: LocalView['result']['items'] };
+const validCard = (value: unknown) => {
+  const card = value as { id?: unknown; name?: unknown; total?: number } | null;
+  return card && typeof card.id === 'string' && typeof card.name === 'string' && Number.isFinite(card.total);
+};
 type Auth = { getSession(): Promise<{ data: { session: { access_token: string; user: { id: string } } | null }; error: unknown }> };
 export function resolveChatUrl(value?: string) {
   if (!value) return null;
@@ -51,10 +56,13 @@ export function createServerChatService(endpoint: string, auth: Auth, owner: str
         (turn.mode === 'agents' && (!turn.agents || !['attribution', 'opinions', 'suggestions', 'memoryProposals', 'autoApplied'].every(key => Array.isArray(turn.agents[key])))) || !turn.view || !Array.isArray(turn.view.result?.items) ||
         !Array.isArray(turn.view.comparison?.alternatives) || !Array.isArray(turn.view.question?.choices) ||
         typeof turn.view.question?.text !== 'string' || typeof turn.view.result?.message !== 'string' ||
-        turn.view.result.items.some((p: { id: unknown; name: unknown; total: unknown }) => typeof p.id !== 'string' || typeof p.name !== 'string' || !Number.isFinite(p.total))) throw new Error('추천 서버 응답 형식을 확인해주세요.');
+        !turn.view.result.items.every(validCard) ||
+        (turn.view.candidateItems !== undefined && (!Array.isArray(turn.view.candidateItems) ||
+          !turn.view.question.key || turn.view.result.items.length > 0 || turn.view.candidateItems.length > 3 ||
+          !turn.view.candidateItems.every(validCard)))) throw new Error('추천 서버 응답 형식을 확인해주세요.');
       const latest = await auth.getSession();
       if (latest.data.session?.user.id !== owner || controller.signal.aborted) throw new Error('계정이 변경되거나 요청이 취소되었어요.');
-      return turn as { session: ChatSession; message: string; view: View; mode: 'rules' | 'rules_fast' | 'llm' | 'agents'; agents?: AgentPayload };
+      return turn as { session: ChatSession; message: string; view: ChatView; mode: 'rules' | 'rules_fast' | 'llm' | 'agents'; agents?: AgentPayload };
     } catch (error) {
       if (timedOut) throw new Error('추천 응답 시간이 초과됐어요. 다시 시도해주세요.');
       if (error instanceof TypeError) throw new Error('추천 서버 연결을 확인해주세요.');

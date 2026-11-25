@@ -138,6 +138,13 @@ entries.push('', '## 정확 상품의 반환 위치', '',
   '|---|---:|---:|---:|---:|',
   ...modes.map(m=>`| ${m.label} | ${m.positions.join(' | ')} | ${m.exact.length-sum(m.positions,n=>n)} |`),
   '', 'Top 1은 첫 번째 카드의 적중을 세고, Top 3는 첫 세 카드의 적중을 센다. 두 점수의 차이는 채점에 포함된 2·3번째 카드 적중 건수다.');
+if(modes.some(m=>Object.hasOwn(m.s,'candidatePreviews'))) {
+  entries.push('', '## 확인 질문의 상품 후보', '',
+    '| 모드 | 후보 표시 | 후보에 정답 포함 | 확정 또는 후보에 정답 포함 |',
+    '|---|---:|---:|---:|',
+    ...modes.map(m=>`| ${m.label} | ${m.s.candidatePreviews}/${m.exact.length} | ${m.s.candidateHits}/${m.s.candidatePreviews} | ${count(m.exact,t=>t.score.visibleHit3)}/${m.exact.length} |`),
+    '', '확인 질문의 후보는 확정 Top 1·Top 3에서 제외한다.');
+}
 entries.push('', '일반·다중 턴 성공은 확인 질문 없이 조건을 충족하는 상품 카드가 최소 하나 반환된 경우다. 카테고리·예산·수량·합성 납기를 사용했다. 다중 턴 전체 성공은 두 턴 모두 이 기준을 충족한 사례다. 정확 상품은 카탈로그 ASIN으로 채점했다.',
   ...(meta.scoringVersion>=2?['', '조건 값이 재현되고 질문 없이 반환된 카드만 성공으로 집계했다. 단일 선물 앱에서 지원하는 수량을 초과한 요청은 별도 집계한다.','',
     ...modes.map(m=>'- '+m.label+' 미지원 수량 안내 '+m.s.quantityLimitExplained+'/'+m.s.unsupportedQuantityCases+
