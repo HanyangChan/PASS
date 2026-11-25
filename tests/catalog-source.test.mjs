@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { catalogId, catalogSource, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
+import { catalogId, catalogSource, currentImageUrl, fromWebItem, mergeCatalogs } from '../lib/catalog-source.mjs';
 import { isGiftSet } from '../lib/ranking.mjs';
 import { packagingFor, sweetnessFor } from '../scripts/catalog/demo-rules.mjs';
 
@@ -53,4 +53,16 @@ test('merging drops only the same product', () => {
   const sameName = { id: 'searchapi-1', name: '[N배송] 스팸 클래식 8호 선물세트', brand: '스팸', link: 'https://b/2' };
   const otherOfBrand = { id: 'searchapi-2', name: '스팸 복합 1호 선물세트', brand: '스팸', link: 'https://b/3' };
   assert.deepEqual(mergeCatalogs([a], [sameLink, sameName, otherOfBrand, a]).map(p => p.id), ['amz-1', 'searchapi-2']);
+});
+
+test('stored web photo addresses point at the current API', () => {
+  const api = 'http://127.0.0.1:8790/';
+  assert.equal(currentImageUrl('https://x.supabase.co/storage/v1/object/public/product-images-kr/naver_5601213660.webp', api), 'http://127.0.0.1:8790/catalog-images/naver_5601213660.webp');
+  assert.equal(currentImageUrl('http://127.0.0.1:8788/catalog-images/naver_1.webp', api), 'http://127.0.0.1:8790/catalog-images/naver_1.webp');
+  const amazon = 'https://m.media-amazon.com/images/I/719elVA3FvL._AC_UL320_.jpg';
+  assert.equal(currentImageUrl(amazon, api), amazon);
+  assert.equal(currentImageUrl(undefined, api), undefined);
+  assert.equal(currentImageUrl(undefined, api, 'naver_8514792794'), 'http://127.0.0.1:8790/catalog-images/naver_8514792794.webp');
+  assert.equal(currentImageUrl(undefined, api, 'amz-B08X2M94KM'), undefined);
+  assert.equal(currentImageUrl('https://x/product-images-kr/naver_1.webp', undefined), 'https://x/product-images-kr/naver_1.webp');
 });

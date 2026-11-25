@@ -12,6 +12,8 @@
   },
   "vars": {
     "CHAT_AGENT": "a-router",
+    // Amazon + Korean web catalog; web photos come from this Worker at /catalog-images/<file>.
+    "CATALOG_SOURCE": "both",
     "SUPABASE_URL": "https://zenmtrokvnwsekidcniy.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XlhsG0VhBso-EFxXF8ZfFg_lR3DBUok",
     "APP_ORIGINS": "https://temporary-prompt-sable-s15js3l.vercel.app",
