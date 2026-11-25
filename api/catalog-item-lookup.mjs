@@ -1,6 +1,7 @@
 const lookupIntent = /찾아|찾고|보여|같은 모델|동일 모델|실물을|주문 후보|\b(?:find|look up)\b/i;
 const alternatives = /말고|제외|비교|\b(?:except|compare)\b/i;
 const normalize = text => String(text ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+const explicitAsin = /\bASIN\s*[:#]?\s*[A-Z0-9]{10}\b|\/dp\/[A-Z0-9]{10}\b|\bB[A-Z0-9]{9}\b/i;
 export const catalogLookupNeedsInterpretation = /알레르|알러지|성분|피해야|배송|예산|오늘까지|내일까지|이하|이내|미만|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유|\b(?:allerg\w*|ingredient\w*|shipping|delivery|budget|explain)\b/i;
 
 // Return null for ordinary recommendations. An explicit lookup only succeeds when it identifies one catalog row.
@@ -139,7 +140,7 @@ export function lookupRankedCatalogItem(text, products) {
   const lookupText = asksForProduct && !lookupIntent.test(text) ? `${text} 찾아줘` : text;
   const matches = lookupIndexedCatalogItem(lookupText, products, {matchNameWords:true});
   if (!asksForProduct) return matches;
-  if (/\bASIN\s*[:#]?\s*[A-Z0-9]{10}\b|\/dp\/[A-Z0-9]{10}\b|\bB[A-Z0-9]{9}\b/i.test(text)) return matches;
+  if (explicitAsin.test(text)) return matches;
 
   // Keep punctuation inside English titles and compare complete normalized phrases.
   const query = normalize(quoted ?? (text.match(/[A-Za-z][^가-힣]*/g) ?? [])
@@ -167,4 +168,41 @@ export function lookupRankedCatalogItem(text, products) {
       a.product.id.localeCompare(b.product.id)).map(({product})=>product);
   }
   return matches?.sort((a,b)=>a.id.localeCompare(b.id)) ?? null;
+}
+
+const retryColors = [...detailAliases,
+  [/\bgreen\b|초록색|녹색|그린/i, 'green'],
+  [/\b(?:gray|grey)\b|회색|그레이/i, 'grey'],
+  [/\bpurple\b|보라색|퍼플/i, 'purple'],
+];
+const variantSizes = /(?<![\d.])\d+(?:\.\d+)?\s*(?:ml|cm|mm|inch|kg|gb|tb)\b/gi;
+const rawTitle = value => value.normalize('NFKC').trim().toLowerCase().replace(/\s+/g,' ');
+const sizes = value => [...new Set([...value.matchAll(variantSizes)].map(([size])=>size.toLowerCase().replace(/\s/g,'')))];
+
+// Search again using title tokens and explicitly stated variant details.
+// A repeated identifier lookup cannot establish a different product's identity.
+export function retryExactCatalogItem(text, products, rejectedIds = []) {
+  if (explicitAsin.test(text)) return null;
+  const quoted = text.match(/["“]([^"”\n]+)["”]/)?.[1];
+  const clue = quoted ?? (text.match(/[A-Za-z][^가-힣]*/g) ?? []).sort((a,b)=>b.length-a.length)[0] ?? '';
+  const words = [...new Set(normalize(clue).split(' '))].filter(word=>/[a-z]/.test(word) && word.length>1);
+  const codes = modelCodes(clue);
+  if (words.length<3 && !codes.length) return null;
+  const wantedColors = retryColors.filter(([pattern])=>pattern.test(text));
+  const wantedSizes = sizes(text);
+  if (wantedColors.length>1 || wantedSizes.length>1) return null;
+  const {rows,models} = catalogIndex(products);
+  const modelRows = codes.map(code=>new Set(models.get(code)??[]));
+  const rejected = new Set(rejectedIds);
+  const candidates = (modelRows.length ? [...modelRows[0]] : rows).filter(row=>
+    !rejected.has(row.product.id) && modelRows.every(matches=>matches.has(row)) &&
+    row.names.some(name=>words.every(word=>` ${name} `.includes(` ${word} `))) &&
+    [row.product.name,row.product.name_en].filter(Boolean).some(name=>
+      wantedColors.every(([pattern])=>pattern.test(name)) &&
+      (wantedSizes.length===0 || wantedSizes.every(size=>sizes(name).includes(size)))));
+  if (quoted && !/앞부분|일부|시작|prefix|starts? with/i.test(text)) {
+    const rawExact=candidates.filter(({product})=>[product.name,product.name_en].some(name=>name&&rawTitle(name)===rawTitle(quoted)));
+    if (rawExact.length) return rawExact.map(({product})=>product);
+  }
+  return candidates.map(({product})=>product);
 }

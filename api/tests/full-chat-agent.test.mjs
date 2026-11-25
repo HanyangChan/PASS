@@ -412,6 +412,42 @@ test('C explains a missing catalog category without trying another category',asy
   assert.equal(f.auditPayloads.length,1);
 });
 
+test('C retries exact misses and uses explicit variant clues without guessing between options',async()=>{
+  const blue={...products[0],id:'blue',name:'North Ridge Travel Mug Blue',category:'kitchen'};
+  const green={...blue,id:'green',name:'North Ridge Travel Mug Green'};
+  const f=fixture([],[blue,green]);
+  const agentMode='full-chat-feedback-2';
+  const narrowed=await f.send({agentMode,text:'"North Ridge Travel Mug" 초록색 상품을 찾아줘.'});
+  assert.equal(narrowed.data.question.key,null);
+  assert.deepEqual(narrowed.data.view.result.items.map(item=>item.id),['green']);
+  assert.deepEqual(narrowed.data.routing.exactRecovery,{attempts:1,reason:'ambiguous_product',outcome:'recovered'});
+  const ambiguous=await f.send({agentMode,text:'상품명이 "North Ridge Travel Mug"로 시작해요. 찾아줘.'});
+  assert.equal(ambiguous.data.question.key,'issue');
+  assert.deepEqual(ambiguous.data.view.candidateItems.map(item=>item.id),['blue','green']);
+  assert.deepEqual(ambiguous.data.routing.exactRecovery,{attempts:1,reason:'ambiguous_product',outcome:'still_ambiguous'});
+  const overBudget=await f.send({agentMode,text:'"North Ridge Travel Mug" 초록색 상품을 찾아줘.',
+    session:{...ready(),state:{...ready().state,budget:{amount_krw:31000,shipping_included:true}}}});
+  assert.equal(overBudget.data.routing.exactRecovery.outcome,'ineligible');
+  assert.deepEqual(overBudget.data.view.result.items,[]);
+  const noMatch=fixture([],[green]);
+  const reordered=await noMatch.send({agentMode,text:'"Travel Mug North Ridge Green" 제품을 찾아줘.'});
+  assert.equal(reordered.data.routing.exactRecovery.reason,'product_not_found');
+  assert.deepEqual(reordered.data.view.result.items.map(item=>item.id),['green']);
+  const exactIdentifier=await noMatch.send({agentMode,text:'ASIN B000000002을 찾아줘.'});
+  assert.equal(exactIdentifier.data.routing.exactRecovery,undefined);
+  assert.deepEqual(exactIdentifier.data.view.result.items,[]);
+});
+
+test('C tries a different eligible product after a confirmed variant conflict',async()=>{
+  const black={...products[0],id:'black',name:'North Ridge Travel Mug',name_en:'North Ridge Travel Mug Black',category:'kitchen'};
+  const green={...black,id:'green',name:'North Ridge Travel Mug Green',name_en:'North Ridge Travel Mug Green'};
+  const f=fixture([],[black,green],[{flags:['exact_identity']},{flags:[{id:'black',reason:'variant_color'}]}]);
+  const out=await f.send({agentMode:'full-chat-feedback-2',text:'"North Ridge Travel Mug" 초록색 상품을 찾아줘.'});
+  assert.equal(out.data.routing.resultAudit.removedCards,1);
+  assert.deepEqual(out.data.routing.exactRecovery,{attempts:1,reason:'audit_mismatch',outcome:'recovered'});
+  assert.deepEqual(out.data.view.result.items.map(item=>item.id),['green']);
+});
+
 test('C repairs an empty search once when a verified category was missed and preserves hard constraints',async()=>{
   const before={...ready().state,delivery_by:'2026-12-01',excluded_ingredients:['우유']};
   const wrong={...before,preferences:['category:stationery']};

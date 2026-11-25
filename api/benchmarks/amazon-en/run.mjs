@@ -220,6 +220,7 @@ async function run(task, agent, repeat) {
       timings: data.routing?.timings,
       resultAudit: data.routing?.resultAudit,
       recovery: data.routing?.recovery,
+      exactRecovery: data.routing?.exactRecovery,
       question: data.question ?? null, score,
       llmCalls: data.routing?.llmCalls ?? 0, attempts: turnAttempts, usd: cost(turnAttempts),
     });
@@ -257,6 +258,9 @@ function summarize(rows) {
     recoverySuccesses: turns.filter(turn=>turn.recovery?.outcome==='recovered' &&
       turn.score.answeredWithEligibleRecommendation).length,
     recoveryCategoryUnavailable: turns.filter(turn=>turn.recovery?.outcome==='category_unavailable').length,
+    exactRecoveryAttempts: sum(exact,turn=>turn.exactRecovery?.attempts??0),
+    exactRecoverySuccesses: exact.filter(turn=>turn.exactRecovery?.outcome==='recovered' && turn.score.hit3).length,
+    exactRecoveryAmbiguous: exact.filter(turn=>turn.exactRecovery?.outcome==='still_ambiguous').length,
     unsupportedQuantityCases: turns.filter(turn=>turn.score.unsupportedQuantity).length,
     quantityLimitExplained: turns.filter(turn=>turn.score.quantityLimitExplained).length,
     requestLatencyMs: percentiles(turns.map(turn => turn.latencyMs)),

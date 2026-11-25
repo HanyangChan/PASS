@@ -151,6 +151,9 @@ const recoveryMode=modes.find(m=>m.label==='C' && Object.hasOwn(m.s,'recoveryAtt
 if (recoveryMode) {
   const s=recoveryMode.s;
   entries.push('', `C 빈 결과 재검색 ${s.recoveryAttempts}건 · 채점 기준 충족 ${s.recoverySuccesses}건 · 카탈로그에 요청 상품군 없음 ${s.recoveryCategoryUnavailable}건`);
+  if (Object.hasOwn(s,'exactRecoveryAttempts')) {
+    entries.push(`C 정확 상품 재검색 ${s.exactRecoveryAttempts}건 · 확정 Top 3 적중 ${s.exactRecoverySuccesses}건 · 재검색 후 단일 상품 미확정 ${s.exactRecoveryAmbiguous}건(복수 후보)`);
+  }
 }
 entries.push('', '## 정확 상품의 반환 위치', '',
   '| 모드 | 1번째 적중 | 2번째 적중 | 3번째 적중 | Top 3 실패 |',

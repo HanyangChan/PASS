@@ -4,7 +4,7 @@ import { engineState, publicState, finishSingle, singleQuestion } from '../lib/s
 import { APP_RANKING, rankProducts, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
-import { catalogLookupNeedsInterpretation, lookupCatalogItem, lookupRankedCatalogItem } from './catalog-item-lookup.mjs';
+import { catalogLookupNeedsInterpretation, lookupCatalogItem, lookupRankedCatalogItem, retryExactCatalogItem } from './catalog-item-lookup.mjs';
 import { auditCResult } from './c-result-audit.mjs';
 import { recoverEmptyRecommendation } from './c-empty-recovery.mjs';
 export { FullChatError, isEndRequest } from '../baseline/agents/full-chat/index.mjs';
@@ -110,7 +110,30 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   } else if(output.limitations?.includes('scent_strength')) message+='\n향 강도 정보가 없어 ‘향이 강한 제품 제외’는 확인·적용하지 못했어요. 나머지 조건으로 조회한 결과이며, 향은 상품 상세 정보에서 확인해 주세요.';
   const blocked=output.kind==='question'&&(routing.route==='limit'||routing.stopReason==='unsupported_quantity'||isIngredientQuestion(output.question));
   let view=blocked?emptyView(turn.question,message):undefined;
-  if (matches && !blocked) {
+  let auditMatches=matches;
+  const canRetryExact=agent==='full-chat-feedback-2' && directLookup && !blocked && !turn.question.key;
+  const retryExact=(reason,rejectedIds=[])=>{
+    if (!canRetryExact || routing.exactRecovery || signal?.aborted ||
+        performance.now()-started >= (limits.timeoutMs??20000)) return false;
+    const lookupStart=performance.now();
+    const found=retryExactCatalogItem(input.text,products,rejectedIds);
+    timings.lookupMs+=performance.now()-lookupStart;
+    if (found===null) return false;
+    const applied=engineState(state);
+    const exactRanking={...ranking,giftAware:false,strictGiftPreferences:false};
+    const result=found.length===1?rank(found,applied,exactRanking):null;
+    routing.exactRecovery={attempts:1,reason,outcome:result?.items.length?'recovered':
+      found.length>1?'still_ambiguous':found.length?'ineligible':'not_found'};
+    if (!result?.items.length) return false;
+    auditMatches=found;
+    message=result.message;
+    turn.question=noQuestion;
+    routing.stopReason='exact_lookup_recovered';
+    view={question:noQuestion,result,comparison:budgetAlternatives(found,applied,exactRanking,{baseline:result,rank})};
+    return true;
+  };
+  if (matches && matches.length!==1) retryExact(matches.length?'ambiguous_product':'product_not_found');
+  if (matches && !blocked && !view) {
     if (output.kind==='question') view=emptyView(turn.question,message);
     else if (matches.length!==1) {
       message=matches.length?'같은 이름의 상품이 여럿 있어요. 색상이나 정확한 ASIN을 알려주세요.':'카탈로그에서 이 상품을 찾지 못했어요. 정확한 모델명이나 ASIN을 알려주세요.';
@@ -163,7 +186,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   if(agent==='full-chat-feedback-2'&&input.operation==='turn'&&!blocked&&view&&
       (output.kind==='recommendation'||matches!==null)&&routing.llmCalls+2<=(limits.maxCalls??10)&&remainingMs>0) {
     const auditStarted=performance.now();
-    const {info,items}=await auditCResult({env,fetcher,signal,timeoutMs:remainingMs,input,state,view,matches});
+    const {info,items}=await auditCResult({env,fetcher,signal,timeoutMs:remainingMs,input,state,view,matches:auditMatches});
     timings.modelMs+=performance.now()-auditStarted;
     routing.resultAudit=info;
     routing.llmCalls+=info.calls;
@@ -175,7 +198,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
       return {session:{state:before,issues:[...input.issues,message]},changes:[],question,message,view:emptyView(question,message),
         agent:activeAgent,mode:'llm',routing:{...routing,stopReason:'result_condition_mismatch'}};
     }
-    if(info.removedCards) {
+    if(info.removedCards && !(matches && !items.length && retryExact('audit_mismatch',view.result.items.map(item=>item.id)))) {
       // Hide the old budget alternatives as they refer to the pre-audit candidate cards.
       if(!items.length) message='요청과 상품 정보가 일치하는 후보를 확인하지 못했어요.';
       view={...emptyView(turn.question,message),
