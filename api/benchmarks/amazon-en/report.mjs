@@ -32,7 +32,7 @@ const directory = resolve(values.output ?? paths[0]);
 const runs = await Promise.all(paths.map(path => resolve(path)).map(readRun));
 const base = runs[0].meta;
 const evaluationSet=base.evaluationSet??'regression';
-if(evaluationSet==='holdout') {
+if(evaluationSet==='holdout'||evaluationSet==='comparison') {
   const privateData=fileURLToPath(new URL('../../../data/',import.meta.url));
   assert.ok(directory.startsWith(privateData),'holdout report must stay in the ignored data directory');
 }
@@ -123,7 +123,7 @@ const qualified = turn => turn.score.answeredWithEligibleRecommendation;
 const inputRate = meta.rates.INPUT.toFixed(2);
 const outputRate = meta.rates.OUTPUT.toFixed(2);
 const entries = [
-  `# PASS ${model.title} ${evaluationSet==='holdout'?'비공개 평가':'회귀 평가'} 결과`, '',
+  `# PASS ${model.title} ${evaluationSet==='comparison'?'동일 시나리오 재평가':evaluationSet==='holdout'?'비공개 평가':'회귀 평가'} 결과`, '',
   `${model.name} · PASS 기준 커밋 \`${meta.baseline.slice(0, 7)}\` · 영문 Amazon 상품 ${meta.catalog.selected.toLocaleString('ko-KR')}개 · ${meta.fixtures.length}개 × 반복 ${meta.repetitions}회 × ${labels.join('/')} = ${rows.length.toLocaleString('ko-KR')}회`,
   ...(meta.sourceRevision?['', `실행 소스 해시 \`${meta.sourceRevision}\` · 채점 버전 ${meta.scoringVersion}`]:[]),
   '', '## 정확도·응답 시간·비용', '',
@@ -132,6 +132,25 @@ const entries = [
 ];
 for (const m of modes) {
   entries.push(`| ${m.label} | ${count(m.exact, t => t.score.hit1)} / ${count(m.exact, t => t.score.hit3)} (각 ${m.exact.length}건) | ${count(m.recommend, qualified)}/${m.recommend.length} | ${count(m.multiRows, row => row.turns.every(qualified))}/${m.multiRows.length} | ${count(m.conditional, qualified)}/${m.conditional.length} | ${count(m.turns, t => t.status !== 200)}/${m.turns.length} | ${fmtLatency(m.turns.map(t => t.latencyMs))} | ${readableCost(m.s.usd, m.knownCost)} |`);
+}
+if (meta.scoringVersion>=3) {
+  const eligible=t=>t.score.catalogEligibleItems>0;
+  const scored=turns=>turns.filter(t=>Object.hasOwn(t.score,'catalogEligibleItems'));
+  const ratio=(turns,test)=>turns.length?`${count(turns,test)}/${turns.length}`:'—';
+  entries.push('', '## 카탈로그 후보 유무와 추천 성공', '',
+    '| 모드 | 일반 추천 후보 없음 | 후보가 있는 일반 추천 성공 | 일반·다중 턴 후보 없음 | 후보가 있는 일반·다중 턴 성공 |',
+    '|---|---:|---:|---:|---:|');
+  for (const m of modes) {
+    const recommendation=scored(m.recommend);
+    const conditional=scored(m.conditional);
+    entries.push(`| ${m.label} | ${ratio(recommendation,t=>!eligible(t))} | ${ratio(recommendation.filter(eligible),qualified)} | ${ratio(conditional,t=>!eligible(t))} | ${ratio(conditional.filter(eligible),qualified)} |`);
+  }
+  entries.push('', '후보 유무는 실행 전에 상품군·배송비 포함 예산·재고·요청 납기로 판정했다. 조건을 충족한 후보가 있어도 추천 엔진의 선호나 선물 적합성 기준에 따라 반환 결과가 달라질 수 있다.');
+}
+const recoveryMode=modes.find(m=>m.label==='C' && Object.hasOwn(m.s,'recoveryAttempts'));
+if (recoveryMode) {
+  const s=recoveryMode.s;
+  entries.push('', `C 빈 결과 재검색 ${s.recoveryAttempts}건 · 채점 기준 충족 ${s.recoverySuccesses}건 · 카탈로그에 요청 상품군 없음 ${s.recoveryCategoryUnavailable}건`);
 }
 entries.push('', '## 정확 상품의 반환 위치', '',
   '| 모드 | 1번째 적중 | 2번째 적중 | 3번째 적중 | Top 3 실패 |',
@@ -186,7 +205,7 @@ if (!allCostKnown) {
   entries.push('', `토큰 사용량 미보고 ${missing.length}건 (${missing.join(', ')})은 비용 소계에서 빠져 있다.`);
 }
 entries.push('', '상품 카테고리·상품 이름 등 관측 가능한 조건을 기준으로 평가했다. 식품의 실제 성분과 선물 취향 적합성은 확인 근거가 있는 범위만 비교할 수 있다.',
-  ...(runs.length>1?['', 'A와 B/C는 같은 앱 코드·카탈로그·시나리오·채점 기준으로 별도 시점에 순차 실행했다. 응답 지연에는 각 시점의 모델 공급자 상태가 반영된다.']:[]),
+  ...(runs.length>1?['', '각 모드는 같은 앱 코드·카탈로그·시나리오·채점 기준으로 별도 실행했다. 응답 지연에는 실행 시점의 모델 공급자와 실행 환경 상태가 반영된다.']:[]),
   '', '## 원본', '',
   ...runs.flatMap(run=>{
     const label=Object.keys(run.meta.modes).join('/');
@@ -200,6 +219,8 @@ entries.push('', '상품 카테고리·상품 이름 등 관측 가능한 조건
 
 await mkdir(directory,{recursive:true});
 if(catalogDir) {
+  const catalogManifest=JSON.parse(await readFile(join(resolve(catalogDir),'manifest.json'),'utf8'));
+  assert.equal(catalogManifest.catalog_sha256,meta.catalog.catalog_sha256,'report catalog must match the run catalog');
   const review = rows.flatMap(row => row.turns.flatMap((turn, i) => {
     if (!turn.score.needsReview) return [];
     const step = specById.get(row.task).steps[i];

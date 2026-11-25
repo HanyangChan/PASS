@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
 import { tasks as regressionTasks, ingredientEvidence as regressionEvidence } from './fixtures.mjs';
-import { scoreTurn } from './scoring.mjs';
+import { catalogCandidateCount, scoreTurn } from './scoring.mjs';
 import { validateHoldout } from './holdout.mjs';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -18,12 +18,14 @@ const { values } = parseArgs({ options: {
   'catalog-dir': { type: 'string', default: 'data/amazon-en/catalog' },
   'config-root': { type: 'string' },
   'holdout-file': { type: 'string' },
+  comparison: { type: 'boolean', default: false },
   mode: { type: 'string', default: 'ABC' },
   model: { type: 'string', default: 'deepseek-v4-flash' },
   validate: { type: 'boolean', default: false },
   worktree: { type: 'boolean', default: false },
 } });
 const repetitions = 3;
+const scoringVersion = 3;
 const day = '2026-11-30';
 const allModes = { A: 'a-router', B: 'full-chat', C: 'full-chat-feedback-2' };
 assert.match(values.mode, /^(?:A|B|C|AB|BC|ABC)$/, 'mode must be A, B, C, AB, BC or ABC');
@@ -39,7 +41,8 @@ const repo = resolve(values.repo);
 const git = (...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' }).trim();
 const baseline = git('rev-parse', 'HEAD');
 const holdoutFile=values['holdout-file'];
-const evaluationSet=holdoutFile?'holdout':'regression';
+assert.ok(!values.comparison || holdoutFile,'--comparison requires --holdout-file');
+const evaluationSet=values.comparison?'comparison':holdoutFile?'holdout':'regression';
 const {tasks,ingredientEvidence}=holdoutFile
   ?validateHoldout(JSON.parse(await readFile(resolve(holdoutFile),'utf8')),regressionTasks,regressionEvidence,baseline)
   :{tasks:regressionTasks,ingredientEvidence:regressionEvidence};
@@ -100,10 +103,23 @@ assert.equal(products.length, manifest.selected, 'catalog count mismatch');
 const byId = new Map(products.map(product => [product.id, product]));
 assert.equal(byId.size, products.length, 'duplicate catalog ID');
 assert.equal(products.length, 300000);
-assert.equal(manifest.catalog_sha256, '70ab2f30b179efae0807dd6441f1c13881a0deb7a694f05db0bb0c8eee3b478c');
+const catalogHashes = {
+  1: '70ab2f30b179efae0807dd6441f1c13881a0deb7a694f05db0bb0c8eee3b478c',
+  2: '6104e21d365da8119084c0bec4d4358c638c6a93dfa1fe553a230425dcb11520',
+};
+assert.equal(manifest.catalog_sha256, catalogHashes[manifest.category_mapping_version ?? 1],
+  'unexpected hash for the 300,000-product catalog version');
 for (const id of [...tasks.flatMap(task => task.steps.flatMap(step => step.expectedIds ?? [])), ...Object.keys(ingredientEvidence)]) {
   assert.ok(byId.has(id), 'a target or evidence product is missing from the catalog');
 }
+const productsByCategory = Map.groupBy(products, product => product.category);
+const availabilityByTask = new Map(tasks.map(task => [task.id,
+  task.steps.map(spec => catalogCandidateCount(spec, productsByCategory))]));
+const coverage = Object.fromEntries(['recommendation', 'multiturn'].map(group => {
+  const steps = tasks.filter(task => task.group === group).flatMap(task => availabilityByTask.get(task.id))
+    .filter(count => count !== null);
+  return [group, { withCandidates: steps.filter(count => count > 0).length, withoutCandidates: steps.filter(count => count === 0).length }];
+}));
 
 const limiter = { limit: async () => ({ success: true }) };
 const common = {
@@ -170,7 +186,7 @@ async function run(task, agent, repeat) {
     session.state.budget = { amount_krw: 80000, shipping_included: true };
   }
   const turns = [];
-  for (const spec of task.steps) {
+  for (const [stepIndex, spec] of task.steps.entries()) {
     const previous = attempts.length;
     const start = performance.now();
     const response = await api.fetch(new Request('https://benchmark.invalid/api/chat', {
@@ -188,6 +204,9 @@ async function run(task, agent, repeat) {
     const ids = !response.ok || invalidApiResponse ? [] : data.view.result.items.slice(0, 3).map(item => item?.id).filter(id => typeof id==='string');
     const candidateIds = !response.ok || invalidApiResponse ? [] : (data.view.candidateItems ?? []).map(item => item.id);
     const turnAttempts = attempts.slice(previous);
+    const catalogEligibleItems = availabilityByTask.get(task.id)[stepIndex];
+    const score = scoreTurn(spec, data, invalidApiResponse ? 502 : response.status, ids, byId, ingredientEvidence, candidateIds);
+    if (catalogEligibleItems !== null) score.catalogEligibleItems = catalogEligibleItems;
     turns.push({
       status: response.status, agent: data.agent ?? null, errorCode: data.code ?? null, route: data.routing?.route ?? null, routingFailure: data.routing?.failureCode ?? null, stopReason: data.routing?.stopReason ?? null,
       latencyMs, ids, candidateIds, invalidApiResponse, response: data.message ?? data.error ?? null, notice: data.view?.result?.notice ?? null,
@@ -200,7 +219,8 @@ async function run(task, agent, repeat) {
       toolCalls: data.routing?.toolCalls ?? 0,
       timings: data.routing?.timings,
       resultAudit: data.routing?.resultAudit,
-      question: data.question ?? null, score: scoreTurn(spec, data, invalidApiResponse ? 502 : response.status, ids, byId, ingredientEvidence,candidateIds),
+      recovery: data.routing?.recovery,
+      question: data.question ?? null, score,
       llmCalls: data.routing?.llmCalls ?? 0, attempts: turnAttempts, usd: cost(turnAttempts),
     });
     if (response.ok && !invalidApiResponse) session = data.session;
@@ -233,6 +253,10 @@ function summarize(rows) {
     tasks: rows.length, requests: turns.length, httpErrors: turns.filter(turn => turn.status !== 200).length,
     invalidApiResponses: turns.filter(turn => turn.invalidApiResponse).length,
     gracefulFallbacks: turns.filter(turn => turn.route==='fallback').length,
+    recoveryAttempts: sum(turns,turn=>turn.recovery?.attempts??0),
+    recoverySuccesses: turns.filter(turn=>turn.recovery?.outcome==='recovered' &&
+      turn.score.answeredWithEligibleRecommendation).length,
+    recoveryCategoryUnavailable: turns.filter(turn=>turn.recovery?.outcome==='category_unavailable').length,
     unsupportedQuantityCases: turns.filter(turn=>turn.score.unsupportedQuantity).length,
     quantityLimitExplained: turns.filter(turn=>turn.score.quantityLimitExplained).length,
     requestLatencyMs: percentiles(turns.map(turn => turn.latencyMs)),
@@ -266,7 +290,7 @@ function summarize(rows) {
 }
 
 const metadata = {
-  baseline, sourceRevision, scoringVersion: 2, methodHash, day, modes, model: local.LLM_MODEL, rates, repetitions,
+  baseline, sourceRevision, scoringVersion, methodHash, day, modes, model: local.LLM_MODEL, rates, repetitions,
   catalog: { ...manifest }, catalogDir, reasoning: local.LLM_REASONING_ENABLED ?? null,
   aMode: local.A_ROUTER_LLM_MODE,
   fixtures: tasks, ingredientEvidence,
@@ -275,7 +299,7 @@ const metadata = {
 const signature = createHash('sha256').update(JSON.stringify(metadata)).digest('hex');
 if (values.validate) {
   console.log(JSON.stringify({ signature, evaluationSet, tasks: tasks.length, products: products.length,
-    scenarios: tasks.length * repetitions * Object.keys(modes).length, model: expectedModel, modes, sourceRevision, scoringVersion: 2, methodHash, loadMs }, null, 2));
+    scenarios: tasks.length * repetitions * Object.keys(modes).length, model: expectedModel, modes, sourceRevision, scoringVersion, methodHash, coverage, loadMs }, null, 2));
   process.exit(0);
 }
 

@@ -106,13 +106,13 @@ flowchart TB
 
 ### 재현
 
-저장소 루트에서 Python 3.11 이상과 Node.js 22.13 이상을 사용한다. 두 `--mode ABC` 명령은 실제 모델을 호출한다. [데이터 준비 및 서버 설정](api/benchmarks/amazon-en/README.md)
+저장소 루트에서 Python 3.11 이상과 Node.js 22.13 이상을 사용한다. 아래 명령은 보관된 결과에서 사용한 기존 상품군 매핑을 선택한다. 두 `--mode ABC` 명령은 실제 모델을 호출한다. [개선 카탈로그 준비 및 서버 설정](api/benchmarks/amazon-en/README.md)
 
 ```sh
-python3 api/benchmarks/amazon-en/prepare.py data/amazon-products-dataset.zip data/amazon-en/catalog
-node api/benchmarks/amazon-en/run.mjs --validate
-node api/benchmarks/amazon-en/run.mjs --mode ABC --model deepseek-v4-flash --data data/amazon-en/deepseek-abc
-node api/benchmarks/amazon-en/run.mjs --mode ABC --model gpt-5.6-luna --data data/amazon-en/gpt-abc
+python3 api/benchmarks/amazon-en/prepare.py data/amazon-products-dataset.zip data/amazon-en/catalog-legacy --mapping legacy
+node api/benchmarks/amazon-en/run.mjs --catalog-dir data/amazon-en/catalog-legacy --validate
+node api/benchmarks/amazon-en/run.mjs --catalog-dir data/amazon-en/catalog-legacy --mode ABC --model deepseek-v4-flash --data data/amazon-en/deepseek-abc
+node api/benchmarks/amazon-en/run.mjs --catalog-dir data/amazon-en/catalog-legacy --mode ABC --model gpt-5.6-luna --data data/amazon-en/gpt-abc
 ```
 
 ## 회귀 평가 결과

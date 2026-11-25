@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApi } from '../worker.mjs';
+import { prototypeFullChatTurn } from '../full-chat-agent.mjs';
+import { recoverEmptyRecommendation } from '../c-empty-recovery.mjs';
+import { APP_RANKING, recommend } from '../../lib/engine.mjs';
 import { singleInitial } from '../../lib/single-gift.mjs';
 import { products } from '../../baseline/examples/catalog.mjs';
 const env={CHAT_AGENT:'full-chat',LLM_PROVIDER:'openai-compatible',LLM_API_KEY:'test-secret',LLM_BASE_URL:'https://llm.example',LLM_MODEL:'test-model',SUPABASE_URL:'https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test',IP_LIMITER:{limit:async()=>({success:true})},USER_LIMITER:{limit:async()=>({success:true})}};
@@ -396,4 +399,54 @@ test('C removes an audited color mismatch with catalog evidence and retains an u
   const kept=await invalid.send({agentMode,text});
   assert.deepEqual(kept.data.view.result.items.map(item=>item.id),['tote']);
   assert.equal(kept.data.routing.resultAudit.removedCards,0);
+});
+
+test('C explains a missing catalog category without trying another category',async()=>{
+  const f=fixture([{action:'search_products'}]);
+  const out=await f.send({agentMode:'full-chat-feedback-2',text:'어머니에게 줄 문구류를 추천해줘. 배송비 포함 5만 원까지.'});
+  assert.equal(out.status,200);
+  assert.deepEqual(out.data.routing.recovery,{outcome:'category_unavailable',attempts:0});
+  assert.match(out.data.message,/요청하신 상품군이 없어요/);
+  assert.deepEqual(out.data.view.result.items,[]);
+  assert.deepEqual(out.data.session.state.preferences,['category:stationery']);
+  assert.equal(f.auditPayloads.length,1);
+});
+
+test('C repairs an empty search once when a verified category was missed and preserves hard constraints',async()=>{
+  const before={...ready().state,delivery_by:'2026-12-01',excluded_ingredients:['우유']};
+  const wrong={...before,preferences:['category:stationery']};
+  const good={...products[0],id:'speaker',name:'휴대용 블루투스 스피커',category:'audio'};
+  const catalog=[
+    good,
+    {...good,id:'late',arrival_date:'2026-12-02'},
+    {...good,id:'expensive',price_krw:49000},
+    {...good,id:'excluded',allergens_declared:['우유']},
+  ];
+  const agentFactory=()=>({runTurn:async()=>({
+    kind:'recommendation',session:{state:{...wrong,quantity:1,same_product:true,budget:{...wrong.budget,scope:'per_set'}}},
+    routing:{agent:'full-chat-feedback-2',route:'agent',llmCalls:1,httpAttempts:1,usage:{},stopReason:'complete'},
+  })});
+  const fetcher=async()=>Response.json({choices:[{finish_reason:'stop',message:{content:'{"flags":[]}'}}]});
+  const input={operation:'turn',text:'스피커 선물을 추천해줘.',issues:[],state:before};
+  const result=await prototypeFullChatTurn(input,catalog,{agent:'full-chat-feedback-2',agentFactory,env,fetcher});
+  assert.deepEqual(result.routing.recovery,{outcome:'recovered',attempts:1,reason:'category_mismatch'});
+  assert.deepEqual(result.view.result.items.map(item=>item.id),[good.id]);
+  assert.deepEqual(result.session.state,{...before,preferences:['category:audio']});
+  const empty=await prototypeFullChatTurn(input,catalog.slice(1),{agent:'full-chat-feedback-2',agentFactory,env,fetcher});
+  assert.deepEqual(empty.routing.recovery,{outcome:'still_empty',attempts:1,reason:'category_mismatch'});
+  assert.deepEqual(empty.view.result.items,[]);
+  assert.match(empty.message,/다시 찾아봤지만/);
+});
+
+test('C removes a newly inferred stationery subtype only for a verified broad request',()=>{
+  const before=ready().state;
+  const staged={...before,preferences:['category:stationery','type:writing']};
+  const catalog=[{...products[0],id:'notebook',name:'A5 Hardcover Notebook',category:'stationery'}];
+  const rank=(items,state)=>recommend(items,state,APP_RANKING);
+  const recovered=recoverEmptyRecommendation('문구류를 추천해줘.',before,staged,catalog,rank);
+  assert.equal(recovered.reason,'inferred_type_filter');
+  assert.deepEqual(recovered.state.preferences,['category:stationery']);
+  assert.deepEqual(recovered.result.items.map(item=>item.id),['notebook']);
+  assert.equal(recoverEmptyRecommendation('볼펜 같은 문구류를 추천해줘.',before,staged,catalog,rank).attempts,0);
+  assert.equal(recoverEmptyRecommendation('문구류를 추천해줘.',staged,staged,catalog,rank).attempts,0);
 });

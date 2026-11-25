@@ -31,6 +31,29 @@ MAIN_FALLBACK = {
 }
 ASIN = re.compile(r'^https?://(?:www\.)?amazon\.in/(?:[^?#]*/)?dp/([A-Z0-9]{10})(?:[/?#]|$)')
 NUMBER = re.compile(r'\d+(?:\.\d+)?')
+STATIONERY_SOURCES = {
+    'All Home & Kitchen', 'Sewing & Craft Supplies', 'Industrial & Scientific Supplies',
+    'Lab & Scientific', 'Test, Measure & Inspect',
+}
+STATIONERY_TITLE = re.compile(
+    r'\b(?:ball(?:point|\s+pen)|gel pens?|fountain pens?|mechanical (?:lead )?pencils?'
+    r'|colou?r(?:ed)? pencils?|pencil sets?|writing pads?|notebooks?|sketch\s*books?)\b',
+    re.I,
+)
+STATIONERY_EXCLUSIONS = re.compile(
+    r'\b(?:laptops?|keyboards?|computers?|tablets?|apple pencils?|cricut|gadgets?|bags?|pouch(?:es)?'
+    r'|chargers?|sleeves?|stands?|cases?|covers? for|gauges?|dress|skirt|heel|shirts?)\b', re.I,
+)
+DECOR_TITLES = {
+    'Home Furnishing': re.compile(r'\b(?:curtains?|cushion covers?|throw pillows?|tapestr(?:y|ies)|rugs?|table runners?)\b', re.I),
+    'Indoor Lighting': re.compile(r'\b(?:table lamps?|floor lamps?|wall sconces?|chandeliers?|pendant lights?|fairy lights?)\b', re.I),
+}
+DECOR_EXCLUSIONS = re.compile(r'\b(?:replacement|spare|bulbs?|holders?|wiring|adapters?)\b', re.I)
+AUDIO_TITLE = re.compile(r'\b(?:microphones?|head(?:phones?|sets?)|earphones?|speakers?|audio (?:interfaces?|mixers?))\b', re.I)
+AUDIO_EXCLUSIONS = re.compile(
+    r'\b(?:stands?|mounts?|covers?|cases?|cables?|adapters?|holders?|modules?|logo flags?|replacement'
+    r'|for (?:a |the )?(?:microphone|speaker|headphone))\b', re.I,
+)
 
 
 def number(value):
@@ -100,12 +123,26 @@ def sample(products, target, seed):
         yield from sorted(strata[key], key=order)[:quotas[key]]
 
 
+def expanded_category(product):
+    if product['category'] != 'unmapped':
+        return product['category']
+    sub, name = product['subCategory'], product['name']
+    if sub in STATIONERY_SOURCES and STATIONERY_TITLE.search(name) and not STATIONERY_EXCLUSIONS.search(name):
+        return 'stationery'
+    if sub in DECOR_TITLES and DECOR_TITLES[sub].search(name) and not DECOR_EXCLUSIONS.search(name):
+        return 'decor'
+    if sub == 'Musical Instruments & Professional Audio' and AUDIO_TITLE.search(name) and not AUDIO_EXCLUSIONS.search(name):
+        return 'audio'
+    return 'unmapped'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('zip', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--target', type=int, default=300000)
     parser.add_argument('--seed', default='pass-amazon-en-v1')
+    parser.add_argument('--mapping', choices=('expanded', 'legacy'), default='expanded')
     args = parser.parse_args()
     if args.target <= 0:
         parser.error('--target must be positive')
@@ -116,8 +153,16 @@ def main():
     catalog = args.output / 'catalog.jsonl'
     raw_categories = Counter()
     app_categories = Counter()
+    reclassified = Counter()
+    asins = hashlib.sha256()
     with catalog.open('w', encoding='utf-8') as output:
         for product in sample(products, args.target, args.seed):
+            asins.update((product['asin'] + '\n').encode('ascii'))
+            if args.mapping == 'expanded':
+                category = expanded_category(product)
+                if category != product['category']:
+                    product = {**product, 'category': category}
+                    reclassified[category] += 1
             output.write(json.dumps(product, ensure_ascii=False, separators=(',', ':')) + '\n')
             raw_categories[product['mainCategory']] += 1
             app_categories[product['category']] += 1
@@ -130,6 +175,9 @@ def main():
             'source_categories': dict(sorted(raw_categories.items())),
             'app_categories': dict(sorted(app_categories.items())),
         }
+    if args.mapping == 'expanded':
+        manifest.update(category_mapping_version=2, selected_asins_sha256=asins.hexdigest(),
+                        reclassified_categories=dict(sorted(reclassified.items())))
     (args.output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
 

@@ -4,8 +4,9 @@ import { engineState, publicState, finishSingle, singleQuestion } from '../lib/s
 import { APP_RANKING, rankProducts, recommend } from '../lib/engine.mjs';
 import { budgetAlternatives } from '../lib/counterfactual.mjs';
 import { FRAGRANCE_NOTICE, FRAGRANCE_TAG } from '../lib/fragrance.mjs';
-import { lookupCatalogItem, lookupRankedCatalogItem } from './catalog-item-lookup.mjs';
+import { catalogLookupNeedsInterpretation, lookupCatalogItem, lookupRankedCatalogItem } from './catalog-item-lookup.mjs';
 import { auditCResult } from './c-result-audit.mjs';
+import { recoverEmptyRecommendation } from './c-empty-recovery.mjs';
 export { FullChatError, isEndRequest } from '../baseline/agents/full-chat/index.mjs';
 
 const recoverableModelErrors=new Set(['invalid_input','invalid_response','timeout','network_error','auth_failed','quota_exceeded','endpoint_or_model_not_found','provider_unavailable','request_rejected']);
@@ -15,7 +16,6 @@ const emptyView=(question,message)=>({
   comparison:{status:'no_alternative',alternatives:[],message:''},
 });
 const noQuestion={key:null,text:'',choices:[]};
-const requiresInterpretation=/알레르|알러지|성분|피해야|배송|예산|오늘까지|내일까지|이하|이내|미만|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유|\b(?:allerg\w*|ingredient\w*|shipping|delivery|budget|explain)\b/i;
 
 const conversation={
   greeting:'안녕하세요! 받는 분과 예산을 알려주시면 선물을 함께 골라드릴게요.',
@@ -57,7 +57,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     return memo.get(key);
   };
   const session={...createSession('prototype-request'),state:engineState(before)};
-  const directLookup=reuseRanking&&matches!==null&&!input.issues.length&&!requiresInterpretation.test(input.text);
+  const directLookup=reuseRanking&&matches!==null&&!input.issues.length&&!catalogLookupNeedsInterpretation.test(input.text);
   const request={expectedVersion:0,...(input.operation==='turn'&&!directLookup?{kind:'message',text:input.text}:input.operation==='conditions'?{kind:'patch',patch:input.routerPatch??input.patch}:{kind:'view'})};
   const pending=singleQuestion({state:before,issues:input.issues});
   let output;
@@ -82,7 +82,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     const message='여기서 마칠게요.';
     return {session:{state:before,issues:input.issues},changes:[],question:noQuestion,message,view:emptyView(noQuestion,message),agent:activeAgent,mode:'rules',routing};
   }
-  const state=publicState(output.session.state);
+  let state=publicState(output.session.state);
   let issues=[];
   if(output.kind==='question') {
     if(reuseRanking) {
@@ -94,7 +94,7 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
   }
   if(input.operation==='conditions'&&input.clearIssues===false) issues=input.issues;
   if(output.kind==='conversation') issues=input.issues;
-  const turn=finishSingle(before,state,issues,candidates,rankingForTurn,reuseRanking?reuseRecommendation:recommend);
+  let turn=finishSingle(before,state,issues,candidates,rankingForTurn,reuseRanking?reuseRecommendation:recommend);
   let message=turn.message;
   if(output.kind==='conversation') message=conversation[output.responseType];
   else if(output.kind==='comparison') {
@@ -134,8 +134,28 @@ export async function prototypeFullChatTurn(input,products,{env,fetcher,signal,d
     }
   }
   if(reuseRanking && !view) {
-    const applied=engineState(state);
-    const result=reuseRecommendation(catalog,applied);
+    let applied=engineState(state);
+    let result=reuseRecommendation(catalog,applied);
+    if (agent==='full-chat-feedback-2' && input.operation==='turn' && matches===null &&
+        output.kind==='recommendation' && output.intent!=='explain' && !turn.question.key &&
+        result.status==='no_match' && !signal?.aborted && performance.now()-started < (limits.timeoutMs??20000)) {
+      const recovery=recoverEmptyRecommendation(input.text,before,state,catalog,reuseRecommendation);
+      const { state: recoveredState, result: recoveredResult, ...diagnostics }=recovery;
+      routing.recovery=diagnostics;
+      if (recoveredState) {
+        state=recoveredState;
+        applied=engineState(state);
+        result=recoveredResult;
+        turn=finishSingle(before,state,issues,candidates,rankingForTurn,reuseRecommendation);
+        message=turn.message;
+      } else if (recovery.outcome==='category_unavailable') {
+        message='현재 검색 범위에 요청하신 상품군이 없어요. 다른 상품군을 찾아볼까요?';
+        result={...result,message};
+      } else if (recovery.outcome==='still_empty') {
+        message='요청하신 상품군으로 다시 찾아봤지만 현재 조건에 맞는 상품이 없어요.';
+        result={...result,message};
+      }
+    }
     view={question:turn.question,result,comparison:budgetAlternatives(catalog,applied,rankingForTurn,{baseline:result,rank})};
   }
   timings.responseMs=Math.max(0,performance.now()-responseStarted-(timings.rankingMs-rankingBeforeResponse));

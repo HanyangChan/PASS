@@ -1,6 +1,7 @@
 const lookupIntent = /찾아|찾고|보여|같은 모델|동일 모델|실물을|주문 후보|\b(?:find|look up)\b/i;
 const alternatives = /말고|제외|비교|\b(?:except|compare)\b/i;
 const normalize = text => String(text ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+export const catalogLookupNeedsInterpretation = /알레르|알러지|성분|피해야|배송|예산|오늘까지|내일까지|이하|이내|미만|\d\s*(?:만\s*원|천\s*원|원)|(?:개|세트)\s*(?:합쳐|합산)|빼|변경|바꿔|설명|추천\s*이유|\b(?:allerg\w*|ingredient\w*|shipping|delivery|budget|explain)\b/i;
 
 // Return null for ordinary recommendations. An explicit lookup only succeeds when it identifies one catalog row.
 export function lookupCatalogItem(text, products) {
@@ -85,11 +86,10 @@ function narrowDetails(rows, text, phrase) {
 
 export function lookupIndexedCatalogItem(text, products, {matchNameWords=false}={}) {
   if (!text) return null;
-  const { asins, models, rows } = catalogIndex(products);
   if (alternatives.test(text)) return null;
   const asin = (text.match(/(?:\bASIN\s*[:#]?\s*|\/dp\/)([A-Z0-9]{10})(?![A-Z0-9])/i) ??
     (lookupIntent.test(text) && text.match(/\b(B[A-Z0-9]{9})\b/i)))?.[1]?.toUpperCase();
-  if (asin) return (asins.get(asin) ?? []).map(({ product }) => product);
+  if (asin) return (catalogIndex(products).asins.get(asin) ?? []).map(({ product }) => product);
   const quoted = text.match(/["“]([^"”\n]+)["”]/)?.[1];
   const codes = modelCodes(quoted ?? text);
   const explicitProduct=exactIntent.test(text) || (matchNameWords&&/이\s*(?:제품|상품)을?\s*고르고|(?:제품|상품)이?\s*있으면\s*보여|실물을\s*찾/.test(text));
@@ -99,6 +99,7 @@ export function lookupIndexedCatalogItem(text, products, {matchNameWords=false}=
     .map(normalize).filter(phrase => phrase.length >= 6 && phrase.includes(' '))
     .sort((a, b) => b.length - a.length);
   if(matchNameWords && !quoted && !phrases.length && !codes.length) return null;
+  const { models, rows } = catalogIndex(products);
   if (quoted) {
     const exact = rows.filter(({ names }) => names.includes(phrases[0]));
     if (exact.length) return narrowDetails(exact, text, phrases[0]).map(({ product }) => product);

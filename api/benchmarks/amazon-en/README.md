@@ -11,7 +11,9 @@ python3 api/benchmarks/amazon-en/prepare.py data/amazon-products-dataset.zip dat
 node api/benchmarks/amazon-en/run.mjs --validate
 ```
 
-고정 시드는 `pass-amazon-en-v1`이다. 실행기는 영문 카탈로그 300,000개와 SHA-256 `70ab2f30b179efae0807dd6441f1c13881a0deb7a694f05db0bb0c8eee3b478c`를 확인한다. 검증 모드는 API 호출 없이 카탈로그와 과제 수를 확인한다.
+고정 시드는 `pass-amazon-en-v1`이다. 기본 매핑은 원본 대분류 비율로 선정한 영문 상품 300,000개의 ASIN을 유지한 채, 원본 소분류와 상품명 근거가 있는 문구·홈데코·음향기기 분류를 보완한다. 기존 카탈로그를 재현하려면 준비 명령에 `--mapping legacy`를 추가하고 다른 출력 폴더를 지정한다. 실행기는 두 카탈로그 버전의 카운트와 SHA-256을 검사한다.
+
+`--validate`는 모델을 호출하지 않고 과제 수와 상품군·배송비 포함 예산·재고·납기에 맞는 카탈로그 후보가 없는 요청을 집계한다. 보고서에는 전체 성공률과 후보가 있는 요청의 성공률이 함께 표시된다.
 
 ## 회귀 평가
 
@@ -43,6 +45,8 @@ node api/benchmarks/amazon-en/report.mjs data/amazon-en/private/deepseek
 
 두 모델을 평가할 때는 같은 파일과 커밋을 사용하고 모델별 결과 폴더를 분리한다. 정확 상품은 정답이 나온 첫 카드 위치를 별도로 집계한다. Top 3와 Top 1의 차이는 2·3번째 카드에서 적중한 요청 수다.
 
+이미 평가한 비공개 요청을 새 커밋에서 그대로 재실행할 때는 복사본의 `baseline`을 대상 커밋으로 지정하고 `--comparison`을 추가한다. 보고서에는 동일 시나리오 재평가로 표시한다.
+
 ## 보관된 결과 집계
 
 아래 명령은 두 실행 기록을 읽어 비교 보고서를 다시 만든다.
@@ -54,7 +58,7 @@ node api/benchmarks/amazon-en/report.mjs \
   --output data/amazon-en/archived-report
 ```
 
-보관 기록을 집계할 때 상품명과 알레르기 응답을 별도 파일로 검토하려면 기존 카탈로그에 대해 `--catalog-dir data/amazon-en/catalog`를 지정한다. 앱 코드나 채점 기준이 다른 실행의 결과는 함께 집계할 수 없다.
+보관 기록을 집계할 때 상품명과 알레르기 응답을 별도 파일로 검토하려면 해당 실행에 사용한 카탈로그를 `--catalog-dir`로 지정한다. 앱 코드나 채점 기준이 다른 실행의 결과는 함께 집계할 수 없다.
 
 [GPT-5.6 Luna A/B 보관 결과](../../../docs/verification/gpt-luna-amazon-en-2026-11-23/comparison.md)는 다음 명령으로 집계한다.
 

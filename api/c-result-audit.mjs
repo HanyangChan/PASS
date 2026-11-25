@@ -77,6 +77,7 @@ export async function auditCResult({env,fetcher,signal,timeoutMs,input,state,vie
     )||(
       info.requestChecks.includes('deadline') && Boolean(explicit.delivery_by && explicit.delivery_by!==state.delivery_by)
     );
+    if(!cards.length) return {info,items:view.result.items};
     const flags=await complete(CATALOG_AUDIT,{request:input.text,state,request_checks:info.requestChecks,lookup,cards,
       question:request.question,status:request.status},value=>validFlags(value,flag=>
       flag && typeof flag==='object' && Object.keys(flag).length===2 && byId.has(flag.id) && cardFlags.has(flag.reason),12));

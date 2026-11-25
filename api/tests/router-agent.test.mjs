@@ -95,6 +95,30 @@ test('A handles an explicit shopping request and ASIN without a model, reusing t
  assert.deepEqual(absent.data.view.result.items,[]);
 });
 
+test('A uses catalog evidence for title and model lookups, including missing and ambiguous variants',async()=>{
+ const white={...products[0],id:'amz-B01BKEZYBY',name:'North Ridge NR-4010 Travel Mug White',category:'kitchen'};
+ const black={...white,id:'amz-B01BKEZYBZ',name:'North Ridge NR-4010 Travel Mug Black'};
+ const instance=api({catalog:async()=>[...products,white,black],extract:async()=>{throw Error('unexpected model');}});
+ const config={...env(),GEMINI_API_KEY:'synthetic'};
+ const lookup=(text,session=ready())=>send(body({text,session}),config,instance);
+ const unique=await lookup('North Ridge NR-4010 Travel Mug White 제품을 찾아주세요.');
+ assert.equal(unique.status,200);
+ assert.equal(unique.data.routing.llmCalls,0);
+ assert.deepEqual(unique.data.view.result.items.map(item=>item.id),[white.id]);
+ const ambiguous=await lookup('NR-4010과 같은 모델을 찾아주세요.');
+ assert.equal(ambiguous.data.routing.stopReason,'ambiguous_product');
+ assert.match(ambiguous.data.question.text,/색상|모델명/);
+ assert.deepEqual(ambiguous.data.view.result.items,[]);
+ const absent=await lookup('카탈로그에서 "Acme Lunar Series"를 찾아주세요.');
+ assert.equal(absent.data.routing.stopReason,'product_not_found');
+ assert.deepEqual(absent.data.view.result.items,[]);
+ const session=ready();
+ session.state.delivery_by='2026-11-30';
+ const late=await lookup('North Ridge NR-4010 흰색 제품을 찾아주세요.',session);
+ assert.deepEqual(late.data.view.result.items,[]);
+ assert.deepEqual(late.data.session.state,session.state);
+});
+
 test('only unresolved text invokes the existing server model adapter with attribution instructions',async()=>{
  let calls=0;
  const instance=api({extract:async(input,catalog,options)=>{

@@ -1,6 +1,18 @@
 const food = new Set(['snack', 'food', 'coffee_tea', 'health']);
 const singleGiftLimit = /(?:선물|상품|제품)(?:은|을|이)?\s*(?:한\s*(?:개|세트)|하나)|(?:한\s*(?:개|세트)|하나)\s*(?:기준|씩|만|당)|단일\s*선물/;
 
+export function isEligibleProduct(spec, product) {
+  return Boolean(product && spec.categories.includes(product.category) && product.stock_sets >= 1
+    && product.price_krw + product.shipping_fee_per_set_krw <= spec.budget
+    && (!spec.deliveryBy || product.arrival_date <= spec.deliveryBy));
+}
+
+export function catalogCandidateCount(spec, productsByCategory) {
+  if (!spec.categories || spec.quantity > 1) return null;
+  return [...new Set(spec.categories)].reduce((total, category) => total +
+    (productsByCategory.get(category) ?? []).filter(product => isEligibleProduct(spec, product)).length, 0);
+}
+
 export function scoreTurn(spec, data, status, ids, byId, ingredientEvidence, candidateIds = []) {
   const answered = status === 200 && Boolean(data.session?.state) && data.question?.key === null
     && data.routing?.route !== 'fallback';
@@ -25,12 +37,7 @@ export function scoreTurn(spec, data, status, ids, byId, ingredientEvidence, can
     const state = data.session?.state;
     result.conditionsApplied = state?.budget?.amount_krw === spec.budget
       && state.budget.shipping_included === true && (!spec.deliveryBy || state.delivery_by === spec.deliveryBy);
-    result.eligibleItems = ids.filter(id => {
-      const p = byId.get(id);
-      return p && spec.categories.includes(p.category) && p.stock_sets >= 1
-        && p.price_krw + p.shipping_fee_per_set_krw <= spec.budget
-        && (!spec.deliveryBy || p.arrival_date <= spec.deliveryBy);
-    }).length;
+    result.eligibleItems = ids.filter(id => isEligibleProduct(spec, byId.get(id))).length;
     result.recommendedItems = ids.length;
     result.hasEligibleRecommendation = result.eligibleItems > 0;
     result.answeredWithEligibleRecommendation = answered && result.conditionsApplied && result.hasEligibleRecommendation;
