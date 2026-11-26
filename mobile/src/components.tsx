@@ -5,6 +5,7 @@ import CheckIcon from '../assets/figma/check.svg';
 import HeartIcon from '../assets/figma/heart.svg';
 import { colors as c, fonts as f } from './theme';
 import type { Gift } from './catalog';
+import { currentImageUrl } from '../../lib/catalog-source.mjs';
 export const ProductImagesContext = createContext<ReadonlyMap<string, string>>(new Map());
 export const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
 export function Chip({
@@ -31,7 +32,7 @@ export function Chip({
 export function GiftImage({ gift, size = 84 }: { gift: Gift; size?: number }) {
   const [failedUrl, setFailedUrl] = useState<string | undefined>();
   const productImages = useContext(ProductImagesContext);
-  const image = productImages.get(gift.id) ?? gift.image;
+  const image = currentImageUrl(productImages.get(gift.id) ?? gift.image, process.env.EXPO_PUBLIC_CHAT_API_URL, gift.id);
   const failed = !!image && failedUrl === image;
   return (
     <View style={[s.image, { width: size, height: size }]}>
