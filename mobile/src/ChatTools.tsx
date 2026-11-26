@@ -13,12 +13,14 @@ import { conditionLabel as toLabel, conditionValue as toValue, normalizeEditedCo
 import type { Conditions } from './domain';
 const arrayFields = ['recipients', 'preferences', 'excluded_categories', 'excluded_ingredients'] as const;
 const fields = [
-  ['recipients', '받는 분', '부모님, 친구'], ['occasion', '선물하는 날', '다른 상황은 직접 입력'],
-  ['amount', '예산 (원)', '50000'], ['preferences', '선호 조건', '덜 달게, 차'],
-  ['excluded_categories', '제외 상품군', '과자·간식, 뷰티'], ['excluded_ingredients', '피할 성분', '땅콩, 우유'],
-  ['brand', '브랜드', '브랜드 이름'], ['delivery_by', '수령 마감일', '2026-10-20'],
-  ['packaging', '포장', '격식 있는 포장 / 기본 포장'],
+  ['recipients', '받는 분', '예: 부모님, 친구'], ['occasion', '선물하는 날', '다른 상황은 직접 입력'],
+  ['amount', '예산 (원)', '예: 50000'], ['preferences', '선호 조건', '예: 덜 달게, 차'],
+  ['excluded_categories', '제외 상품군', '예: 과자·간식, 뷰티'], ['excluded_ingredients', '피할 성분', '예: 땅콩, 우유'],
+  ['brand', '브랜드', '예: 브랜드 이름'], ['delivery_by', '수령 마감일', '예: 2026-10-20'],
+  ['packaging', '포장', '예: 격식 있는 포장 / 기본 포장'],
 ] as const;
+// Examples are placeholders in a light color; confirmed values are dark and stay editable.
+const placeholderColor = '#ABA69F';
 const voiceErrors: Partial<Record<ExpoSpeechRecognitionErrorCode, string>> = {
   'no-speech': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
   'speech-timeout': '말소리를 듣지 못했어요. 다시 말하거나 아래에 직접 입력해주세요.',
@@ -241,7 +243,7 @@ export function ChatTools({ conditions, onApply, onVoice, mode = 'conditions', p
                     }}
                   />)}
                 </View>}
-                <TextInput accessibilityLabel={label} value={draft[key] ?? ''} onChangeText={v => { setDraft(old => ({ ...old, [key]: v })); setError(''); }} placeholder={placeholder} keyboardType={key === 'amount' ? 'numeric' : 'default'} style={s.input}/>
+                <TextInput accessibilityLabel={label} value={draft[key] ?? ''} onChangeText={v => { setDraft(old => ({ ...old, [key]: v })); setError(''); }} placeholder={placeholder} placeholderTextColor={placeholderColor} keyboardType={key === 'amount' ? 'numeric' : 'default'} style={[s.input, !!draft[key]?.trim() && s.inputFilled]}/>
               </View>)}
               <Text style={s.label}>배송비 기준</Text><View style={s.tools}>{([{ label: '미정', value: null }, { label: '배송비 포함', value: true }, { label: '상품값 기준', value: false }] as const).map(item => <Chip key={item.label} label={item.label} selected={shipping === item.value} onPress={() => setShipping(item.value)}/>)}</View>
               {(error || saveFailed) && <Text accessibilityRole="alert" style={s.error}>{error || requestError || '조건을 적용하지 못했어요. 다시 시도해주세요.'}</Text>}
@@ -274,5 +276,6 @@ const s = StyleSheet.create({
   voice: { alignItems: 'center', gap: 16, paddingVertical: 24 }, live: { fontFamily: f.medium, fontSize: 16, lineHeight: 24, color: c.text, textAlign: 'center' }, transcript: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 16, minHeight: 100, fontFamily: f.regular, color: c.text },
   primary: { minHeight: 48, padding: 14, borderRadius: 12, backgroundColor: c.primary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   white: { color: c.white, fontFamily: f.medium, fontSize: 15 }, secondary: { padding: 12, alignItems: 'center' }, field: { gap: 6 }, label: { fontFamily: f.medium, color: c.text, fontSize: 14 },
-  input: { borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontFamily: f.regular, color: c.text }, error: { color: c.primary, fontFamily: f.regular },
+  input: { borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12, fontFamily: f.regular, color: c.text },
+  inputFilled: { fontFamily: f.medium, borderColor: '#BDB9B3' }, error: { color: c.primary, fontFamily: f.regular },
 });

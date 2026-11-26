@@ -40,5 +40,15 @@ export function createProductRepository({ url, key, storage, fetcher = fetch, no
       const web = (await webItems()).map(item => fromWebItem(item, today, { apiBase })) as EngineProduct[];
       return mergeCatalogs(amazon, web) as EngineProduct[];
     },
+    // The ranking tab always lists both catalogs, whatever the chat server uses for recommendations.
+    async loadRanking(): Promise<EngineProduct[]> {
+      const choice = await source();
+      const apiBase = typeof choice === 'string' ? undefined : choice.apiBase;
+      const today = todayKst(now());
+      const amazon = await loadAmazon();
+      if (!webItems) return amazon;
+      const web = (await webItems()).map(item => fromWebItem(item, today, { apiBase })) as EngineProduct[];
+      return mergeCatalogs(amazon, web) as EngineProduct[];
+    },
   };
 }

@@ -62,7 +62,7 @@ import { colors as c, fonts as f } from './src/theme';
 import { CalendarScreen, ddayLabel, eventKindMeta } from './src/CalendarScreen';
 import { ChatTools } from './src/ChatTools';
 import { ChatPendingIndicator } from './src/ChatPendingIndicator';
-import { AgentModeControl } from './src/AgentModeControl';
+import { AgentModeControl, AgentModeStatus, AgentModeToggle } from './src/AgentModeControl';
 import type { ChatAgentMode } from './src/chatAgentModes';
 import { AttachmentPicker } from './src/AttachmentPicker';
 import { personalizeSession, emptyPersonalization, assertSameRecipient } from './src/services/personalization';
@@ -158,6 +158,7 @@ export function AppContent({
     retrySave,
     recommendation,
     chatPending,
+    pendingText,
     agentMode,
     changeAgentMode,
     agentConnected,
@@ -199,6 +200,7 @@ export function AppContent({
     setAllRecent,
     chatService,
     catalogProducts,
+    rankingProducts,
     rankingByRecipient,
     popularGifts,
     catalogError,
@@ -213,6 +215,8 @@ export function AppContent({
   const [draftSort, setDraftSort] = useState('인기순');
   const [draftPrice, setDraftPrice] = useState<number | null>(null);
   const [composerFocused, setComposerFocused] = useState(false);
+  // The A/B/C slider starts folded so the chat has room; the line under the composer shows the mode.
+  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const screen = activeScreen ?? baseScreen;
   const detail = detailPage ? selectedDetail : null;
   const resultsOpen = resultPage;
@@ -360,8 +364,8 @@ export function AppContent({
       ))}
     </ScrollView>
   );
-  const ranked = useMemo(() => selectGifts(catalogProducts, { recipient, search, filter, priceLimit, sort }),
-    [catalogProducts, recipient, search, filter, priceLimit, sort]);
+  const ranked = useMemo(() => selectGifts(rankingProducts, { recipient, search, filter, priceLimit, sort }),
+    [rankingProducts, recipient, search, filter, priceLimit, sort]);
   const sweetnessLabel: Record<string, string> = { unsweetened: '단맛 없음', naturally_sweet: '자연 단맛', sweet: '단맛 있음' };
   const demoValue = (field: string, text: string) => (detail?.demoFields?.includes(field) ? `${text} · 데모 값` : text);
   const info =
@@ -887,24 +891,29 @@ export function AppContent({
                       />
                     </View>
                   )}
+                  {chatPending && !!pendingText && <Text style={s.user}>{pendingText}</Text>}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={s.chips}
-                  >
-                    {question.choices.map((choice: string) => (
-                      <Chip
-                        key={choice}
-                        label={choice}
-                        onPress={() => send(choice, 'quick_reply')}
-                      />
-                    ))}
-                  </ScrollView>
+                  <View style={s.chipBar}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={s.flex}
+                      contentContainerStyle={s.chips}
+                    >
+                      {question.choices.map((choice: string) => (
+                        <Chip
+                          key={choice}
+                          label={choice}
+                          onPress={() => send(choice, 'quick_reply')}
+                        />
+                      ))}
+                    </ScrollView>
+                    {!surveyRecording && <AgentModeToggle expanded={agentPanelOpen} onToggle={() => setAgentPanelOpen(old => !old)} />}
+                  </View>
                   {attachments.length > 0 && <View style={s.attachmentRow}>{attachments.map(name => <Pressable key={name} accessibilityRole="button" accessibilityLabel={`${name} 첨부 제거`} onPress={() => setAttachments(old => old.filter(item => item !== name))} style={s.attachmentChip}><Text style={s.small}>{name} ×</Text></Pressable>)}</View>}
-                  {!surveyRecording && <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />}
+                  {!surveyRecording && agentPanelOpen && <AgentModeControl value={agentMode} onChange={changeAgentMode} disabled={chatPending} connected={agentConnected} />}
                   <View style={s.composer}>
                     <AttachmentPicker onSelect={name => setAttachments(old => [...new Set([...old, name])])}/>
                     <View style={[s.inputShell, composerFocused && s.inputShellFocused]}>
@@ -935,6 +944,7 @@ export function AppContent({
                       <ArrowUp size={22} color={input.trim() || attachments.length ? c.white : c.muted} />
                     </Pressable>
                   </View>
+                  {!surveyRecording && !agentPanelOpen && <AgentModeStatus value={agentMode} onExpand={() => setAgentPanelOpen(true)} />}
                 </View>
               </>
             ) : screen === 'calendar' ? (
@@ -1118,8 +1128,15 @@ function usePassState() {
       products => { if (live) setCatalog({ products, error: '' }); },
       (error: Error) => { if (live) setCatalog(old => ({ ...old, error: error.message })); },
     );
+    productRepository.loadRanking().then(
+      products => { if (live) setRankingProducts(products); },
+      () => { /* the ranking falls back to the chat catalog */ },
+    );
     return () => { live = false; };
   }, [catalogAttempt]);
+  // Amazon + Korean web catalog for the ranking tab, independent of the chat server's catalog.
+  const [rankingProducts, setRankingProducts] = useState<EngineProduct[] | null>(null);
+  const rankingCatalog = rankingProducts ?? catalog.products;
   // Feedback the ranking uses: past chats plus this chat's taps, snapshotted per request so cards don't jump mid-tap.
   const [rankingSignal, setRankingSignal] = useState<FeedbackSignal[]>([]);
   const rankingSignalRef = useRef<FeedbackSignal[]>([]);
@@ -1134,7 +1151,7 @@ function usePassState() {
   const resumedGuestId = useRef<string | null>(null);
   const deletedPastChats = useRef(new Set<string>());
   const chatService = useMemo(() => createLocalChatService(catalog.products, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current), [catalog.products]);
-  const rankingByRecipient = useMemo(() => rankGifts(catalog.products), [catalog.products]);
+  const rankingByRecipient = useMemo(() => rankGifts(rankingCatalog), [rankingCatalog]);
   const cloud = useRef<ReturnType<typeof createCloudRecords> | null>(null);
   const persistence = useRef(createSnapshotPersistence());
   const saveRevision = useRef(0);
@@ -1168,6 +1185,8 @@ function usePassState() {
   const serverChat = useMemo(() => owner && supabase && chatEndpoint ? createServerChatService(chatEndpoint, supabase.auth, owner, fetch, () => feedbackEnabledRef.current ? rankingSignalRef.current : [], () => guestSession.current) : null, [owner]);
   const [recommendation, setRecommendation] = useState<{ key: string; view: ReturnType<typeof chatService.view>; agentMode: ChatAgentMode; mode: string } | null>(null);
   const [chatPending, setChatPending] = useState(false);
+  // The message being sent, shown as the user's bubble above the loading dots until the reply lands.
+  const [pendingText, setPendingText] = useState('');
   const [agentMode, setAgentMode] = useState<ChatAgentMode>('a-router');
   const [chatError, setChatError] = useState(chatConfigurationError);
   const [cardFeedback, setCardFeedback] = useState<CardFeedback[]>([]);
@@ -1185,6 +1204,7 @@ function usePassState() {
     const controller = new AbortController();
     const revision = ++chatFlight.current.revision;
     chatFlight.current.controller = controller; setChatPending(true); setChatError('');
+    setPendingText(operation === 'turn' ? text.trim() : '');
     refreshSignal();
     try {
       // `fresh` is a just-reset session whose state hasn't rendered yet; use it instead of the stale closure.
@@ -1221,7 +1241,7 @@ function usePassState() {
       setChatError((error as Error).message || '추천 요청에 실패했어요. 다시 보내주세요.');
       return false;
     } finally {
-      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); }
+      if (chatFlight.current.revision === revision) { chatFlight.current.controller = null; setChatPending(false); setPendingText(''); }
     }
   };
   const changeFeedbackEnabled = async (enabled: boolean) => {
@@ -1306,7 +1326,7 @@ function usePassState() {
     resumedGuestId.current = null; setRestoredRecommendations(null);
     cardFeedbackRef.current = []; setCardFeedback([]); cloud.current?.setFeedback([]); guestSession.current = randomUUID();
     chatFlight.current.revision++; chatFlight.current.controller?.abort(); chatFlight.current.controller = null;
-    setChatPending(false); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
+    setChatPending(false); setPendingText(''); setChatError(''); setRecommendation(null); setChatRecommendations(undefined);
     const next = chatService.createSession();
     setSession(next); setMessages([]);
     return next;
@@ -1448,6 +1468,7 @@ function usePassState() {
     retrySave: () => { persistence.current.retry(); setSaveAttempt(value => value + 1); },
     recommendation,
     chatPending,
+    pendingText,
     agentMode,
     changeAgentMode,
     agentConnected: Boolean(serverChat),
@@ -1479,6 +1500,7 @@ function usePassState() {
     chatService,
     rankingByRecipient,
     catalogProducts: catalog.products,
+    rankingProducts: rankingCatalog,
     popularGifts: rankingByRecipient['전체'].slice(0, 10),
     catalogError: catalog.error,
     retryCatalog: () => setCatalogAttempt(value => value + 1),
@@ -1516,9 +1538,9 @@ export function PassProvider({ children }: { children: React.ReactNode }) {
 }
 function AccountPassProvider({ children }: { children: React.ReactNode }) {
   const value = usePassState();
-  const productImages = useMemo(() => new Map(value.catalogProducts
+  const productImages = useMemo(() => new Map([...value.rankingProducts, ...value.catalogProducts]
     .filter(product => Boolean(product.image))
-    .map(product => [product.id, product.image!])), [value.catalogProducts]);
+    .map(product => [product.id, product.image!])), [value.rankingProducts, value.catalogProducts]);
   const { service } = useAuth();
   const [loaded, error] = useFonts({
     NotoSansKR_400Regular,
@@ -1811,6 +1833,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: c.border,
   },
+  chipBar: { flexDirection: 'row', alignItems: 'center' },
   chips: {
     paddingHorizontal: 16,
     gap: 8,

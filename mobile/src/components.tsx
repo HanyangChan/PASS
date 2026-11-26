@@ -70,7 +70,7 @@ export function GiftCard({
 }) {
   return (
     <View style={s.card}>
-      {rank !== undefined && <Text style={s.rank}>{rank}</Text>}
+      {rank !== undefined && <Text numberOfLines={1} style={[s.rank, rank >= 100 && s.rankWide]}>{rank}</Text>}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${gift.name} 상세 보기`}
@@ -227,14 +227,16 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
+  // Up to two digits fit at 18px; 100 gets a little more room so the number never wraps.
   rank: {
-    width: 22,
+    width: 26,
     textAlign: 'center',
     color: c.primary,
     fontFamily: f.bold,
-    fontSize: 22,
-    lineHeight: 30.8,
+    fontSize: 18,
+    lineHeight: 25.2,
   },
+  rankWide: { width: 34, fontSize: 16 },
   body: { flex: 1, paddingTop: 2 },
   badge: {
     alignSelf: 'flex-start',

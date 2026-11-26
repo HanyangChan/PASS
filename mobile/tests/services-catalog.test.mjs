@@ -79,3 +79,20 @@ test('web and both sources load the Korean catalog for the ranking screen and gu
   assert.deepEqual((await make('both').load()).map(p => p.id), ['A', 'naver_1']);
   assert.deepEqual((await make('amazon').load()).map(p => p.id), ['A']);
 });
+
+test('the ranking ranks Amazon and Naver products by review-count percentile within each catalog', () => {
+  const p = (id, category, rating_count) => ({ id, category, rating_count, name: id, description: '', price_krw: 1, shipping_fee_per_set_krw: 0, stock_sets: 1, arrival_date: '2026-10-16', packaging: 'basic', sweetness: 'unknown', brand: null, allergens_declared: [], allergen_information_complete: false });
+  // Amazon counts dwarf Naver counts, but each catalog's top product ranks alongside the other's.
+  const products = [p('amz-1', 'snack', 90000), p('amz-2', 'snack', 50000), p('naver_1', 'snack', 300), p('naver_2', 'snack', 100)];
+  assert.deepEqual(rankGifts(products)['전체'].map(g => g.id), ['amz-1', 'naver_1', 'amz-2', 'naver_2']);
+  assert.deepEqual(selectGifts(products).map(g => g.id), ['amz-1', 'naver_1', 'amz-2', 'naver_2']);
+});
+
+test('the ranking catalog includes the web catalog even when the chat server uses Amazon only', async () => {
+  const web = [{ id: 'naver_7', name: '한과 세트', category: 'snack', price: 20000, arrival_days: 2, review_count: 40, image_file: 'naver_7.webp' }];
+  const repo = createProductRepository({ url: 'https://p.supabase.co', key: 'k', storage: memory(), fetcher: async () => Response.json([row('A', 'snack', 5)]), source: async () => ({ source: 'amazon', apiBase: 'http://127.0.0.1:8790' }), webItems: async () => web });
+  assert.deepEqual((await repo.load()).map(p => p.id), ['A']);
+  const ranking = await repo.loadRanking();
+  assert.deepEqual(ranking.map(p => p.id), ['A', 'naver_7']);
+  assert.equal(ranking[1].image, 'http://127.0.0.1:8790/catalog-images/naver_7.webp');
+});
