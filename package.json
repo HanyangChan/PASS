@@ -28,6 +28,7 @@
     "test:full-chat": "node --test baseline/agents/full-chat/tests/*.test.mjs api/tests/full-chat-agent.test.mjs",
     "demo:full-chat": "node baseline/agents/full-chat/demo.mjs",
     "smoke:full-chat": "node api/smoke-full-chat.mjs",
+    "smoke:profile": "node api/smoke-profile.mjs",
     "dev:api:full-chat": "CHAT_AGENT=full-chat npm --prefix api run dev",
     "benchmark:agents": "node api/benchmarks/agent-comparison.mjs",
     "benchmark:feedback": "node api/benchmarks/feedback-tradeoff.mjs",

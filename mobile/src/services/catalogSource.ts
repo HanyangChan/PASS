@@ -1,7 +1,7 @@
 // Which product catalog the app's own screens (ranking tab, guest chat) use.
 // The chat server decides it with CATALOG_SOURCE and reports it on /health; the app follows that
 // so both always show the same catalog. Without a reachable server, EXPO_PUBLIC_CATALOG_SOURCE
-// (amazon | web | both) applies, and the default is amazon.
+// (amazon | web | both) applies, and the default is both.
 export type CatalogSource = 'amazon' | 'web' | 'both';
 const SOURCES: readonly string[] = ['amazon', 'web', 'both'];
 const BY_CATALOG_ID: Record<string, CatalogSource> = {
@@ -24,6 +24,6 @@ export async function resolveCatalog({ chatApiUrl, fallback, fetcher = fetch }: 
       if (source) return { source, ...server };
     } catch { /* server unreachable: fall back to the app setting */ }
   }
-  return { source: fallback && SOURCES.includes(fallback) ? (fallback as CatalogSource) : 'amazon', ...server };
+  return { source: fallback && SOURCES.includes(fallback) ? (fallback as CatalogSource) : 'both', ...server };
 }
 export const resolveCatalogSource = async (options: Options): Promise<CatalogSource> => (await resolveCatalog(options)).source;

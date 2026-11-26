@@ -4,7 +4,7 @@ import { CATEGORIES, PREFERENCE_TAGS } from '../../src/vendor/catalog.mjs';
 import { ALLERGEN_NAMES } from '../../src/vendor/allergens.mjs';
 import { createLlmFromEnv } from '../../llm/index.mjs';
 import { SYSTEM } from './prompts.mjs';
-import { capabilityIssue } from './capabilities.mjs';
+import { capabilityIssue, capabilityFix } from './capabilities.mjs';
 
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
@@ -108,9 +108,10 @@ export function createAgent({env={},decide,fetcher=fetch,maxLlmCalls=6,maxToolCa
         if(controller.signal.aborted) throw new FullChatError('aborted',routing);
         routing.llmCalls++;
         const context={text:request.text,history:structuredClone(history),state:promptState(staged.state),currentQuestion:ingredientBlocked?pendingQuestion:observations.length?requiredQuestion(staged.state):pendingQuestion||requiredQuestion(staged.state),observations:structuredClone(observations),...(capabilityFeedback?{capabilityFeedback}:{}),remaining:{llmCalls:maxLlmCalls-routing.llmCalls,toolCalls:maxToolCalls-routing.toolCalls}};
-        const decision=await choose(context,{signal:controller.signal});
+        let decision=await choose(context,{signal:controller.signal});
         if(controller.signal.aborted) throw new FullChatError('aborted',routing);
         if(!validAction(decision)) throw new FullChatError('invalid_response',routing);
+        decision=capabilityFix(context,decision)??decision;
         routing.steps.push({action:decision.action,...(decision.type?{type:decision.type}:{})});
         capabilityFeedback=capabilityIssue(context,decision);
         if(capabilityFeedback) continue;

@@ -5,7 +5,8 @@ import { singleInitial, finishSingle } from '../../lib/single-gift.mjs';
 import { readFileSync } from 'node:fs';
 const products = JSON.parse(readFileSync(new URL('../../tests/fixtures/food-demo.json', import.meta.url)));
 const catalog = async () => products;
-const env = () => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: 'https://app.example', IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) } });
+// These tests use an Amazon fixture catalog, so they pin CATALOG_SOURCE=amazon.
+const env = () => ({ CATALOG_SOURCE: 'amazon', SUPABASE_URL: 'https://test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGINS: 'https://app.example', IP_LIMITER: { limit: async () => ({ success: true }) }, USER_LIMITER: { limit: async () => ({ success: true }) } });
 const body = (values = {}) => ({ operation: 'turn', session: { state: singleInitial(), issues: [] }, text: '부모님 예산 5만원', history: [], ...values });
 const request = (value = body(), headers = {}) => new Request('https://api.example/api/chat', { method: 'POST', headers: { Authorization: 'Bearer test.jwt.value', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(value) });
 const verified = async () => Response.json({ id: 'verified-owner', role: 'authenticated' });

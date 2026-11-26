@@ -7,9 +7,10 @@ import { packagingFor, sweetnessFor } from '../scripts/catalog/demo-rules.mjs';
 
 const web = JSON.parse(readFileSync(new URL('../supabase/seed/products-kr.json', import.meta.url)));
 
-test('catalog source defaults to amazon and rejects unknown values', () => {
-  assert.equal(catalogSource(undefined), 'amazon');
-  assert.equal(catalogSource(''), 'amazon');
+test('catalog source defaults to both catalogs and rejects unknown values', () => {
+  assert.equal(catalogSource(undefined), 'both');
+  assert.equal(catalogSource(''), 'both');
+  assert.equal(catalogSource('amazon'), 'amazon');
   assert.equal(catalogSource('both'), 'both');
   assert.throws(() => catalogSource('naver'));
   assert.equal(catalogId('web'), 'naver-web-v1');

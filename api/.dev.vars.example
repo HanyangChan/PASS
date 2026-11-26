@@ -25,7 +25,7 @@ A_ROUTER_LLM_MODE=single
 
 # langgraph-advisors: B, rule attribution with optional Luna plus four advisors.
 
-# Product catalog for every chat mode: amazon (default), web (Korean Naver catalog, supabase/seed/products-kr.json) or both
+# Product catalog for every chat mode: amazon, web (Korean Naver catalog, supabase/seed/products-kr.json) or both (default)
 # CATALOG_SOURCE=web
 
 # Keep only products of an item the user names (e.g. 카네이션) when at least 3 match: on | off (default)
