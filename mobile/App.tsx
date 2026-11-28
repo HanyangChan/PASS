@@ -876,17 +876,6 @@ export function AppContent({
                       </ScrollView>
                     </>
                   )}
-                  {!surveyRecording && agentMode === 'langgraph-advisors' && recommendation?.agents && recommendation.key === JSON.stringify(session) && (
-                    <View style={s.advisorPanel}>
-                      <AgentPanel
-                        agents={recommendation.agents}
-                        disabled={disabledAdvisors}
-                        busy={chatPending}
-                        onToggle={toggleAdvisor}
-                        onSuggest={(patch, label) => void changeChatConditions(patch as Parameters<typeof changeChatConditions>[0], `${label}로 바꿔줘.`)}
-                      />
-                    </View>
-                  )}
                   {chatPending && <ChatPendingIndicator />}
                 </ScrollView>
                 <View style={s.inputArea}>
