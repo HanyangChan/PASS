@@ -10,7 +10,6 @@ import type { ChatAgentMode } from '../chatAgentModes';
  */
 const supportedModes: readonly ChatAgentMode[] = [
   'a-router',
-  'langgraph-advisors',
   'full-chat',
   'full-chat-feedback-2',
 ];
